@@ -48,17 +48,17 @@
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ===== الصق هنا إعدادات مشروع Firebase الخاص بك (انظر ملف التعليمات) =====
-        const ELVON_FIREBASE_CONFIG = {
-            apiKey: "",
-            authDomain: "",
-            projectId: "",
-            storageBucket: "",
-            messagingSenderId: "",
-            appId: ""
-        };
-        // بريد حساب المدير الذي تنشئه في Firebase Authentication
-        const ELVON_ADMIN_EMAIL = "";
+        const  ELVON_FIREBASE_CONFIG = {apiKey:"AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64",
+  authDomain: "elvon-store.firebaseapp.com",
+  projectId: "elvon-store",
+  storageBucket: "elvon-store.firebasestorage.app",
+  messagingSenderId: "78681211845",
+  appId: "1:78681211845:web:3be30581fcd2db8d1141ac",
+  measurementId: "G-LZ3BT3DK83"
+};
 
+        const ELVON_ADMIN_EMAIL = "elvonstore1@gmail.com";
+           
         window.ElvonCloud = {
             ready: false,
             db: null,
