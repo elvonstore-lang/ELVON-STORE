@@ -657,7 +657,7 @@
                         <div><label class="block text-xs font-bold text-zinc-300 mb-1">أوقات العمل</label><input id="k-hours" type="text" placeholder="مثال: كل يوم من 10:00 إلى 22:00" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]"></div>
                         <div><label class="block text-xs font-bold text-zinc-300 mb-1">رقم الهاتف للعرض</label><input id="k-phone" type="text" dir="ltr" placeholder="06 00 00 00 00" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]"></div>
                         <div><label class="block text-xs font-bold text-zinc-300 mb-1">نبذة عن المتجر</label><textarea id="k-about" rows="3" placeholder="شكون حنا وشنو كنبيعو..." class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]"></textarea></div>
-                        <div class="pt-2 border-t border-elvon-border"><label class="block text-xs font-bold text-zinc-300 mb-1">رابط خادم الذكاء الاصطناعي (اختياري، للأسئلة العامة)</label><input id="k-endpoint" type="url" dir="ltr" placeholder="https://elvon-ai.yourname.workers.dev" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]"><p class="text-[11px] text-zinc-500 mt-1">اتبع ملف cloudflare-worker.js. إذا تركته فارغاً يجاوب ELVON AI فقط عن المتجر والأسئلة التي تضيفها هنا.</p></div>
+                        <div class="pt-2 border-t border-elvon-border"><label class="block text-xs font-bold text-zinc-300 mb-1">رابط خادم الذكاء الاصطناعي (اختياري)</label><input id="k-endpoint" type="url" dir="ltr" placeholder="https://elvon-ai.yourname.workers.dev" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]"><p class="text-[11px] text-zinc-500 mt-1">إذا تركته فارغاً يستعمل ELVON AI تلقائياً <span dir="ltr">/api/ai</span> ديال موقعك على Vercel (خاص GEMINI_API_KEY ف Vercel). بلا مفتاح يجاوب بالمحرك المحلي فقط.</p></div>
                         <button onclick="saveKnowledge()" class="px-5 py-2.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-sm font-black">حفظ</button>
                     </div>
                     <div class="bg-elvon-card border border-elvon-border rounded-3xl p-5 space-y-3">
@@ -1030,7 +1030,7 @@
 
             <!-- مربع إدخال السؤال -->
             <form onsubmit="handleAiFormSubmit(event)" class="p-3 border-t border-elvon-border bg-elvon-card flex items-center gap-2">
-                <input type="text" id="elvon-ai-input" required placeholder="كتب سؤالك: تتبع طلب أو مقارنة بين منتجين..."
+                <input type="text" id="elvon-ai-input" required placeholder="سولني على أي حاجة: منتجات، تتبع طلب، ولا أي سؤال آخر..."
                        class="flex-1 bg-elvon-black border border-elvon-border rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-[#DC0A14]">
                 <button type="submit" id="elvon-ai-send-btn" class="h-10 px-4 rounded-2xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shrink-0">
                     <i data-lucide="send" class="w-4 h-4"></i>
@@ -2320,7 +2320,7 @@
         function initAiChatWelcome() {
             const box = document.getElementById('elvon-ai-messages');
             if (!box || box.children.length > 0) return;
-            appendAiBubble('assistant', 'مرحباً بك ❤️ أنا ELVON AI.\nكنعاونك ف شيئين: **تتبع طلبك** (كتب ليا رقم الهاتف لي دخلتي) و**مقارنة المنتجات** (مثلاً: قارن بين الشاحن والكابل).');
+            appendAiBubble('assistant', 'مرحباً بك ❤️ أنا **ELVON AI**، المساعد الذكي ديال ELVON STORE.\nسولني على **أي حاجة**: نختار ليك منتج، نقارن، نتبع طلبك (كتب رقم الهاتف)، ولا أي سؤال آخر ف الدراسة، التكنولوجيا، الترجمة، الحسابات... 🤖');
         }
 
         function openElvonAiModal() {
@@ -2384,8 +2384,17 @@
         // اختياري: رابط خادم خاص بك (مثل Cloudflare Worker) يتصل بنموذج ذكاء اصطناعي ويخفي المفتاح السري.
         // يستقبل POST {message, history, catalog, policy} ويرجع {reply}. إذا تركته فارغاً يشتغل المحرك المحلي.
         const ELVON_AI_ENDPOINT = '';
+        // إلا ما تحطش رابط، كنستعملو تلقائياً /api/ai ديال نفس الموقع (Vercel). إلا الخادم ما فيهش مفتاح، كنرجعو للمحرك المحلي.
+        let aiServerOff = false;
+        function aiResolveEndpoint() {
+            const manual = String(settings.aiEndpoint || ELVON_AI_ENDPOINT || '').trim();
+            if (/^https:\/\//i.test(manual)) return manual;
+            if (aiServerOff) return '';
+            try { if (location.protocol === 'https:') return location.origin + '/api/ai'; } catch (e) {}
+            return '';
+        }
         // وضع التخصص: ELVON AI يشتغل فقط ف تتبع الطلبات ومقارنة المنتجات (بلا اقتراحات جاهزة). ضعه false لتفعيل باقي الميزات.
-        const AI_FOCUS = true;
+        const AI_FOCUS = false;
 
         let aiCtx = { last: [], category: null, awaitPhone: false };
 
@@ -2397,8 +2406,12 @@
                 .normalize('NFD').replace(/[̀-ͯ]/g, '');
         }
         function aiFmt(text) {
-            return esc(text)
+            return esc(String(text || '')
+                    .replace(/^\s{0,3}#{1,6}\s+(.+)$/gm, '**$1**')
+                    .replace(/^\s*[*•]\s+/gm, '- ')
+                    .replace(/\[(\d+)\]\(https?:\/\/[^\s)]*\)/g, ''))
                 .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-black">$1</strong>')
+                .replace(/`([^`\n]+)`/g, '<code dir="ltr" class="px-1 rounded bg-black/40 text-[11px]">$1</code>')
                 .replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#DC0A14] underline font-black">$1</a>');
         }
         function aiFaqMatch(nq) {
@@ -2736,7 +2749,7 @@
         let aiBusy = false;
         const aiQueue = [];
         async function processAiUserMessage(text) {
-            aiQueue.push(String(text || '').slice(0, 500));
+            aiQueue.push(String(text || '').slice(0, 2000));
             if (aiBusy) return;
             aiBusy = true;
             while (aiQueue.length) {
@@ -2756,30 +2769,43 @@
             box.scrollTop = box.scrollHeight;
 
             let reply = null;
+            let fromFlow = false; // جواب من تتبع الطلب أو حجز الورشة: كيبقى محلي
             const engineText = aiPre(userText);
             try {
                 if (aiRepair) reply = aiRepairNext(engineText);
                 if (!reply) reply = await aiTrackIntent(engineText);
                 if (!reply && !AI_FOCUS) reply = aiRepairDirect(engineText);
                 if (!reply && !AI_FOCUS) reply = aiRepairStart(engineText);
+                if (reply) fromFlow = true;
             } catch (e) { reply = null; aiRepair = null; }
             if (!reply) try { reply = aiBuildReply(engineText); } catch (e) { reply = { text: 'وقع خطأ صغير، عاود صيغ سؤالك من فضلك 🙏', products: [], chips: [], fallback: false }; }
-            const endpoint = String(settings.aiEndpoint || ELVON_AI_ENDPOINT || '').trim();
-            if (reply.fallback && /^https:\/\//i.test(endpoint)) {
+            const endpoint = aiResolveEndpoint();
+            if (!fromFlow && !aiRepair && endpoint) {
                 try {
                     const ctl = new AbortController();
-                    const to = setTimeout(() => ctl.abort(), 20000);
+                    const to = setTimeout(() => ctl.abort(), 29000);
                     const r = await fetch(endpoint, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
                         body: JSON.stringify({
-                            message: userText, history: aiChatHistory.slice(-8),
-                            catalog: products.map(p => ({ name: p.name, brand: p.brand, category: CATEGORY_LABELS[p.category], price_mad: p.price, stock: p.stock, specs: p.desc })),
+                            message: userText, history: aiChatHistory.slice(-16),
+                            catalog: products.map(p => ({ name: p.name, brand: p.brand, category: CATEGORY_LABELS[p.category], price_mad: p.price, old_price_mad: p.oldPrice || null, stock: p.stock, specs: p.desc })),
                             store: { address: settings.address, maps: settings.mapsUrl, hours: settings.hours, phone: settings.phoneDisplay, about: settings.about, faq: settings.faq || [] },
                             policy: { cod: true, free_shipping_from: settings.freeShippingThreshold, tanger_fee: settings.shippingFee, other_fee: settings.otherCitiesFee, exchange_hours: 48 }
                         })
                     });
                     clearTimeout(to);
-                    if (r.ok) { const d = await r.json(); if (d && d.reply) reply = { text: String(d.reply), products: [], chips: [] }; }
+                    if (r.ok) {
+                        const d = await r.json();
+                        if (d && d.disabled) aiServerOff = true;
+                        if (d && d.reply) {
+                            const t = String(d.reply);
+                            const tn = aiNorm(t);
+                            // نخليو بطاقات المنتجات غير إلا الجواب الذكي ذكرهم
+                            const keep = (reply.products || []).filter(p => p && p.name && tn.includes(aiNorm(p.name)));
+                            const named = keep.length ? keep : products.filter(p => p && p.name && Number(p.stock) > 0 && aiNorm(p.name).length > 4 && tn.includes(aiNorm(p.name))).slice(0, 4);
+                            reply = { text: t, products: named, chips: [], action: reply.action };
+                        }
+                    } else if (r.status === 404) aiServerOff = true;
                 } catch (e) { /* نبقى على الجواب المحلي */ }
             } else {
                 await aiSleep(220);
