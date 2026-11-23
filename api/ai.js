@@ -1,11 +1,15 @@
 // ELVON AI — Vercel Serverless Function (POST /api/ai)
-// Keeps GEMINI_API_KEY on the server. ELVON AI is a general-purpose smart assistant:
+// Keeps the AI keys on the server (GROQ_API_KEY free, or GEMINI_API_KEY). ELVON AI is a general-purpose smart assistant:
 // it answers ANY question (general knowledge, tech, phones, math, translation, advice, news...)
 // and is also the expert of ELVON STORE (products, prices, delivery, orders).
 // Without GEMINI_API_KEY it returns { reply: '', disabled: true } and the site keeps its local engine.
 
 // Tried in order; the first one that answers wins. Override the first one with GEMINI_MODEL.
 const MODELS = [process.env.GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash']
+  .filter((m, i, a) => m && a.indexOf(m) === i);
+
+// Free alternative: Groq (https://console.groq.com/keys). Used first when GROQ_API_KEY is set.
+const GROQ_MODELS = [process.env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
   .filter((m, i, a) => m && a.indexOf(m) === i);
 
 const MAX_MSG = 2000;
@@ -90,6 +94,30 @@ async function callGemini(key, model, payload, signal) {
   return parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
 }
 
+async function callGroq(key, model, system, contents, signal) {
+  const messages = [{ role: 'system', content: system }].concat(contents.map(c => ({
+    role: c.role === 'user' ? 'user' : 'assistant',
+    content: c.parts.map(p => p.text || '').join(''),
+  })));
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 2048 }),
+    signal,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error((data && data.error && data.error.message) || ('HTTP ' + r.status));
+    err.status = r.status;
+    throw err;
+  }
+  const msg = data && data.choices && data.choices[0] && data.choices[0].message;
+  return String((msg && msg.content) || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
+const isKeyError = (e) => e && (e.status === 401 || e.status === 403 ||
+  /api key|API_KEY|permission|unauthori|free tier is not available|billing/i.test(String(e.message)));
+
 module.exports = async (req, res) => {
   const allowed = process.env.ALLOWED_ORIGIN || '*';
   const origin = req.headers.origin || '';
@@ -101,26 +129,40 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  // GET /api/ai : quick health check (open it in the browser to see if the key works)
+  const groqKey = process.env.GROQ_API_KEY || '';
+  const geminiKey = process.env.GEMINI_API_KEY || '';
+
+  // GET /api/ai : quick health check (open it in the browser to see if the keys work)
   if (req.method === 'GET') {
-    const k = process.env.GEMINI_API_KEY || '';
-    if (!k) return res.status(200).json({ ok: false, problem: 'GEMINI_API_KEY is not set in Vercel. Add it, then Redeploy.' });
-    const out = { ok: false, key_length: k.length, models: {} };
-    if (k.length < 30) out.problem = 'The key looks too short. Copy the full key from aistudio.google.com/apikey.';
-    for (const model of MODELS) {
-      try {
-        const t = await callGemini(k, model, { contents: [{ role: 'user', parts: [{ text: 'Say OK' }] }] });
-        out.models[model] = t ? 'works' : 'empty reply';
-        if (t) { out.ok = true; break; }
-      } catch (e) { out.models[model] = 'error: ' + String(e.message).slice(0, 200); }
+    if (!groqKey && !geminiKey) return res.status(200).json({ ok: false, problem: 'Add GROQ_API_KEY (free) or GEMINI_API_KEY in Vercel, then Redeploy.' });
+    const out = { ok: false };
+    const ping = [{ role: 'user', parts: [{ text: 'Say OK' }] }];
+    if (groqKey) {
+      out.groq = {};
+      for (const model of GROQ_MODELS) {
+        try {
+          const t = await callGroq(groqKey, model, 'Reply briefly.', ping);
+          out.groq[model] = t ? 'works' : 'empty reply';
+          if (t) { out.ok = true; break; }
+        } catch (e) { out.groq[model] = 'error: ' + String(e.message).slice(0, 200); if (isKeyError(e)) break; }
+      }
+    }
+    if (geminiKey && !out.ok) {
+      out.gemini = {};
+      for (const model of MODELS) {
+        try {
+          const t = await callGemini(geminiKey, model, { contents: ping });
+          out.gemini[model] = t ? 'works' : 'empty reply';
+          if (t) { out.ok = true; break; }
+        } catch (e) { out.gemini[model] = 'error: ' + String(e.message).slice(0, 200); if (isKeyError(e)) break; }
+      }
     }
     return res.status(200).json(out);
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   if (allowed !== '*' && origin && origin !== allowed) return res.status(403).json({ error: 'forbidden' });
 
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(200).json({ reply: '', disabled: true });
+  if (!groqKey && !geminiKey) return res.status(200).json({ reply: '', disabled: true });
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = null; } }
@@ -129,30 +171,45 @@ module.exports = async (req, res) => {
   const message = clip(body.message, MAX_MSG).trim();
   if (!message) return res.status(200).json({ reply: '' });
 
-  const base = {
-    contents: buildContents(body, message),
-    systemInstruction: { parts: [{ text: buildSystem(body) }] },
-    generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 },
-  };
-  const useSearch = process.env.AI_WEB_SEARCH !== 'false';
+  const system = buildSystem(body);
+  const contents = buildContents(body, message);
   let lastError = '';
 
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 27000);
   try {
-    for (const model of MODELS) {
-      // First try with Google Search grounding (fresh info), then without it.
-      const attempts = useSearch ? [{ ...base, tools: [{ google_search: {} }] }, base] : [base];
-      for (const payload of attempts) {
+    // 1) Groq (free)
+    if (groqKey) {
+      for (const model of GROQ_MODELS) {
         try {
-          const reply = await callGemini(key, model, payload, ctl.signal);
+          const reply = await callGroq(groqKey, model, system, contents, ctl.signal);
           if (reply) return res.status(200).json({ reply, model });
         } catch (e) {
           if (ctl.signal.aborted) return res.status(200).json({ reply: '', error: 'timeout' });
           lastError = String(e.message || e).slice(0, 200);
-          if (e.status === 400 || e.status === 401 || e.status === 403) {
-            // A bad key fails the same way on every model: stop early.
-            if (/api key|API_KEY|permission|unauthori/i.test(lastError)) return res.status(200).json({ reply: '', error: lastError });
+          if (isKeyError(e)) break;
+        }
+      }
+    }
+    // 2) Gemini
+    if (geminiKey) {
+      const base = {
+        contents,
+        systemInstruction: { parts: [{ text: system }] },
+        generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 },
+      };
+      const useSearch = process.env.AI_WEB_SEARCH !== 'false';
+      gemini: for (const model of MODELS) {
+        // First try with Google Search grounding (fresh info), then without it.
+        const attempts = useSearch ? [{ ...base, tools: [{ google_search: {} }] }, base] : [base];
+        for (const payload of attempts) {
+          try {
+            const reply = await callGemini(geminiKey, model, payload, ctl.signal);
+            if (reply) return res.status(200).json({ reply, model });
+          } catch (e) {
+            if (ctl.signal.aborted) return res.status(200).json({ reply: '', error: 'timeout' });
+            lastError = String(e.message || e).slice(0, 200);
+            if (isKeyError(e)) break gemini;
           }
         }
       }
