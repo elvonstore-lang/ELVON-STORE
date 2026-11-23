@@ -90,29 +90,38 @@
                     return false;
                 }
             },
-            // ===== حسابات الزبناء (عملات ELVON): الاسم + الكود =====
-            async _acctEmail(name) {
-                const key = String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
-                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('elvon-user|' + key));
-                return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 28) + '@users.elvon.store';
+            // ===== حسابات الزبناء (عملات ELVON): رقم الهاتف + كلمة السر =====
+            _norm(p) { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('212')) d = d.slice(3); d = d.replace(/^0+/, ''); return d.slice(-9); },
+            async _phoneVer(n) {
+                try { const s = await getDoc(doc(this.db, 'phones', n)); return s.exists() ? Math.floor(Number(s.data().v) || 0) : 0; } catch (e) { return 0; }
             },
-            _acctPass(code) { return 'ELVON#' + String(code) + '#coins'; },
+            _acctEmail(n, v) { return `p${n}v${v}@users.elvon.store`; },
             account() {
                 const u = this.auth && this.auth.currentUser;
                 if (!u || !u.email || !u.email.endsWith('@users.elvon.store')) return null;
-                return { uid: u.uid, name: u.displayName || 'زبون ELVON' };
+                const m = u.email.match(/^p(\d{9})v/);
+                return { uid: u.uid, name: u.displayName || 'زبون ELVON', phone: m ? m[1] : '' };
             },
-            async signUpAccount(name, code) {
+            async _ensureWallet(u, name, n) {
                 try {
-                    const cred = await createUserWithEmailAndPassword(this.auth, await this._acctEmail(name), this._acctPass(code));
+                    const s = await getDoc(doc(this.db, 'wallets', u.uid));
+                    if (!s.exists()) await setDoc(doc(this.db, 'wallets', u.uid), { name: String(name || u.displayName || '').trim() || 'زبون ELVON', phone: n, createdAt: Date.now() });
+                } catch (e) { /* الرصيد كيتصاوب من بعد */ }
+            },
+            async signUpAccount(name, phone, pass) {
+                try {
+                    const n = this._norm(phone);
+                    const cred = await createUserWithEmailAndPassword(this.auth, this._acctEmail(n, await this._phoneVer(n)), String(pass));
                     await updateProfile(cred.user, { displayName: String(name).trim() });
-                    try { await setDoc(doc(this.db, 'wallets', cred.user.uid), { name: String(name).trim(), createdAt: Date.now() }); } catch (e) { /* الرصيد كيتصاوب من بعد */ }
+                    await this._ensureWallet(cred.user, name, n);
                     return { ok: true };
                 } catch (err) { return { ok: false, code: (err && err.code) || 'unknown' }; }
             },
-            async signInAccount(name, code) {
+            async signInAccount(phone, pass) {
                 try {
-                    await signInWithEmailAndPassword(this.auth, await this._acctEmail(name), this._acctPass(code));
+                    const n = this._norm(phone);
+                    const cred = await signInWithEmailAndPassword(this.auth, this._acctEmail(n, await this._phoneVer(n)), String(pass));
+                    await this._ensureWallet(cred.user, cred.user.displayName, n);
                     return { ok: true };
                 } catch (err) { return { ok: false, code: (err && err.code) || 'unknown' }; }
             },
@@ -653,6 +662,7 @@
                     <button onclick="switchAdminTab('analytics')" id="admin-tab-btn-analytics" class="admin-tab"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>التحليلات</span></button>
                     <button onclick="switchAdminTab('repairs')" id="admin-tab-btn-repairs" class="admin-tab"><i data-lucide="wrench" class="w-4 h-4"></i><span>مواعيد الورشة</span><b class="admin-count" id="count-repairs">0</b></button>
                     <button onclick="switchAdminTab('knowledge')" id="admin-tab-btn-knowledge" class="admin-tab"><i data-lucide="bot" class="w-4 h-4"></i><span>ذكاء ELVON AI</span></button>
+                                        <button onclick="switchAdminTab('accounts')" id="admin-tab-btn-accounts" class="admin-tab"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>حسابات العملات</span><b class="admin-count" id="count-accounts">0</b></button>
                                         <button onclick="switchAdminTab('settings')" id="admin-tab-btn-settings" class="admin-tab"><i data-lucide="settings" class="w-4 h-4"></i><span>الإعدادات</span></button>
                 </nav>
 
@@ -825,6 +835,17 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4"><h4 class="text-sm font-black text-white mb-3">المنتجات حسب الفئة</h4><div class="h-64"><canvas id="categoryChart"></canvas></div></div>
                 <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4"><h4 class="text-sm font-black text-white mb-3">الطلبات في آخر 7 أيام</h4><div class="h-64"><canvas id="ordersChart"></canvas></div></div>
+            </div>
+        </div>
+
+        <!-- التبويب: حسابات العملات -->
+        <div id="admin-panel-accounts" class="hidden space-y-4">
+            <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div><h3 class="text-base font-black text-white">حسابات عملات ELVON</h3><p class="text-[11px] text-zinc-400">كل الزبناء لي صاوبو حساب، والرصيد ديالهم. تقدر تزيد ولا تنقص العملات، ولا تعاود الحساب إلا نسا الزبون كلمة السر.</p></div>
+                    <input id="acc-search" oninput="renderAccounts()" type="text" placeholder="قلب بالاسم ولا الرقم" class="w-full sm:w-56 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+                <div id="admin-accounts-list" class="space-y-2"></div>
             </div>
         </div>
 
@@ -1134,7 +1155,7 @@
             <div class="rounded-2xl p-4 text-center bg-gradient-to-br from-amber-500/15 to-[#DC0A14]/10 border border-amber-400/30">
                 <svg class="w-16 h-16 mx-auto drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
                 <p class="text-sm font-black text-white mt-2">عملات <span class="text-amber-300">ELVON</span></p>
-                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">صاوب حساب بالاسم وكود سري. دخل أكواد العملات لي كننشرو باش تربح عملات، ومن بعد بدلهم بالمنتجات لي ف "متجر عملات ELVON".</p>
+                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">صاوب حساب برقم الهاتف وكلمة السر. دخل أكواد العملات لي كننشرو باش تربح عملات، ومن بعد بدلهم بالمنتجات لي ف "متجر عملات ELVON".</p>
             </div>
             <div id="wallet-result"></div>
             <div id="recaptcha-box"></div>
@@ -2372,15 +2393,17 @@
             if (!acc) {
                 const isNew = walletMode === 'signup';
                 const tab = (m, label) => `<button onclick="walletMode='${m}'; renderWalletModal()" class="py-2 rounded-xl text-xs font-black ${walletMode === m ? 'bg-amber-400 text-black' : 'text-zinc-300 hover:text-white'}">${label}</button>`;
+                const last = loadState('elvon_last_phone', '');
                 box.innerHTML = `<div class="space-y-2.5">
                     <div class="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-elvon-black border border-elvon-border">${tab('login', 'دخول لحسابي')}${tab('signup', 'حساب جديد')}</div>
-                    <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الاسم</label>
-                    <input id="acc-name" name="elvon-acc-name" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="مثال: يوسف الطنجاوي" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"></div>
-                    <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الكود السري (4 حتى 8 أرقام)</label>
-                    <input id="acc-code" name="elvon-acc-pin" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="-webkit-text-security:disc" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>
-                    ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">عاود الكود</label><input id="acc-code2" name="elvon-acc-pin2" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="-webkit-text-security:disc" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>` : ''}
+                    ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الاسم</label><input id="acc-name" name="elvon-acc-name" type="text" maxlength="30" autocomplete="off" placeholder="مثال: يوسف" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"></div>` : ''}
+                    <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">رقم الهاتف</label>
+                    <input id="acc-phone" name="elvon-acc-phone" type="tel" inputmode="tel" autocomplete="off" value="${esc(last)}" placeholder="06XXXXXXXX" dir="ltr" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 text-center font-black text-base tracking-wider"></div>
+                    <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">كلمة السر ${isNew ? '(6 حروف ولا أرقام على الأقل)' : ''}</label>
+                    <input id="acc-pass" name="elvon-acc-pass" type="password" autocomplete="${isNew ? 'new-password' : 'off'}" placeholder="••••••" dir="ltr" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 text-center"></div>
+                    ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">عاود كلمة السر</label><input id="acc-pass2" name="elvon-acc-pass2" type="password" autocomplete="new-password" placeholder="••••••" dir="ltr" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 text-center"></div>` : ''}
                     <button onclick="submitAccount()" id="acc-btn" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-sm">${isNew ? 'صاوب الحساب' : 'دخول'}</button>
-                    <p class="text-[10px] text-zinc-500 text-center">${isNew ? 'حفظ الاسم والكود، غادي تحتاجهم باش تدخل من أي تيليفون.' : 'ما عندكش حساب؟ ضغط على "حساب جديد".'}</p>${note}</div>`;
+                    <p class="text-[10px] text-zinc-500 text-center">${isNew ? 'حفظ كلمة السر، غادي تحتاجها باش تدخل من أي تيليفون.' : 'نسيتي كلمة السر؟ تواصل معنا ف واتساب. ما عندكش حساب؟ ضغط على "حساب جديد".'}</p>${note}</div>`;
                 return;
             }
             box.innerHTML = '<p class="text-xs text-zinc-400 text-center py-4">كنحملو الرصيد...</p>';
@@ -2452,10 +2475,11 @@
         }
         function accountErrorText(code) {
             const map = {
-                'auth/email-already-in-use': 'هاد الاسم ديجا مستعمل. ختار اسم آخر، ولا دخل لحسابك إلا كان ديالك.',
-                'auth/invalid-credential': 'الاسم ولا الكود غالط.',
-                'auth/wrong-password': 'الاسم ولا الكود غالط.',
-                'auth/user-not-found': 'ما كاينش حساب بهاد الاسم. صاوب حساب جديد.',
+                'auth/email-already-in-use': 'هاد الرقم عندو ديجا حساب. دخل لحسابك، ولا تواصل معنا إلا نسيتي كلمة السر.',
+                'auth/invalid-credential': 'الرقم ولا كلمة السر غالطين.',
+                'auth/wrong-password': 'الرقم ولا كلمة السر غالطين.',
+                'auth/user-not-found': 'ما كاينش حساب بهاد الرقم. صاوب حساب جديد.',
+                'auth/weak-password': 'كلمة السر خاصها تكون 6 حروف ولا أرقام على الأقل.',
                 'auth/too-many-requests': 'حاولتي بزاف ديال المرات. عاود من بعد شوية.',
                 'auth/operation-not-allowed': 'الحسابات مازال ما تفعلوش ف المتجر.',
                 'auth/network-request-failed': 'مشكل ف الإنترنت، عاود.'
@@ -2463,26 +2487,32 @@
             return map[code] || ('وقع مشكل (' + code + ')');
         }
         async function submitAccount() {
-            const name = (document.getElementById('acc-name')?.value || '').trim().replace(/\s+/g, ' ');
-            const code = (document.getElementById('acc-code')?.value || '').replace(/\D/g, '');
             const isNew = walletMode === 'signup';
-            if (name.length < 2) { renderWalletModal('دخل الاسم ديالك'); return; }
-            if (!/^\d{4,8}$/.test(code)) { renderWalletModal('الكود خاصو يكون من 4 حتى 8 أرقام'); return; }
-            if (isNew && code !== (document.getElementById('acc-code2')?.value || '').replace(/\D/g, '')) { renderWalletModal('الكود ماشي بحال بحال ف الجوج'); return; }
+            const name = isNew ? (document.getElementById('acc-name')?.value || '').trim().replace(/\s+/g, ' ') : '';
+            const phone = document.getElementById('acc-phone')?.value || '';
+            const pass = document.getElementById('acc-pass')?.value || '';
+            const n = normPhone(phone);
+            if (isNew && name.length < 2) { renderWalletModal('دخل الاسم ديالك'); return; }
+            if (n.length < 9) { renderWalletModal('دخل رقم هاتف صحيح (06... ولا 07...)'); return; }
+            if (pass.length < 6) { renderWalletModal('كلمة السر خاصها تكون 6 حروف ولا أرقام على الأقل'); return; }
+            if (isNew && pass !== (document.getElementById('acc-pass2')?.value || '')) { renderWalletModal('كلمة السر ماشي بحال بحال ف الجوج'); return; }
             const btn = document.getElementById('acc-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            saveState('elvon_last_phone', '0' + n);
             if (window.ElvonCloud?.ready) {
-                const r = isNew ? await window.ElvonCloud.signUpAccount(name, code) : await window.ElvonCloud.signInAccount(name, code);
+                const r = isNew ? await window.ElvonCloud.signUpAccount(name, n, pass) : await window.ElvonCloud.signInAccount(n, pass);
                 if (!r.ok) { renderWalletModal(accountErrorText(r.code)); return; }
             } else {
-                const key = name.toLowerCase(), all = loadState('elvon_local_accounts', {});
-                if (isNew) { if (all[key]) { renderWalletModal(accountErrorText('auth/email-already-in-use')); return; } all[key] = { name, code }; saveState('elvon_local_accounts', all); }
-                else if (!all[key] || all[key].code !== code) { renderWalletModal(accountErrorText('auth/invalid-credential')); return; }
-                saveState('elvon_local_account', { uid: 'local-' + key, name: all[key].name });
+                const all = loadState('elvon_local_accounts2', {});
+                if (isNew) { if (all[n]) { renderWalletModal(accountErrorText('auth/email-already-in-use')); return; } all[n] = { name, pass }; saveState('elvon_local_accounts2', all); }
+                else if (!all[n] || all[n].pass !== pass) { renderWalletModal(accountErrorText('auth/invalid-credential')); return; }
+                const luid = 'local-' + n + '-v' + (Math.floor(Number((loadState('elvon_local_phones', {})[n] || {}).v) || 0));
+                saveState('elvon_local_account', { uid: luid, name: all[n].name, phone: n });
+                const ws = loadState('elvon_local_walletinfo', {}); if (!ws[luid]) ws[luid] = { name: all[n].name, phone: n, createdAt: Date.now() }; saveState('elvon_local_walletinfo', ws);
             }
             walletMode = 'login';
             walletCacheClear();
             renderWalletModal(isNew ? '✓ تصاوب الحساب ديالك، مرحبا بيك!' : '✓ دخلتي لحسابك');
-            refreshCoinBadge(); refreshCoinBoxes();
+            refreshCoinBadge();
         }
         async function accountSignOut() {
             if (window.ElvonCloud?.ready) { if (window.ElvonCloud.account()) await window.ElvonCloud.adminSignOut(); }
@@ -3195,7 +3225,7 @@
         // =====================================================================
         // لوحة التحكم: الكوبونات، نقاط الولاء، الحالة، والتحليلات، والأدوات الفنية
         // =====================================================================
-        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'كوبونات الخصم', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', settings: 'الإعدادات' };
+        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'كوبونات الخصم', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', accounts: 'حسابات العملات', settings: 'الإعدادات' };
         let adminOrderFilter = 'site';
         const orderChannel = (o) => (o && o.channel === 'الموقع') ? 'site' : 'wa';
         function switchAdminTab(tab) {
@@ -3216,6 +3246,7 @@
             if (tab === 'analytics') renderCharts();
             if (tab === 'repairs') renderRepairs();
             if (tab === 'promos') loadCoinCodes();
+            if (tab === 'accounts') loadAccounts();
             if (tab === 'knowledge') { fillKnowledgeFields(); renderFaqList(); }
             if (window.lucide) lucide.createIcons();
         }
@@ -4151,6 +4182,94 @@
             document.getElementById('new-promo-percent').value = '';
             renderAdminTables();
             showToast(`تم حفظ الكوبون ${code}`);
+        }
+
+        // ===== حسابات العملات (المدير) =====
+        let adminAccounts = [], adminPhones = {};
+        async function loadAccounts() {
+            const wrap = document.getElementById('admin-accounts-list');
+            if (wrap) wrap.innerHTML = '<p class="text-xs text-zinc-400 py-4 text-center">كنحملو الحسابات...</p>';
+            const cloud = window.ElvonCloud?.ready && adminOrders;
+            let list = [];
+            if (cloud) {
+                const ws = await window.ElvonCloud.listPath(['wallets']);
+                adminPhones = {}; (await window.ElvonCloud.listPath(['phones'])).forEach(p => { adminPhones[p._docId] = p; });
+                list = await Promise.all(ws.map(async w => {
+                    const red = await window.ElvonCloud.listPath(['wallets', w._docId, 'redeems']);
+                    return { uid: w._docId, name: w.name, phone: w.phone || '', closed: !!w.closed, createdAt: w.createdAt || 0, base: Math.floor(Number(w.balance) || 0), redeemed: red.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: red.length };
+                }));
+            } else {
+                const info = loadState('elvon_local_walletinfo', {}), bal = loadState('elvon_wallets_v2', {}), red = loadState('elvon_redeems_v1', {});
+                adminPhones = loadState('elvon_local_phones', {});
+                list = Object.keys(info).map(uid => ({ uid, name: info[uid].name, phone: info[uid].phone, closed: !!info[uid].closed, createdAt: info[uid].createdAt || 0, base: Math.floor(Number(bal[uid]) || 0), redeemed: (red[uid] || []).reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: (red[uid] || []).length }));
+            }
+            list.forEach(a => { a.balance = Math.max(0, a.base + a.redeemed); });
+            adminAccounts = list.sort((a, b) => (a.closed - b.closed) || (b.createdAt - a.createdAt));
+            renderAccounts();
+        }
+        function renderAccounts() {
+            const wrap = document.getElementById('admin-accounts-list'); if (!wrap) return;
+            const cnt = document.getElementById('count-accounts'); if (cnt) cnt.textContent = adminAccounts.filter(a => !a.closed).length;
+            const q = (document.getElementById('acc-search')?.value || '').trim().toLowerCase();
+            const shown = adminAccounts.filter(a => !q || String(a.name || '').toLowerCase().includes(q) || ('0' + a.phone).includes(q.replace(/\D/g, '') || '§'));
+            if (!shown.length) { wrap.innerHTML = '<p class="text-xs text-zinc-500 py-6 text-center">ما كاين حتى حساب.</p>'; return; }
+            wrap.innerHTML = shown.map(a => {
+                const ph = adminPhones[a.phone] || {};
+                const carry = !a.closed && Number(ph.carry) > 0 && ph.carryFrom !== a.uid ? Math.floor(Number(ph.carry)) : 0;
+                return `<div class="bg-elvon-black border ${a.closed ? 'border-zinc-800 opacity-60' : 'border-amber-400/25'} rounded-2xl p-3 flex flex-wrap items-center gap-3">
+                    <div class="flex-1 min-w-[150px]">
+                        <p class="text-sm font-black text-white">${esc(a.name || 'بلا اسم')} ${a.closed ? '<span class="text-[10px] text-zinc-500">(حساب قديم مسدود)</span>' : ''}</p>
+                        <p class="text-[11px] text-zinc-400" dir="ltr">0${esc(a.phone)}</p>
+                        <p class="text-[10px] text-zinc-500">${a.codes} كود مستعمل${a.createdAt ? ' • ' + new Date(a.createdAt).toLocaleDateString('ar-MA') : ''}</p>
+                    </div>
+                    <div class="text-center px-2"><p class="text-xl font-black text-amber-300">${a.balance}</p><p class="text-[10px] text-zinc-500 font-bold">عملة</p></div>
+                    ${a.closed ? '' : `<div class="flex flex-wrap items-center gap-1.5">
+                        <input id="adj-${a.uid}" type="number" min="1" placeholder="العدد" class="w-20 bg-elvon-card border border-elvon-border rounded-lg px-2 py-1.5 text-xs text-white">
+                        <button onclick="adminAdjust('${a.uid}', 1)" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black">+ زيد</button>
+                        <button onclick="adminAdjust('${a.uid}', -1)" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black">− نقص</button>
+                        <button onclick="adminResetAccount('${a.uid}')" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-black">نسا كلمة السر</button>
+                        ${carry ? `<button onclick="adminCarry('${a.uid}')" class="px-2.5 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-black">نقل الرصيد القديم (${carry})</button>` : ''}
+                    </div>`}
+                </div>`;
+            }).join('');
+        }
+        async function adminAdjust(uid, sign) {
+            const n = Math.floor(Number(document.getElementById('adj-' + uid)?.value) || 0);
+            if (n < 1) { showToast('دخل عدد العملات'); return; }
+            const r = await adjustWallet(uid, sign * n);
+            if (!r.ok) { showToast('ما قدرناش نبدلو الرصيد'); return; }
+            showToast(sign > 0 ? `تزادو ${n} عملة (الرصيد: ${r.after})` : `تنقصو ${n} عملة (الرصيد: ${r.after})`);
+            loadAccounts();
+        }
+        async function adminResetAccount(uid) {
+            const a = adminAccounts.find(x => x.uid === uid); if (!a || !a.phone) return;
+            if (!confirm(`الزبون ${a.name} (0${a.phone}) نسا كلمة السر؟\n\nغادي نسدو الحساب القديم ونحفظو الرصيد ديالو (${a.balance} عملة). من بعد قول للزبون يصاوب حساب جديد بنفس الرقم، وضغط "نقل الرصيد القديم".`)) return;
+            const ph = adminPhones[a.phone] || {};
+            const rec = { v: Math.floor(Number(ph.v) || 0) + 1, carry: a.balance, carryFrom: uid, at: Date.now() };
+            if (window.ElvonCloud?.ready && adminOrders) {
+                const ok1 = await window.ElvonCloud.setPath(['phones', a.phone], rec);
+                const ok2 = await window.ElvonCloud.setPath(['wallets', uid], { balance: -a.redeemed, closed: true, updatedAt: Date.now() });
+                if (!ok1 || !ok2) { showToast('ما قدرناش نعاودو الحساب، تأكد من القواعد ف Firebase'); return; }
+            } else {
+                const phs = loadState('elvon_local_phones', {}); phs[a.phone] = rec; saveState('elvon_local_phones', phs);
+                const info = loadState('elvon_local_walletinfo', {}); if (info[uid]) info[uid].closed = true; saveState('elvon_local_walletinfo', info);
+                const bal = loadState('elvon_wallets_v2', {}); bal[uid] = -a.redeemed; saveState('elvon_wallets_v2', bal);
+                const acc = loadState('elvon_local_accounts2', {}); delete acc[a.phone]; saveState('elvon_local_accounts2', acc);
+            }
+            showToast('تسد الحساب القديم. قول للزبون يصاوب حساب جديد بنفس الرقم');
+            loadAccounts();
+        }
+        async function adminCarry(uid) {
+            const a = adminAccounts.find(x => x.uid === uid); if (!a) return;
+            const ph = adminPhones[a.phone] || {}; const carry = Math.floor(Number(ph.carry) || 0);
+            if (!carry) return;
+            const r = await adjustWallet(uid, carry);
+            if (!r.ok) { showToast('ما قدرناش ننقلو الرصيد'); return; }
+            const rec = { ...ph, carry: 0, carriedTo: uid }; delete rec._docId;
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.setPath(['phones', a.phone], rec);
+            else { const phs = loadState('elvon_local_phones', {}); phs[a.phone] = rec; saveState('elvon_local_phones', phs); }
+            showToast(`تنقلو ${carry} عملة للحساب الجديد`);
+            loadAccounts();
         }
 
         // ===== أكواد عملات ELVON (المدير) =====
