@@ -15,10 +15,24 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'جديد';
       allow read, update, delete: if isAdmin();
     }
-    // عملات ELVON: الزبون يقرأ رصيده (بمعرفة رقمه)، والمدير وحده يزيد وينقص
-    match /wallets/{phoneHash}/w/{docId} {
-      allow get, list: if true;
-      allow write: if isAdmin();
+    // عملات ELVON: الحساب مربوط برقم الهاتف لي تأكد بالكود (SMS)
+    // wallets/{رقم بلا 0، مثلا 612345678}: الزبون يقرأ غير الحساب ديالو، والمدير وحده يبدل الرصيد
+    function ownsPhone(p) {
+      return request.auth != null && request.auth.token.phone_number == '+212' + p;
+    }
+    match /wallets/{p} {
+      allow get: if ownsPhone(p) || isAdmin();
+      allow list, write: if isAdmin();
+      // لعبة ELVON Trade: 2 محاولات ف النهار، وكل محاولة كتعطي 0 ولا 1 عملة
+      match /games/{g} {
+        allow get, list: if ownsPhone(p) || isAdmin();
+        allow create: if ownsPhone(p)
+          && (g == string(int(request.time.toMillis() / 86400000)) + '_1'
+              || g == string(int(request.time.toMillis() / 86400000)) + '_2')
+          && request.resource.data.keys().hasOnly(['coins', 'at', 'dir', 'ok'])
+          && request.resource.data.coins in [0, 1];
+        allow update, delete: if isAdmin();
+      }
     }
     // تتبع الطلب بالهاتف: الزبون يقدر يقرأ طلباته (بمعرفة رقمه) وينشئ سجلاً جديداً بحالة "جديد" فقط، والمدير وحده يغير الحالة
     match /track/{phoneHash}/orders/{orderId} {
