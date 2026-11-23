@@ -979,22 +979,11 @@
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-300 mb-1">اللون أو النسخة (اختياري)</label>
-                        <input type="text" id="wa-modal-variant" placeholder="مثال: أسود / 256GB / Type-C"
-                               class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-300 mb-1">ملاحظات إضافية (اختياري)</label>
-                        <input type="text" id="wa-modal-notes" placeholder="وقت التوصيل المناسب..."
-                               class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                    </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-zinc-300 mb-1">اللون أو النسخة (اختياري)</label>
+                    <input type="text" id="wa-modal-variant" placeholder="مثال: أسود / 256GB / Type-C"
+                           class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                 </div>
-
-                <p class="text-[11px] text-zinc-400 bg-elvon-black/70 border border-elvon-border rounded-xl p-2.5 leading-relaxed">
-                    اختار كيفاش بغيتي تطلب: <b class="text-white">من الموقع نيشان</b> (الطلب كيتسجل عندنا وكنتاصلو بيك باش نأكدوه)، ولا <b class="text-white">عبر WhatsApp</b>. ف جوج الحالات الدفع عند الاستلام.
-                </p>
 
                 <button type="submit" data-via="site" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span>تأكيد الطلب من الموقع</span>
@@ -2229,7 +2218,7 @@
             document.getElementById('wa-modal-prod-unit-price').textContent = `السعر للوحدة: ${p.price} MAD`;
             document.getElementById('wa-modal-qty').value = Math.max(1, qty);
             document.getElementById('wa-modal-variant').value = '';
-            document.getElementById('wa-modal-notes').value = '';
+            { const n = document.getElementById('wa-modal-notes'); if (n) n.value = ''; }
 
             refreshWaModalSummary();
             const modal = document.getElementById('whatsapp-order-modal');
@@ -2292,7 +2281,7 @@
             const address = document.getElementById('wa-modal-address').value.trim();
             const qty = Math.max(1, parseInt(document.getElementById('wa-modal-qty').value, 10) || 1);
             const variant = document.getElementById('wa-modal-variant').value.trim();
-            const notes = document.getElementById('wa-modal-notes').value.trim();
+            const notes = (document.getElementById('wa-modal-notes')?.value || '').trim();
 
             if (!name || !phone || !city || !address) {
                 showToast('يرجى ملء جميع الحقول المطلوبة');
