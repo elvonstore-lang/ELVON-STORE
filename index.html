@@ -44,8 +44,8 @@
     <!-- Firebase: مزامنة سحابية حقيقية (Firestore) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ===== الصق هنا إعدادات مشروع Firebase الخاص بك (انظر ملف التعليمات) =====
         const  ELVON_FIREBASE_CONFIG = {apiKey:"AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64",
@@ -69,8 +69,10 @@
                     if (!ELVON_FIREBASE_CONFIG.apiKey || !ELVON_FIREBASE_CONFIG.projectId) return false;
                     const app = initializeApp(ELVON_FIREBASE_CONFIG);
                     this.auth = getAuth(app);
+                    this.auth.languageCode = 'ar';
                     this.db = getFirestore(app);
                     this.ready = true;
+                    onAuthStateChanged(this.auth, () => { if (typeof window.onElvonAuthChange === 'function') window.onElvonAuthChange(); });
                     return true;
                 } catch (err) {
                     return false;
@@ -87,6 +89,36 @@
                 } catch (err) {
                     return false;
                 }
+            },
+            // ===== تأكيد رقم الهاتف (عملات ELVON) =====
+            phoneUser() {
+                const u = this.auth && this.auth.currentUser;
+                return (u && u.phoneNumber) ? u.phoneNumber : '';
+            },
+            async sendPhoneCode(e164) {
+                try {
+                    if (!this._rv) this._rv = new RecaptchaVerifier(this.auth, 'recaptcha-box', { size: 'invisible' });
+                    this._confirm = await signInWithPhoneNumber(this.auth, e164, this._rv);
+                    return { ok: true };
+                } catch (err) {
+                    try { if (this._rv) this._rv.clear(); } catch (e) {}
+                    this._rv = null;
+                    return { ok: false, code: (err && err.code) || 'unknown' };
+                }
+            },
+            async confirmPhoneCode(code) {
+                try {
+                    if (!this._confirm) return { ok: false, code: 'no-session' };
+                    await this._confirm.confirm(code);
+                    return { ok: true };
+                } catch (err) { return { ok: false, code: (err && err.code) || 'unknown' }; }
+            },
+            async getPath(pathArr) {
+                if (!this.ready) return null;
+                try {
+                    const snap = await getDoc(doc(this.db, ...pathArr));
+                    return snap.exists() ? snap.data() : null;
+                } catch (err) { return null; }
             },
             async adminSignOut() {
                 try { if (this.auth) await signOut(this.auth); } catch (err) {}
@@ -1090,13 +1122,35 @@
             <div class="rounded-2xl p-4 text-center bg-gradient-to-br from-amber-500/15 to-[#DC0A14]/10 border border-amber-400/30">
                 <svg class="w-16 h-16 mx-auto drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
                 <p class="text-sm font-black text-white mt-2">كل عملة = <span class="text-amber-300">1 درهم</span></p>
-                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">كتربح عملات على كل منتج فيه علامة العملة، وكيتزادو ف الحساب ديالك ملي كيتسلم الطلب. ومن بعد تقدر تخلص بيهم ف الطلب الجاي.</p>
+                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">كتربح عملات على المنتجات لي فيهم علامة العملة (كيتزادو ملي يتسلم الطلب)، وكل نهار تقدر تربح حتى 2 عملات ف لعبة ELVON Trade. ومن بعد تخلص بيهم ف الطلب الجاي.</p>
             </div>
-            <form onsubmit="checkWallet(event)" class="flex items-center gap-2">
-                <input type="tel" id="wallet-phone" required placeholder="رقم الهاتف لي كتطلب بيه (06...)" class="flex-1 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
-                <button type="submit" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-xs">شوف الرصيد</button>
-            </form>
             <div id="wallet-result"></div>
+            <div id="recaptcha-box"></div>
+        </div>
+    </div>
+
+    <!-- لعبة ELVON Trade: طالع ولا هابط؟ -->
+    <div id="trade-modal" class="fixed inset-0 z-[72] hidden items-center justify-center p-3">
+        <div onclick="closeTradeGame()" class="absolute inset-0 bg-black/85 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-[#0b0d10] border border-emerald-500/20 rounded-3xl p-4 z-10 space-y-3 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><svg class="w-8 h-8" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><div><h3 class="text-base font-black text-white leading-tight">ELVON Trade</h3><p class="text-[10px] text-zinc-400 font-bold">طالع ولا هابط؟ جواب صحيح = 1 عملة</p></div></div>
+                <button onclick="closeTradeGame()" class="w-8 h-8 rounded-lg bg-black/60 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="flex items-end justify-between bg-black/50 border border-zinc-800 rounded-2xl px-3 py-2">
+                <div><p class="text-[10px] text-zinc-500 font-bold" dir="ltr">ELVON / MAD</p><p id="tr-price" class="text-2xl font-black text-white" dir="ltr">10.000</p></div>
+                <div class="text-left"><p id="tr-chg" class="text-xs font-black text-emerald-400" dir="ltr">+0.00%</p><p class="text-[10px] text-zinc-500 font-bold">المحاولات اليوم: <b id="tr-tries" class="text-amber-300">2</b>/2</p></div>
+            </div>
+            <div class="relative bg-black/60 border border-zinc-800 rounded-2xl overflow-hidden">
+                <svg id="tr-chart" viewBox="0 0 360 200" class="w-full h-52 block" preserveAspectRatio="none"></svg>
+                <div id="tr-count" class="hidden absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/80 border border-zinc-700 text-xs font-black text-white"></div>
+            </div>
+            <div id="tr-msg" class="min-h-[40px] text-center text-sm font-black text-zinc-300 flex items-center justify-center">شنو بان ليك؟ الثمن غادي يطلع ولا يهبط ف 5 ثواني؟</div>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="tr-up" onclick="tradeGuess('up')" class="py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-95">طالع <span class="text-xl leading-none">▲</span></button>
+                <button id="tr-down" onclick="tradeGuess('down')" class="py-3.5 rounded-2xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-95">هابط <span class="text-xl leading-none">▼</span></button>
+            </div>
+            <p class="text-[10px] text-zinc-500 text-center">لعبة فابور: ما كترهن والو وما كتخسر حتى عملة. عندك 2 محاولات كل نهار.</p>
         </div>
     </div>
 
@@ -2252,41 +2306,55 @@
             }
         }
 
-        // ===== عملات ELVON: كل عملة = 1 درهم =====
+        // ===== عملات ELVON: كل عملة = 1 درهم (الحساب مربوط برقم هاتف متأكد منو) =====
         const walletCache = {};
         let coinTimers = {};
+        const todayKey = () => Math.floor(Date.now() / 86400000);
         function localWallets() { return loadState('elvon_wallets_v1', {}); }
+        function verifiedPhone() {
+            if (window.ElvonCloud?.ready) { const p = window.ElvonCloud.phoneUser(); return p ? normPhone(p) : ''; }
+            return loadState('elvon_local_verified', '');
+        }
+        async function readWalletRaw(n) {
+            if (window.ElvonCloud?.ready) {
+                const main = await window.ElvonCloud.getPath(['wallets', n]);
+                const games = await window.ElvonCloud.listPath(['wallets', n, 'games']);
+                return { balance: Math.floor(Number(main && main.balance) || 0), games };
+            }
+            return { balance: Math.floor(Number(localWallets()[n]) || 0), games: (loadState('elvon_games_v1', {})[n] || []) };
+        }
         async function fetchWallet(phone) {
             const n = normPhone(phone);
             if (n.length < 9) return null;
-            let balance = 0;
-            if (window.ElvonCloud?.ready) {
-                const h = await phoneHash(phone);
-                const rows = h ? await window.ElvonCloud.listPath(['wallets', h, 'w']) : [];
-                const m = rows.find(r => r._docId === 'main');
-                balance = Math.max(0, Math.floor(Number(m && m.balance) || 0));
-            } else {
-                balance = Math.max(0, Math.floor(Number(localWallets()[n]) || 0));
-            }
+            if (verifiedPhone() !== n) return { locked: true };
+            const raw = await readWalletRaw(n);
+            const gameCoins = raw.games.reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
+            const today = String(todayKey()) + '_';
+            const triesToday = raw.games.filter(g => String(g._docId || '').startsWith(today)).length;
+            const total = Math.max(0, raw.balance + gameCoins);
             const list = await lookupOrdersByPhone(phone, 50);
             const live = list.filter(o => o.status !== 'ملغي');
             const reserved = live.filter(o => o.coinsUsed > 0 && !o.coinsSpentApplied).reduce((sum, o) => sum + Math.floor(o.coinsUsed), 0);
             const pending = live.filter(o => o.coinsEarn > 0 && !o.coinsEarnedApplied).reduce((sum, o) => sum + Math.floor(o.coinsEarn), 0);
-            const w = { balance, reserved, pending, available: Math.max(0, balance - reserved) };
+            const w = { balance: total, reserved, pending, available: Math.max(0, total - reserved), triesLeft: Math.max(0, 2 - triesToday), triesToday };
             walletCache[n] = w;
             return w;
         }
         function setCoinBadge(w) {
             const b = document.getElementById('coin-badge');
             if (!b) return;
-            if (w && w.available > 0) { b.textContent = w.available; b.classList.remove('hidden'); } else b.classList.add('hidden');
+            if (w && !w.locked && w.available > 0) { b.textContent = w.available; b.classList.remove('hidden'); } else b.classList.add('hidden');
         }
+        async function refreshCoinBadge() { const vp = verifiedPhone(); setCoinBadge(vp ? await fetchWallet(vp) : null); }
+        window.onElvonAuthChange = () => { refreshCoinBadge(); const m = document.getElementById('wallet-modal'); if (m && !m.classList.contains('hidden')) renderWalletModal(); };
         function coinsToUse(which, maxAmount) {
             const box = document.getElementById('coin-use-' + which);
             if (!box || !box.checked) return 0;
             const phone = document.getElementById(which === 'cart' ? 'customer-phone' : 'wa-modal-phone')?.value || '';
-            const w = walletCache[normPhone(phone)];
-            if (!w) return 0;
+            const n = normPhone(phone);
+            if (n !== verifiedPhone()) return 0;
+            const w = walletCache[n];
+            if (!w || w.locked) return 0;
             return Math.max(0, Math.min(w.available, Math.floor(maxAmount)));
         }
         function renderCoinBox(which, w) {
@@ -2294,7 +2362,12 @@
             const txt = document.getElementById('coin-text-' + which);
             const chk = document.getElementById('coin-use-' + which);
             if (!box) return;
-            if (w && w.available > 0) {
+            if (w && w.locked) {
+                chk.checked = false; chk.disabled = true; chk.classList.add('hidden');
+                txt.innerHTML = `عندك عملات ELVON؟ <button type="button" onclick="openWalletModal()" class="underline font-black text-amber-300">أكد رقمك</button> باش تخلص بيهم`;
+                box.classList.remove('hidden');
+            } else if (w && w.available > 0) {
+                chk.disabled = false; chk.classList.remove('hidden');
                 txt.innerHTML = `عندك <b class="text-amber-300">${w.available} عملة</b> (= ${w.available} درهم). استعملهم ف هاد الطلب`;
                 box.classList.remove('hidden');
             } else {
@@ -2306,11 +2379,7 @@
         function onCoinPhone(which, value) {
             clearTimeout(coinTimers[which]);
             if (normPhone(value).length < 9) { renderCoinBox(which, null); return; }
-            coinTimers[which] = setTimeout(async () => {
-                const w = await fetchWallet(value);
-                renderCoinBox(which, w);
-                if (w) { saveState('elvon_last_phone', value); setCoinBadge(w); }
-            }, 450);
+            coinTimers[which] = setTimeout(async () => { renderCoinBox(which, await fetchWallet(value)); }, 450);
         }
         function resetCoinBox(which, phone) {
             const chk = document.getElementById('coin-use-' + which);
@@ -2318,54 +2387,214 @@
             const box = document.getElementById('coin-box-' + which);
             if (box) box.classList.add('hidden');
             delete walletCache[normPhone(phone)];
-            setTimeout(async () => { const w = await fetchWallet(phone); setCoinBadge(w); }, 1500);
+            setTimeout(refreshCoinBadge, 1500);
         }
+        // ----- نافذة العملات: تأكيد الرقم ثم الرصيد واللعبة -----
+        let walletStep = 'phone', walletPendingPhone = '', localCode = '';
         function openWalletModal() {
             const m = document.getElementById('wallet-modal');
-            const last = loadState('elvon_last_phone', '');
-            const inp = document.getElementById('wallet-phone');
-            if (inp && last && !inp.value) inp.value = last;
-            document.getElementById('wallet-result').innerHTML = '';
             m.classList.remove('hidden'); m.classList.add('flex');
-            if (window.lucide) lucide.createIcons();
-            if (inp && inp.value) checkWallet();
+            renderWalletModal();
         }
-        async function checkWallet(e) {
-            if (e) e.preventDefault();
-            const phone = document.getElementById('wallet-phone').value.trim();
-            const res = document.getElementById('wallet-result');
-            if (normPhone(phone).length < 9) { res.innerHTML = '<p class="text-xs text-red-300 font-bold text-center">دخل رقم هاتف صحيح.</p>'; return; }
-            res.innerHTML = '<p class="text-xs text-zinc-400 text-center">كنقلبو...</p>';
-            const w = await fetchWallet(phone);
-            saveState('elvon_last_phone', phone);
+        async function renderWalletModal(msg = '') {
+            const box = document.getElementById('wallet-result');
+            const vp = verifiedPhone();
+            const note = msg ? `<p class="text-xs font-bold text-center ${msg.startsWith('✓') ? 'text-emerald-400' : 'text-red-300'}">${esc(msg)}</p>` : '';
+            if (!vp) {
+                if (walletStep === 'code') {
+                    box.innerHTML = `<div class="space-y-2.5">
+                        <p class="text-xs text-zinc-300 text-center">صيفطنا كود ف SMS لـ <b dir="ltr" class="text-white">${esc(walletPendingPhone)}</b></p>
+                        <input id="wallet-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="• • • • • •" class="w-full text-center tracking-[0.5em] text-2xl font-black bg-elvon-black border border-amber-400/50 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-amber-400">
+                        <button onclick="confirmWalletCode()" id="wallet-btn" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-sm">تأكيد</button>
+                        <button onclick="walletStep='phone'; renderWalletModal()" class="w-full text-[11px] text-zinc-400 font-bold hover:text-white">بدل الرقم</button>${note}</div>`;
+                    setTimeout(() => document.getElementById('wallet-code')?.focus(), 50);
+                } else {
+                    const last = loadState('elvon_last_phone', '');
+                    box.innerHTML = `<div class="space-y-2.5">
+                        <p class="text-xs text-zinc-300 text-center leading-relaxed">باش تشوف وتستعمل العملات ديالك، أكد رقم الهاتف لي كتطلب بيه. غادي توصلك SMS فيها كود.</p>
+                        <input id="wallet-phone" type="tel" value="${esc(last)}" placeholder="06XXXXXXXX" class="w-full text-center text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-3 text-white focus:outline-none focus:border-amber-400" dir="ltr">
+                        <button onclick="sendWalletCode()" id="wallet-btn" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-sm">صيفط ليا الكود</button>${note}</div>`;
+                }
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+            box.innerHTML = '<p class="text-xs text-zinc-400 text-center py-4">كنحملو الرصيد...</p>';
+            const w = await fetchWallet(vp);
             setCoinBadge(w);
-            res.innerHTML = `
+            box.innerHTML = `
                 <div class="bg-elvon-black border border-elvon-border rounded-2xl p-4 text-center space-y-1">
-                    <p class="text-[11px] text-zinc-400 font-bold">الرصيد لي تقدر تستعمل</p>
+                    <p class="text-[11px] text-zinc-400 font-bold">الرصيد ديال <span dir="ltr">0${esc(vp)}</span> ✓</p>
                     <p class="text-4xl font-black text-amber-300">${w.available}<span class="text-base text-white"> عملة</span></p>
                     <p class="text-xs text-zinc-300 font-bold">= ${w.available} درهم</p>
                     ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب كيتأكد</p>` : ''}
                     ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
                 </div>
-                <p class="text-[11px] text-zinc-400 text-center mt-2">باش تخلص بالعملات: دخل نفس رقم الهاتف ف الطلب، وغادي يبان ليك خيار "استعمل العملات".</p>`;
+                <button onclick="openTradeGame()" class="w-full mt-3 rounded-2xl p-3 flex items-center gap-3 bg-gradient-to-l from-emerald-500/20 to-[#DC0A14]/20 border border-emerald-400/40 hover:border-emerald-300 transition-all">
+                    <span class="w-11 h-11 rounded-xl bg-black/60 flex items-center justify-center text-emerald-400 text-xl font-black">📈</span>
+                    <span class="flex-1 text-right"><span class="block text-sm font-black text-white">العب ELVON Trade</span><span class="block text-[11px] text-zinc-300 font-bold">${w.triesLeft ? `باقي ليك ${w.triesLeft} محاولات اليوم • كل جواب صحيح = 1 عملة` : 'كملتي المحاولات ديال اليوم، رجع غدا'}</span></span>
+                </button>
+                <p class="text-[11px] text-zinc-400 text-center mt-2">باش تخلص بالعملات: دخل نفس الرقم ف الطلب وغادي يبان ليك خيار "استعمل العملات".</p>
+                <button onclick="walletSignOut()" class="w-full mt-1 text-[11px] text-zinc-500 font-bold hover:text-white">خروج من الحساب</button>${note}`;
+        }
+        function phoneErrorText(code) {
+            const map = {
+                'auth/operation-not-allowed': 'التأكيد بالهاتف مازال ما تفعلش ف المتجر. عاود من بعد.',
+                'auth/billing-not-enabled': 'التأكيد بالهاتف مازال ما تفعلش ف المتجر. عاود من بعد.',
+                'auth/too-many-requests': 'حاولتي بزاف ديال المرات. عاود من بعد شوية.',
+                'auth/invalid-phone-number': 'رقم الهاتف ماشي صحيح.',
+                'auth/invalid-verification-code': 'الكود غالط، عاود شوف الـ SMS.',
+                'auth/code-expired': 'الكود سالا الوقت ديالو، طلب كود جديد.',
+                'auth/quota-exceeded': 'وصلنا للحد ديال الرسائل اليوم، عاود غدا.',
+                'auth/unauthorized-domain': 'هاد الموقع ماشي مسموح ليه ف Firebase.',
+                'auth/captcha-check-failed': 'وقع مشكل ف التحقق، عاود.'
+            };
+            return map[code] || ('ما قدرناش نكملو التأكيد (' + code + ')');
+        }
+        async function sendWalletCode() {
+            const raw = document.getElementById('wallet-phone')?.value || '';
+            const n = normPhone(raw);
+            if (n.length < 9) { renderWalletModal('دخل رقم هاتف صحيح (06... ولا 07...)'); return; }
+            const btn = document.getElementById('wallet-btn'); if (btn) { btn.disabled = true; btn.textContent = 'كنصيفطو...'; }
+            saveState('elvon_last_phone', '0' + n);
+            walletPendingPhone = '+212 ' + n;
+            if (window.ElvonCloud?.ready) {
+                const r = await window.ElvonCloud.sendPhoneCode('+212' + n);
+                if (!r.ok) { renderWalletModal(phoneErrorText(r.code)); return; }
+            } else {
+                localCode = String(Math.floor(100000 + Math.random() * 900000));
+                walletPendingPhone = n;
+                showToast(`وضع محلي (تجربة): الكود هو ${localCode}`);
+            }
+            walletStep = 'code';
+            renderWalletModal();
+        }
+        async function confirmWalletCode() {
+            const code = (document.getElementById('wallet-code')?.value || '').replace(/\D/g, '');
+            if (code.length < 6) { renderWalletModal('دخل الكود كامل (6 أرقام)'); return; }
+            if (window.ElvonCloud?.ready) {
+                const r = await window.ElvonCloud.confirmPhoneCode(code);
+                if (!r.ok) { renderWalletModal(phoneErrorText(r.code)); return; }
+            } else {
+                if (code !== localCode) { renderWalletModal('الكود غالط، عاود شوف'); return; }
+                saveState('elvon_local_verified', normPhone(walletPendingPhone));
+            }
+            walletStep = 'phone';
+            renderWalletModal('✓ تأكد الرقم ديالك');
+            refreshCoinBadge();
+            ['cart', 'wa'].forEach(w => { const el = document.getElementById(w === 'cart' ? 'customer-phone' : 'wa-modal-phone'); if (el && el.value) onCoinPhone(w, el.value); });
+        }
+        async function walletSignOut() {
+            if (window.ElvonCloud?.ready) { if (window.ElvonCloud.phoneUser()) await window.ElvonCloud.adminSignOut(); }
+            else saveState('elvon_local_verified', '');
+            setCoinBadge(null);
+            renderWalletModal();
+        }
+        // ----- لعبة ELVON Trade -----
+        const trade = { pts: [], timer: null, round: null, base: 10, tries: 0, busy: false };
+        async function openTradeGame() {
+            const vp = verifiedPhone();
+            if (!vp) { openWalletModal(); return; }
+            closeModalById('wallet-modal');
+            const m = document.getElementById('trade-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+            if (!trade.pts.length) { let p = 10; for (let i = 0; i < 70; i++) { p *= 1 + (Math.random() - .5) * .005; trade.pts.push(p); } trade.base = trade.pts[0]; }
+            clearInterval(trade.timer); trade.timer = setInterval(tradeTick, 160);
+            const w = await fetchWallet(vp); trade.tries = w.triesLeft || 0;
+            tradeUI(trade.tries ? 'شنو بان ليك؟ الثمن غادي يطلع ولا يهبط ف 5 ثواني؟' : 'كملتي المحاولات ديال اليوم. رجع غدا، عندك 2 محاولات جداد 👋');
+            drawTrade();
+        }
+        function closeTradeGame() {
+            if (trade.round) return;
+            clearInterval(trade.timer); trade.timer = null;
+            closeModalById('trade-modal');
+            refreshCoinBadge();
+        }
+        function tradeUI(msg, cls = 'text-zinc-300') {
+            document.getElementById('tr-tries').textContent = trade.tries;
+            const dis = !!trade.round || trade.tries <= 0 || trade.busy;
+            document.getElementById('tr-up').disabled = dis; document.getElementById('tr-down').disabled = dis;
+            if (msg !== undefined) { const el = document.getElementById('tr-msg'); el.innerHTML = msg; el.className = 'min-h-[40px] text-center text-sm font-black flex items-center justify-center ' + cls; }
+        }
+        function tradeTick() {
+            const last = trade.pts[trade.pts.length - 1];
+            const vol = trade.round ? .006 : .0035;
+            trade.pts.push(last * (1 + (Math.random() - .5) * vol));
+            if (trade.pts.length > 70) trade.pts.shift();
+            if (trade.round) {
+                const left = Math.max(0, 5 - (Date.now() - trade.round.start) / 1000);
+                const c = document.getElementById('tr-count'); c.classList.remove('hidden'); c.textContent = `⏱ ${left.toFixed(1)} ث`;
+                if (left <= 0) finishTrade();
+            }
+            drawTrade();
+        }
+        function drawTrade() {
+            const svg = document.getElementById('tr-chart'); if (!svg) return;
+            const pts = trade.pts, W = 360, H = 200, pad = 14;
+            let mn = Math.min(...pts), mx = Math.max(...pts);
+            if (trade.round) { mn = Math.min(mn, trade.round.entry); mx = Math.max(mx, trade.round.entry); }
+            const span = Math.max(mx - mn, .02);
+            const X = (i) => (i / (pts.length - 1)) * (W - 40), Y = (v) => H - pad - ((v - mn) / span) * (H - pad * 2);
+            const last = pts[pts.length - 1];
+            const ref = trade.round ? trade.round.entry : pts[0];
+            const up = last >= ref, col = up ? '#22c55e' : '#ef4444';
+            const line = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
+            let grid = ''; for (let i = 1; i < 5; i++) grid += `<line x1="0" x2="${W}" y1="${i * H / 5}" y2="${i * H / 5}" stroke="#ffffff10"/>`;
+            const entry = trade.round ? `<line x1="0" x2="${W}" y1="${Y(trade.round.entry)}" y2="${Y(trade.round.entry)}" stroke="#f4c542" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W - 4}" y="${Y(trade.round.entry) - 5}" fill="#f4c542" font-size="10" text-anchor="end" font-weight="800">${trade.round.dir === 'up' ? '▲ طالع' : '▼ هابط'}</text>` : '';
+            svg.innerHTML = `<defs><linearGradient id="trg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>${grid}
+                <path d="${line} L${X(pts.length - 1)} ${H} L0 ${H}Z" fill="url(#trg)"/>
+                <path d="${line}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>${entry}
+                <circle cx="${X(pts.length - 1)}" cy="${Y(last)}" r="4.5" fill="${col}"/><circle cx="${X(pts.length - 1)}" cy="${Y(last)}" r="9" fill="${col}" opacity=".25"/>
+                <rect x="${W - 38}" y="${Y(last) - 9}" width="38" height="18" rx="4" fill="${col}"/><text x="${W - 19}" y="${Y(last) + 4}" fill="#000" font-size="10" font-weight="900" text-anchor="middle">${last.toFixed(3)}</text>`;
+            document.getElementById('tr-price').textContent = last.toFixed(3);
+            const chg = ((last - trade.base) / trade.base) * 100;
+            const ce = document.getElementById('tr-chg'); ce.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`; ce.className = 'text-xs font-black ' + (chg >= 0 ? 'text-emerald-400' : 'text-red-400');
+        }
+        function tradeGuess(dir) {
+            if (trade.round || trade.tries <= 0 || trade.busy) return;
+            trade.round = { dir, entry: trade.pts[trade.pts.length - 1], start: Date.now() };
+            tradeUI(`اخترتي <span class="${dir === 'up' ? 'text-emerald-400' : 'text-red-400'} mx-1">${dir === 'up' ? 'طالع ▲' : 'هابط ▼'}</span> ... تسنى 5 ثواني`);
+        }
+        async function finishTrade() {
+            const r = trade.round; if (!r) return;
+            trade.round = null; trade.busy = true;
+            document.getElementById('tr-count').classList.add('hidden');
+            const last = trade.pts[trade.pts.length - 1];
+            const ok = (last > r.entry) === (r.dir === 'up');
+            const n = verifiedPhone();
+            const tryNo = 3 - trade.tries;
+            const rec = { coins: ok ? 1 : 0, at: Date.now(), dir: r.dir, ok };
+            let saved = true;
+            const id = `${todayKey()}_${tryNo}`;
+            if (window.ElvonCloud?.ready) saved = await window.ElvonCloud.setPath(['wallets', n, 'games', id], rec);
+            else { const all = loadState('elvon_games_v1', {}); (all[n] = all[n] || []).push({ ...rec, _docId: id }); saveState('elvon_games_v1', all); }
+            trade.busy = false;
+            if (!saved) { tradeUI('ما قدرناش نسجلو النتيجة، عاود من بعد.', 'text-red-300'); return; }
+            trade.tries = Math.max(0, trade.tries - 1);
+            delete walletCache[n];
+            const more = trade.tries ? ` باقي ليك ${trade.tries} محاولة اليوم.` : ' كملتي المحاولات ديال اليوم، رجع غدا!';
+            tradeUI(ok ? `✓ صحيح! ربحتي 1 عملة 🎉${more}` : `✗ ماشي هاد المرة.${more}`, ok ? 'text-emerald-400' : 'text-red-300');
+            refreshCoinBadge();
         }
         // تطبيق العملات ملي المدير كيبدل حالة الطلب
         async function adjustWallet(phone, delta) {
             const n = normPhone(phone);
             if (n.length < 9) return { ok: false };
             if (window.ElvonCloud?.ready && adminOrders) {
-                const h = await phoneHash(phone);
-                const rows = await window.ElvonCloud.listPath(['wallets', h, 'w']);
-                const cur = Math.floor(Number((rows.find(r => r._docId === 'main') || {}).balance) || 0);
-                const next = Math.max(0, cur + delta);
-                const ok = await window.ElvonCloud.setPath(['wallets', h, 'w', 'main'], { balance: next, updatedAt: Date.now() });
-                return { ok, before: cur, after: next };
+                const main = await window.ElvonCloud.getPath(['wallets', n]);
+                const games = await window.ElvonCloud.listPath(['wallets', n, 'games']);
+                const gameCoins = games.reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
+                const cur = Math.floor(Number(main && main.balance) || 0);
+                const before = Math.max(0, cur + gameCoins);
+                const next = Math.max(-gameCoins, cur + delta);
+                const ok = await window.ElvonCloud.setPath(['wallets', n], { balance: next, updatedAt: Date.now() });
+                return { ok, before, after: Math.max(0, next + gameCoins) };
             }
             const all = localWallets();
+            const games = (loadState('elvon_games_v1', {})[n] || []).reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
             const cur = Math.floor(Number(all[n]) || 0);
-            all[n] = Math.max(0, cur + delta);
+            all[n] = Math.max(-games, cur + delta);
             saveState('elvon_wallets_v1', all);
-            return { ok: true, before: cur, after: all[n] };
+            return { ok: true, before: Math.max(0, cur + games), after: Math.max(0, all[n] + games) };
         }
         async function applyOrderCoins(o, newStatus) {
             const used = Math.floor(Number(o.coinsUsed) || 0), earn = Math.floor(Number(o.coinsEarn) || 0);
@@ -2389,7 +2618,7 @@
             if (delta) setTimeout(() => showToast(delta > 0 ? `تزادو ${delta} عملة ف حساب الزبون (الرصيد: ${r.after})` : `تنقصو ${-delta} عملة من حساب الزبون (الرصيد: ${r.after})`), 1600);
         }
 
-        window.addEventListener('load', () => setTimeout(async () => { try { const last = loadState('elvon_last_phone', ''); if (last) setCoinBadge(await fetchWallet(last)); } catch (e) {} }, 2500));
+        window.addEventListener('load', () => setTimeout(refreshCoinBadge, 2500));
 
         // رقم طلب فريد (الوقت + حروف عشوائية) باش ما يتكررش حتى ملي يطلبو بزاف ديال الناس ف نفس الوقت
         function newOrderId() {
