@@ -904,8 +904,11 @@
                     <input type="text" id="customer-address" required placeholder="العنوان التفصيلي / الحي"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                     <p class="text-[10px] text-zinc-400 leading-relaxed" data-i18n="topTrustBar">الدفع عند الاستلام (COD) • توصيل مجاني فوق 300 درهم • تأكيد سريع عبر واتساب</p>
-                    <button type="submit" class="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
-                        <span data-i18n="confirmWhatsappBtn">تأكيد الطلب عبر واتساب (الدفع عند الاستلام)</span>
+                    <button type="submit" data-via="site" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span data-i18n="confirmSiteBtn">تأكيد الطلب من الموقع (الدفع عند الاستلام)</span>
+                    </button>
+                    <button type="submit" data-via="wa" class="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.5-.6-2.7-1.2-4.4-3.9-4.6-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.1.1.3 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.5.1.3.7 1.2 1.5 1.9 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.1.1.7-.1 1.3z"/></svg><span data-i18n="confirmWhatsappBtn">ولا اطلب عبر واتساب</span>
                     </button>
                 </form>
             </div>
@@ -924,7 +927,7 @@
                         <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                     </span>
                     <div>
-                        <h3 class="text-sm sm:text-base font-black text-white">إتمام الطلب عبر WhatsApp</h3>
+                        <h3 class="text-sm sm:text-base font-black text-white">إتمام الطلب</h3>
                         <p class="text-[11px] text-zinc-400">الدفع نقداً عند الاستلام (COD)</p>
                     </div>
                 </div>
@@ -990,14 +993,38 @@
                 </div>
 
                 <p class="text-[11px] text-zinc-400 bg-elvon-black/70 border border-elvon-border rounded-xl p-2.5 leading-relaxed">
-                    سيتم تجهيز رسالة طلبك بجميع التفاصيل وفتح محادثة WhatsApp الرسمية لـ ELVON STORE؛ اضغط على زر الإرسال داخل WhatsApp لتأكيد إرسال طلبك.
+                    اختار كيفاش بغيتي تطلب: <b class="text-white">من الموقع نيشان</b> (الطلب كيتسجل عندنا وكنتاصلو بيك باش نأكدوه)، ولا <b class="text-white">عبر WhatsApp</b>. ف جوج الحالات الدفع عند الاستلام.
                 </p>
 
-                <button type="submit" class="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span>تأكيد الطلب عبر WhatsApp</span>
+                <button type="submit" data-via="site" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span>تأكيد الطلب من الموقع</span>
+                </button>
+                <button type="submit" data-via="wa" class="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.5-.6-2.7-1.2-4.4-3.9-4.6-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.1.1.3 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.5.1.3.7 1.2 1.5 1.9 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.1.1.7-.1 1.3z"/></svg><span>ولا اطلب عبر WhatsApp</span>
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الطلب من الموقع -->
+    <div id="order-success-modal" class="fixed inset-0 z-[80] hidden items-center justify-center p-3 sm:p-4">
+        <div onclick="closeModalById('order-success-modal')" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative bg-elvon-card border border-elvon-border rounded-3xl w-full max-w-md p-6 z-10 text-center space-y-3">
+            <div id="os-icon" class="mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-600 to-emerald-400 shadow-lg shadow-emerald-500/30">
+                <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>
+            </div>
+            <h3 id="os-title" class="text-lg sm:text-xl font-black text-white">تم تسجيل طلبك بنجاح!</h3>
+            <p id="os-text" class="text-xs sm:text-sm text-zinc-300 leading-relaxed">فريق ELVON غادي يتاصل بيك ف أقرب وقت باش يأكد معاك الطلب. الدفع عند الاستلام.</p>
+            <div class="bg-elvon-black border border-elvon-border rounded-2xl p-3 grid grid-cols-2 gap-2 text-xs">
+                <div><p class="text-zinc-500 font-bold">رقم الطلب</p><p id="os-id" class="font-black text-[#DC0A14] text-base" dir="ltr"></p></div>
+                <div><p class="text-zinc-500 font-bold">المجموع (COD)</p><p id="os-total" class="font-black text-white text-base"></p></div>
+            </div>
+            <p class="text-[11px] text-zinc-400">تقدر تتبع الطلب ديالك ف أي وقت برقم الهاتف لي دخلتي.</p>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="closeModalById('order-success-modal'); openTrackOrderModal()" class="py-2.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs">تتبع الطلب</button>
+                <button onclick="closeModalById('order-success-modal')" class="py-2.5 rounded-xl bg-elvon-black border border-elvon-border text-white font-black text-xs">متابعة التسوق</button>
+            </div>
+            <a id="os-wa" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] font-bold text-[#25D366] hover:underline">عندك سؤال؟ تواصل معنا ف واتساب</a>
         </div>
     </div>
 
@@ -1242,7 +1269,8 @@
                 cartTitle: 'سلة التسوق',
                 subtotalLabel: 'المجموع الفرعي',
                 totalCodLabel: 'الإجمالي (COD)',
-                confirmWhatsappBtn: 'تأكيد الطلب عبر واتساب (الدفع عند الاستلام)',
+                confirmWhatsappBtn: 'ولا اطلب عبر واتساب',
+                confirmSiteBtn: 'تأكيد الطلب من الموقع (الدفع عند الاستلام)',
                 searchPlaceholder: 'ابحث عن إكسسوار، شاحن، سماعة، كفر...',
                 langToggle: 'FR'
             },
@@ -1270,7 +1298,8 @@
                 cartTitle: 'Panier',
                 subtotalLabel: 'Sous-total',
                 totalCodLabel: 'Total (COD)',
-                confirmWhatsappBtn: 'Commander sur WhatsApp (Paiement à la livraison)',
+                confirmWhatsappBtn: 'Ou commander via WhatsApp',
+                confirmSiteBtn: 'Confirmer la commande sur le site (paiement à la livraison)',
                 searchPlaceholder: 'Rechercher chargeur, écouteurs, coque...',
                 langToggle: 'AR'
             }
@@ -2224,8 +2253,35 @@
             }
         }
 
+        // حفظ الطلب ف السحابة وإظهار التأكيد (طلب من الموقع) أو فتح واتساب
+        async function finishOrder(newOrder, via, waText) {
+            if (via !== 'site') {
+                window.open(getWhatsappBaseUrl(waText), '_blank', 'noopener,noreferrer');
+                if (window.ElvonCloud?.ready) window.ElvonCloud.saveItem('orders', newOrder.id, newOrder);
+                return;
+            }
+            const waLink = document.getElementById('os-wa');
+            if (waLink) waLink.href = getWhatsappBaseUrl(`مرحباً، عندي سؤال على الطلب ديالي ${newOrder.id}`);
+            let saved = false;
+            if (window.ElvonCloud?.ready) {
+                try { saved = await window.ElvonCloud.saveItem('orders', newOrder.id, newOrder); } catch (err) { saved = false; }
+            }
+            const ok = saved !== false;
+            document.getElementById('os-id').textContent = newOrder.id;
+            document.getElementById('os-total').textContent = `${newOrder.total} MAD`;
+            document.getElementById('os-title').textContent = ok ? 'تم تسجيل طلبك بنجاح!' : 'ما قدرناش نسجلو الطلب دابا';
+            document.getElementById('os-text').textContent = ok
+                ? 'فريق ELVON غادي يتاصل بيك ف أقرب وقت باش يأكد معاك الطلب. الدفع عند الاستلام.'
+                : 'وقع مشكل ف الاتصال. ضغط على الزر الأخضر لتحت باش تصيفط الطلب ف واتساب، ولا عاود من بعد شوية.';
+            document.getElementById('os-icon').className = 'mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg ' + (ok ? 'bg-gradient-to-br from-emerald-600 to-emerald-400 shadow-emerald-500/30' : 'bg-gradient-to-br from-amber-600 to-amber-400 shadow-amber-500/30');
+            if (!ok && waLink) { waLink.href = getWhatsappBaseUrl(waText); waLink.textContent = 'صيفط الطلب ف واتساب'; } else if (waLink) waLink.textContent = 'عندك سؤال؟ تواصل معنا ف واتساب';
+            const m = document.getElementById('order-success-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+
         function submitDirectWhatsappModalOrder(e) {
             e.preventDefault();
+            const via = (e.submitter && e.submitter.dataset.via) || 'wa';
             const prodId = document.getElementById('wa-modal-prod-id').value;
             const p = products.find(item => item.id === prodId);
             if (!p) return;
@@ -2263,15 +2319,14 @@
                 discount: 0,
                 shipping,
                 total,
+                notes: notes || '',
+                channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
                 date: new Date().toLocaleDateString('ar-MA'),
                 createdAt: Date.now()
             };
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
-            if (window.ElvonCloud?.ready) {
-                window.ElvonCloud.saveItem('orders', newOrder.id, newOrder);
-            }
             pushTracking(newOrder);
             renderStoreProducts();
             renderAdminTables();
@@ -2316,8 +2371,8 @@
                 ].filter(v => v !== null).join('\n');
 
             closeModalById('whatsapp-order-modal');
-            showToast('تم تجهيز رسالة الطلب، أكمل الإرسال داخل WhatsApp');
-            window.open(getWhatsappBaseUrl(waText), '_blank', 'noopener,noreferrer');
+            if (via !== 'site') showToast('تم تجهيز رسالة الطلب، أكمل الإرسال داخل WhatsApp');
+            finishOrder(newOrder, via, waText);
         }
 
         // =====================================================================
@@ -3205,6 +3260,7 @@
 
         function submitOrder(e) {
             e.preventDefault();
+            const via = (e.submitter && e.submitter.dataset.via) || 'wa';
             if (!cart.length) {
                 showToast('أضف منتجاً واحداً على الأقل للسلة');
                 return;
@@ -3238,6 +3294,7 @@
                 discount,
                 shipping,
                 total,
+                channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
                 date: new Date().toLocaleDateString('ar-MA'),
                 createdAt: Date.now()
@@ -3245,9 +3302,6 @@
 
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
-            if (window.ElvonCloud?.ready) {
-                window.ElvonCloud.saveItem('orders', newOrder.id, newOrder);
-            }
             pushTracking(newOrder);
 
             const lines = cart.map(i => `• ${i.name} (×${i.qty}) = ${i.price * i.qty} MAD`).join('\n');
@@ -3281,9 +3335,8 @@
             renderDealsRows();
             renderAdminTables();
             toggleCartDrawer(false);
-            showToast(`تم تسجيل الطلب ${orderId} وإرساله إلى واتساب`);
-
-            window.open(getWhatsappBaseUrl(waText), '_blank', 'noopener,noreferrer');
+            if (via !== 'site') showToast(`تم تسجيل الطلب ${orderId} وإرساله إلى واتساب`);
+            finishOrder(newOrder, via, waText);
         }
 
         // =====================================================================
@@ -3847,10 +3900,10 @@
                         : DEFAULT_WA_URL;
                     return `
                         <tr class="hover:bg-elvon-black/40">
-                            <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span></td>
+                            <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD</td>
