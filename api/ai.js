@@ -80,7 +80,11 @@ async function callGemini(key, model, payload, signal) {
     signal,
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) return '';
+  if (!r.ok) {
+    const err = new Error((data && data.error && data.error.message) || ('HTTP ' + r.status));
+    err.status = r.status;
+    throw err;
+  }
   const cand = data && data.candidates && data.candidates[0];
   const parts = (cand && cand.content && cand.content.parts) || [];
   return parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
@@ -96,6 +100,22 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // GET /api/ai : quick health check (open it in the browser to see if the key works)
+  if (req.method === 'GET') {
+    const k = process.env.GEMINI_API_KEY || '';
+    if (!k) return res.status(200).json({ ok: false, problem: 'GEMINI_API_KEY is not set in Vercel. Add it, then Redeploy.' });
+    const out = { ok: false, key_length: k.length, models: {} };
+    if (k.length < 30) out.problem = 'The key looks too short. Copy the full key from aistudio.google.com/apikey.';
+    for (const model of MODELS) {
+      try {
+        const t = await callGemini(k, model, { contents: [{ role: 'user', parts: [{ text: 'Say OK' }] }] });
+        out.models[model] = t ? 'works' : 'empty reply';
+        if (t) { out.ok = true; break; }
+      } catch (e) { out.models[model] = 'error: ' + String(e.message).slice(0, 200); }
+    }
+    return res.status(200).json(out);
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   if (allowed !== '*' && origin && origin !== allowed) return res.status(403).json({ error: 'forbidden' });
 
@@ -115,6 +135,7 @@ module.exports = async (req, res) => {
     generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 },
   };
   const useSearch = process.env.AI_WEB_SEARCH !== 'false';
+  let lastError = '';
 
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 27000);
@@ -127,11 +148,16 @@ module.exports = async (req, res) => {
           const reply = await callGemini(key, model, payload, ctl.signal);
           if (reply) return res.status(200).json({ reply, model });
         } catch (e) {
-          if (ctl.signal.aborted) return res.status(200).json({ reply: '' });
+          if (ctl.signal.aborted) return res.status(200).json({ reply: '', error: 'timeout' });
+          lastError = String(e.message || e).slice(0, 200);
+          if (e.status === 400 || e.status === 401 || e.status === 403) {
+            // A bad key fails the same way on every model: stop early.
+            if (/api key|API_KEY|permission|unauthori/i.test(lastError)) return res.status(200).json({ reply: '', error: lastError });
+          }
         }
       }
     }
-    return res.status(200).json({ reply: '' });
+    return res.status(200).json({ reply: '', error: lastError });
   } finally {
     clearTimeout(timer);
   }
