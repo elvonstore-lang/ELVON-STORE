@@ -49,13 +49,17 @@ You must create this yourself; no credentials are included in this repo.
 ## 4. Admin panel
 Hidden from customers. Open it with the small lock icon in the footer, the `#admin` URL hash, `Ctrl+Shift+A`, or 7 taps on the logo area. In cloud mode it signs in with your Firebase admin email and password.
 
-## 5. Optional: free-form ELVON AI (Gemini)
-ELVON AI works without it (rule-based: order tracking by phone number and product comparison).
-To let it also answer with a language model when its local engine has no answer:
-1. Create a key at https://aistudio.google.com/apikey.
-2. Vercel > Settings > Environment Variables: add `GEMINI_API_KEY` (and optionally `ALLOWED_ORIGIN` = your site URL), then redeploy.
-3. In the admin panel > ELVON AI tab > AI server URL, enter `https://YOUR-DOMAIN/api/ai` (must start with `https://`).
+## 5. Smart ELVON AI (Gemini) — answers any question
+Without a key, ELVON AI uses its local engine (order tracking, comparison, store info, accessory tips).
+With a key it becomes a full smart assistant: general knowledge, tech, math, translation, writing, advice,
+fresh info via Google Search grounding, plus everything about your store (products, prices, delivery).
+1. Create a free key at https://aistudio.google.com/apikey.
+2. Vercel > Settings > Environment Variables: add `GEMINI_API_KEY`, then redeploy.
+   Optional: `ALLOWED_ORIGIN` (your site URL), `GEMINI_MODEL` (default `gemini-2.5-flash`), `AI_WEB_SEARCH=false` to turn off Google Search.
+3. That's it: the site calls `/api/ai` on its own domain automatically. (The admin panel > ELVON AI tab > AI server URL is only needed for a server on another domain.)
+
+Order tracking by phone number and repair booking always stay local; every other message goes to the AI with the full catalog and store info.
 
 ## Notes
-- `AI_FOCUS = true` in `index.html` limits ELVON AI to tracking and comparison. Set it to `false` to re-enable phone-repair booking and general questions.
+- `AI_FOCUS` in `index.html` is now `false` (all features on). Set it to `true` to limit the local engine to tracking and comparison.
 - Never put the Gemini key or any password in `index.html` or commit a `.env` file.
