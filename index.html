@@ -1261,6 +1261,10 @@
                         <input type="number" id="prod-coins" min="0" step="1" value="0" placeholder="مثال: 150"
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
                         <p class="text-[10px] text-zinc-400 mt-1">إلا حطيتي رقم، المنتج كيبان ف "متجر عملات ELVON" ويقدر الزبون يشريه بالعملات. خليها 0 إلا ما بغيتيهش ف متجر العملات.</p>
+                        <label class="block text-xs font-black text-amber-300 mb-1 mt-3">عملات كيربح الزبون ملي يشري هاد المنتج (على كل وحدة)</label>
+                        <input type="number" id="prod-coins-earn" min="0" step="1" value="0" placeholder="مثال: 10"
+                               class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                        <p class="text-[10px] text-zinc-400 mt-1">كيتزادو ف الحساب ديال الزبون غير ملي تحط الطلب "تم التسليم".</p>
                     </div>
                 </div>
 
@@ -2212,6 +2216,7 @@
                                     ${p.oldPrice ? `<span class="text-[11px] text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
                                 </div>
                                 ${Number(p.coins) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-[10px] font-black text-amber-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>ولا بـ ${Math.floor(p.coins)} عملة</span></div>` : ''}
+                                ${Number(p.coinsEarn) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/40 text-[10px] font-black text-emerald-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>اربح ${Math.floor(p.coinsEarn)} عملة</span></div>` : ''}
                             </div>
                         </div>
 
@@ -2555,7 +2560,7 @@
             if (!o.uid) return;
             const used = Math.floor(Number(o.coinsUsed) || 0);
             // الحد الأقصى ديال العملات لي يربح: حسب المنتجات الحالية (باش ما يتزادوش عملات مزورة)
-            const expected = (o.items || []).reduce((sum, it) => sum + Math.floor(Number((products.find(p => p.id === it.id) || {}).coins) || 0) * (it.qty || 1), 0);
+            const expected = (o.items || []).reduce((sum, it) => sum + Math.floor(Number((products.find(p => p.id === it.id) || {}).coinsEarn) || 0) * (it.qty || 1), 0);
             const earn = Math.min(Math.floor(Number(o.coinsEarn) || 0), expected || 0);
             const active = newStatus !== 'ملغي';
             let delta = 0; const patch = {};
@@ -2663,7 +2668,7 @@
                 total,
                 notes: notes || '',
                 coinsUsed,
-                coinsEarn: 0,
+                coinsEarn: (currentAccount() && !coinMode) ? Math.floor(Number(p.coinsEarn) || 0) * qty : 0,
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
                 channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
@@ -3650,7 +3655,7 @@
                 items: JSON.parse(JSON.stringify(cart)),
                 coinsUsed: coins,
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
-                coinsEarn: 0,
+                coinsEarn: !currentAccount() ? 0 : cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coinsEarn) || 0) * it.qty, 0),
                 promoCode: activePromo ? activePromo.code : null,
                 discount,
                 shipping,
@@ -4526,6 +4531,7 @@
                     document.getElementById('prod-old-price').value = p.oldPrice || '';
                     document.getElementById('prod-stock').value = p.stock;
                     document.getElementById('prod-coins').value = Math.floor(Number(p.coins) || 0);
+                    document.getElementById('prod-coins-earn').value = Math.floor(Number(p.coinsEarn) || 0);
                     document.getElementById('prod-desc').value = p.desc || '';
                     modalImages = Array.isArray(p.images) ? [...p.images] : [];
                 }
@@ -4574,6 +4580,7 @@
             const stock = parseInt(document.getElementById('prod-stock').value, 10) || 0;
             const desc = document.getElementById('prod-desc').value.trim();
             const coins = Math.max(0, Math.floor(parseFloat(document.getElementById('prod-coins')?.value) || 0));
+            const coinsEarn = Math.max(0, Math.floor(parseFloat(document.getElementById('prod-coins-earn')?.value) || 0));
 
             const finalImages = modalImages.length
                 ? [...modalImages]
@@ -4590,6 +4597,7 @@
                 stock,
                 desc,
                 coins,
+                coinsEarn,
                 images: finalImages,
                 updatedAt: Date.now()
             };
