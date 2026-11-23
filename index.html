@@ -2425,7 +2425,7 @@
                 <div class="bg-elvon-black border border-elvon-border rounded-2xl p-4 text-center space-y-1">
                     <p class="text-[11px] text-zinc-400 font-bold">مرحبا ${esc(acc.name)} 👋</p>
                     <p class="text-4xl font-black text-amber-300">${w.available}<span class="text-base text-white"> عملة</span></p>
-                    ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب كيتأكد</p>` : ''}
+                    ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب مازال ما تسلمش</p>` : ''}
                     ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
                 </div>
                 <div class="mt-3 rounded-2xl p-3 bg-amber-400/10 border border-amber-400/40 space-y-2">
@@ -2562,11 +2562,10 @@
             // الحد الأقصى ديال العملات لي يربح: حسب المنتجات الحالية (باش ما يتزادوش عملات مزورة)
             const expected = (o.items || []).reduce((sum, it) => sum + Math.floor(Number((products.find(p => p.id === it.id) || {}).coinsEarn) || 0) * (it.qty || 1), 0);
             const earn = Math.min(Math.floor(Number(o.coinsEarn) || 0), expected || 0);
-            const active = newStatus !== 'ملغي';
             let delta = 0; const patch = {};
             if (used) {
-                if (active && newStatus !== 'جديد' && !o.coinsSpentApplied) { delta -= used; patch.coinsSpentApplied = true; }
-                if (!active && o.coinsSpentApplied) { delta += used; patch.coinsSpentApplied = false; }
+                if (newStatus === 'تم التسليم' && !o.coinsSpentApplied) { delta -= used; patch.coinsSpentApplied = true; }
+                if (newStatus !== 'تم التسليم' && o.coinsSpentApplied) { delta += used; patch.coinsSpentApplied = false; }
             }
             if (earn) {
                 if (newStatus === 'تم التسليم' && !o.coinsEarnedApplied) { delta += earn; patch.coinsEarnedApplied = true; }
@@ -4412,7 +4411,7 @@
                             <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي تأكد الطلب)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD</td>
