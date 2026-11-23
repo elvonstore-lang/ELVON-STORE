@@ -57,7 +57,7 @@ plus everything about your store (products, prices, delivery).
 **Free option (recommended): Groq**
 1. Create a free account and key at https://console.groq.com/keys (no card needed).
 2. Vercel > Project > Settings > Environment Variables: add `GROQ_API_KEY`, then Redeploy.
-   Optional: `GROQ_MODEL` (default `llama-3.3-70b-versatile`).
+   Optional: `GROQ_MODEL` (default `openai/gpt-oss-120b`).
 
 **Optional: Gemini** (needs billing on some Google accounts; adds Google Search for fresh info)
 - Key from https://aistudio.google.com/apikey, saved as `GEMINI_API_KEY`. Optional: `GEMINI_MODEL`, `AI_WEB_SEARCH=false`.

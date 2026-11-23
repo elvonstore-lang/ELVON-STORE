@@ -9,7 +9,7 @@ const MODELS = [process.env.GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-flash-late
   .filter((m, i, a) => m && a.indexOf(m) === i);
 
 // Free alternative: Groq (https://console.groq.com/keys). Used first when GROQ_API_KEY is set.
-const GROQ_MODELS = [process.env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
+const GROQ_MODELS = [process.env.GROQ_MODEL, 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
   .filter((m, i, a) => m && a.indexOf(m) === i);
 
 const MAX_MSG = 2000;
