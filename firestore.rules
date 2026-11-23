@@ -15,22 +15,32 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'جديد';
       allow read, update, delete: if isAdmin();
     }
-    // عملات ELVON: الحساب مربوط برقم الهاتف لي تأكد بالكود (SMS)
-    // wallets/{رقم بلا 0، مثلا 612345678}: الزبون يقرأ غير الحساب ديالو، والمدير وحده يبدل الرصيد
-    function ownsPhone(p) {
-      return request.auth != null && request.auth.token.phone_number == '+212' + p;
+    // عملات ELVON: حسابات الزبناء (الاسم + الكود السري) — wallets/{uid}
+    // الزبون يقرأ غير الحساب ديالو، والمدير وحده يبدل الرصيد
+    function isUser(u) {
+      return request.auth != null && request.auth.uid == u;
     }
-    match /wallets/{p} {
-      allow get: if ownsPhone(p) || isAdmin();
-      allow list, write: if isAdmin();
+    match /wallets/{u} {
+      allow get: if isUser(u) || isAdmin();
+      allow create: if isUser(u) && request.resource.data.keys().hasOnly(['name', 'createdAt']);
+      allow update: if isAdmin();
+      allow list, delete: if isAdmin();
       // لعبة ELVON Trade: 2 محاولات ف النهار، وكل محاولة كتعطي 0 ولا 1 عملة
       match /games/{g} {
-        allow get, list: if ownsPhone(p) || isAdmin();
-        allow create: if ownsPhone(p)
+        allow get, list: if isUser(u) || isAdmin();
+        allow create: if isUser(u)
           && (g == string(int(request.time.toMillis() / 86400000)) + '_1'
               || g == string(int(request.time.toMillis() / 86400000)) + '_2')
           && request.resource.data.keys().hasOnly(['coins', 'at', 'dir', 'ok'])
           && request.resource.data.coins in [0, 1];
+        allow update, delete: if isAdmin();
+      }
+      // نسخة من طلبات الزبون باش يشوف العملات المحجوزة والجاية
+      match /orders/{o} {
+        allow get, list: if isUser(u) || isAdmin();
+        allow create: if isUser(u)
+          && request.resource.data.coinsSpentApplied == false
+          && request.resource.data.coinsEarnedApplied == false;
         allow update, delete: if isAdmin();
       }
     }
