@@ -15,6 +15,11 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'جديد';
       allow read, update, delete: if isAdmin();
     }
+    // عملات ELVON: الزبون يقرأ رصيده (بمعرفة رقمه)، والمدير وحده يزيد وينقص
+    match /wallets/{phoneHash}/w/{docId} {
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
     // تتبع الطلب بالهاتف: الزبون يقدر يقرأ طلباته (بمعرفة رقمه) وينشئ سجلاً جديداً بحالة "جديد" فقط، والمدير وحده يغير الحالة
     match /track/{phoneHash}/orders/{orderId} {
       allow get, list: if true;
