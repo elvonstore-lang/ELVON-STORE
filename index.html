@@ -2242,6 +2242,12 @@
             }
         }
 
+        // رقم طلب فريد (الوقت + حروف عشوائية) باش ما يتكررش حتى ملي يطلبو بزاف ديال الناس ف نفس الوقت
+        function newOrderId() {
+            const rnd = (window.crypto && crypto.getRandomValues) ? Array.from(crypto.getRandomValues(new Uint8Array(5)), b => (b % 36).toString(36)).join('') : Math.random().toString(36).slice(2, 7);
+            return ('ELV-' + Date.now().toString(36).slice(-5) + rnd).toUpperCase();
+        }
+
         // حفظ الطلب ف السحابة وإظهار التأكيد (طلب من الموقع) أو فتح واتساب
         async function finishOrder(newOrder, via, waText) {
             if (via !== 'site') {
@@ -2291,7 +2297,7 @@
             const subtotal = p.price * qty;
             const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
             const total = subtotal + shipping;
-            const orderId = 'ELV-' + Math.floor(1000 + Math.random() * 9000);
+            const orderId = newOrderId();
 
             if (typeof p.stock === 'number') {
                 p.stock = Math.max(0, p.stock - qty);
@@ -3261,7 +3267,7 @@
             const address = document.getElementById('customer-address').value.trim();
 
             const { subtotal, discount, shipping, total } = computeCartTotals();
-            const orderId = 'ELV-' + Math.floor(1000 + Math.random() * 9000);
+            const orderId = newOrderId();
 
             // خصم المخزون
             cart.forEach(item => {
@@ -3388,9 +3394,9 @@
             const q = document.getElementById('track-query-input').value.trim();
             const res = document.getElementById('track-order-result');
             let matches = [];
-            const idm = q.match(/elv-?\s?(\d{3,5})/i);
+            const idm = q.match(/elv-?\s?([a-z0-9]{4,10})/i);
             if (idm) {
-                const id = 'ELV-' + idm[1];
+                const id = 'ELV-' + idm[1].toUpperCase();
                 matches = orders.filter(o => String(o.id).toUpperCase() === id);
             } else if (normPhone(q).length >= 9) {
                 matches = await lookupOrdersByPhone(q);
@@ -3760,7 +3766,7 @@
             const T = (ar, f) => (fr ? f : ar);
             const compact = raw.replace(/[\s.\-]/g, '');
             const phoneM = compact.match(/(?:\+?212|0)[5-7]\d{8}/);
-            const idm = raw.match(/elv-?\s?(\d{3,5})/i);
+            const idm = raw.match(/elv-?\s?([a-z0-9]{4,10})/i);
             const wants = /(فين وصل|وين وصل|اين وصل|حاله (ال)?طلب|تتبع|suivi|ou en est|ou est ma commande|track|where is my order|وضعيه (ال)?طلب|طلبي|طلبيتي|ma commande|my order|كوماند)/.test(nq);
             if (!phoneM && !idm && !wants) return null;
             if (!phoneM && !idm && !aiCtx.awaitPhone && !wants) return null;
@@ -3782,7 +3788,7 @@
                 return { text: aiPick([T(`لقيت طلباتك، هادي آخر الأخبار:`, `Voici l'état de vos commandes :`), T(`تفضل، هادا هو وضع طلبك دابا:`, `Voilà où en est votre commande :`)]) + '\n\n' + list.map(fmt).join('\n\n'), products: [], chips: [], fallback: false };
             }
             if (idm) {
-                const id = 'ELV-' + idm[1];
+                const id = 'ELV-' + idm[1].toUpperCase();
                 const o = orders.find(x => String(x.id).toUpperCase() === id);
                 if (o) return { text: fmt(o), products: [], chips: [], fallback: false };
                 return ask();
