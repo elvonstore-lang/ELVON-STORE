@@ -106,7 +106,7 @@
                 try {
                     const cred = await createUserWithEmailAndPassword(this.auth, await this._acctEmail(name), this._acctPass(code));
                     await updateProfile(cred.user, { displayName: String(name).trim() });
-                    await setDoc(doc(this.db, 'wallets', cred.user.uid), { name: String(name).trim(), createdAt: Date.now() }, { merge: true });
+                    try { await setDoc(doc(this.db, 'wallets', cred.user.uid), { name: String(name).trim(), createdAt: Date.now() }); } catch (e) { /* الرصيد كيتصاوب من بعد */ }
                     return { ok: true };
                 } catch (err) { return { ok: false, code: (err && err.code) || 'unknown' }; }
             },
@@ -431,6 +431,17 @@
         </section>
 
         <!-- بطاقة ELVON AI المدمجة في الصفحة الرئيسية -->
+        <!-- متجر عملات ELVON: منتجات كتشرا بالعملات -->
+        <section id="coin-store" class="hidden rounded-3xl p-4 sm:p-5 border border-amber-400/35 bg-gradient-to-bl from-amber-500/10 via-elvon-card to-elvon-card space-y-3">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5"><svg class="w-10 h-10 drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                    <div><h2 class="text-base sm:text-lg font-black text-white">متجر عملات ELVON</h2><p class="text-[11px] text-zinc-400 font-bold">بدل العملات ديالك بهاد المنتجات • كل عملة = 1 درهم</p></div>
+                </div>
+                <button onclick="openWalletModal()" class="shrink-0 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black">الرصيد ديالي</button>
+            </div>
+            <div id="coin-store-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+        </section>
+
         <section id="elvon-ai-banner" class="bg-gradient-to-l from-[#180709] via-elvon-card to-elvon-card border border-[#DC0A14]/45 rounded-3xl p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div class="space-y-1.5">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DC0A14]/20 border border-[#DC0A14]/40 text-[#DC0A14] text-xs font-black">
@@ -791,6 +802,16 @@
                 <button type="submit" class="px-4 py-2 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-xs font-black">إضافة</button>
             </form>
             <div id="admin-promos-list" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+
+            <div class="pt-4 mt-2 border-t border-elvon-border space-y-3">
+                <div class="flex items-center gap-2"><svg class="w-7 h-7" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><div><h3 class="text-base font-black text-white">أكواد عملات ELVON</h3><p class="text-[11px] text-zinc-400">صاوب كود، والزبون لي داخل لحسابو ودخلو كيربح العدد ديال العملات لي حطيتي (مرة وحدة لكل زبون).</p></div></div>
+                <form onsubmit="addCoinCode(event)" class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="new-coin-code" required maxlength="24" placeholder="الكود (مثال: ELVON50)" class="flex-1 min-w-[160px] bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-400" dir="ltr">
+                    <input type="number" id="new-coin-amount" required min="1" max="100000" placeholder="عدد العملات" class="w-32 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black">إضافة</button>
+                </form>
+                <div id="admin-coincodes-list" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+            </div>
         </div>
 
         <!-- التبويب: التحليل -->
@@ -899,13 +920,7 @@
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                         <select id="customer-city" onchange="updateCartUI()" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]"><option value="طنجة">طنجة</option><option value="تطوان">تطوان</option><option value="الدار البيضاء">الدار البيضاء</option><option value="الرباط">الرباط</option><option value="فاس">فاس</option><option value="مراكش">مراكش</option><option value="أكادير">أكادير</option><option value="مكناس">مكناس</option><option value="وجدة">وجدة</option><option value="القنيطرة">القنيطرة</option><option value="سلا">سلا</option><option value="تمارة">تمارة</option><option value="المحمدية">المحمدية</option><option value="الجديدة">الجديدة</option><option value="آسفي">آسفي</option><option value="بني ملال">بني ملال</option><option value="خريبكة">خريبكة</option><option value="الناظور">الناظور</option><option value="تازة">تازة</option><option value="العرائش">العرائش</option><option value="القصر الكبير">القصر الكبير</option><option value="الحسيمة">الحسيمة</option><option value="شفشاون">شفشاون</option><option value="وزان">وزان</option><option value="أصيلة">أصيلة</option><option value="المضيق">المضيق</option><option value="الفنيدق">الفنيدق</option><option value="مرتيل">مرتيل</option><option value="سطات">سطات</option><option value="برشيد">برشيد</option><option value="بن سليمان">بن سليمان</option><option value="الخميسات">الخميسات</option><option value="تيفلت">تيفلت</option><option value="الصويرة">الصويرة</option><option value="ورزازات">ورزازات</option><option value="الرشيدية">الرشيدية</option><option value="ميدلت">ميدلت</option><option value="إفران">إفران</option><option value="خنيفرة">خنيفرة</option><option value="أزرو">أزرو</option><option value="صفرو">صفرو</option><option value="تيزنيت">تيزنيت</option><option value="إنزكان">إنزكان</option><option value="آيت ملول">آيت ملول</option><option value="تارودانت">تارودانت</option><option value="طانطان">طانطان</option><option value="كلميم">كلميم</option><option value="العيون">العيون</option><option value="الداخلة">الداخلة</option><option value="بوجدور">بوجدور</option><option value="السمارة">السمارة</option><option value="الفقيه بن صالح">الفقيه بن صالح</option><option value="قلعة السراغنة">قلعة السراغنة</option><option value="سيدي سليمان">سيدي سليمان</option><option value="سيدي قاسم">سيدي قاسم</option><option value="سيدي بنور">سيدي بنور</option><option value="الوالدية">الوالدية</option><option value="أزيلال">أزيلال</option><option value="بركان">بركان</option><option value="تاوريرت">تاوريرت</option><option value="جرادة">جرادة</option><option value="فجيج">فجيج</option><option value="بوعرفة">بوعرفة</option><option value="زاكورة">زاكورة</option><option value="تنغير">تنغير</option><option value="الدريوش">الدريوش</option><option value="العروي">العروي</option><option value="تاونات">تاونات</option><option value="كلميمة">كلميمة</option><option value="سيدي إفني">سيدي إفني</option><option value="اليوسفية">اليوسفية</option><option value="الحاجب">الحاجب</option><option value="مدينة أخرى">مدينة أخرى</option></select>
                     </div>
-<div id="coin-box-cart" class="hidden">
-                        <label class="flex items-center gap-2 bg-amber-400/10 border border-amber-400/40 rounded-xl px-3 py-2 cursor-pointer">
-                            <input type="checkbox" id="coin-use-cart" onchange="updateCartUI()" class="w-4 h-4 accent-amber-400">
-                            <svg class="w-6 h-6 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
-                            <span id="coin-text-cart" class="text-[11px] font-bold text-amber-200 leading-snug"></span>
-                        </label>
-                    </div>
+
                     <input type="text" id="customer-address" required placeholder="العنوان التفصيلي / الحي"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                     <p class="text-[10px] text-zinc-400 leading-relaxed" data-i18n="topTrustBar">الدفع عند الاستلام (COD) • توصيل مجاني فوق 300 درهم • تأكيد سريع عبر واتساب</p>
@@ -978,13 +993,7 @@
                     </div>
                 </div>
 
-<div id="coin-box-wa" class="hidden">
-                        <label class="flex items-center gap-2 bg-amber-400/10 border border-amber-400/40 rounded-xl px-3 py-2 cursor-pointer">
-                            <input type="checkbox" id="coin-use-wa" onchange="refreshWaModalSummary()" class="w-4 h-4 accent-amber-400">
-                            <svg class="w-6 h-6 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
-                            <span id="coin-text-wa" class="text-[11px] font-bold text-amber-200 leading-snug"></span>
-                        </label>
-                    </div>
+
                 <div>
                     <label class="block text-[11px] font-bold text-zinc-300 mb-1">العنوان بالتفصيل *</label>
                     <input type="text" id="wa-modal-address" required placeholder="الحي، الشارع، رقم المنزل..."
@@ -1125,35 +1134,10 @@
             <div class="rounded-2xl p-4 text-center bg-gradient-to-br from-amber-500/15 to-[#DC0A14]/10 border border-amber-400/30">
                 <svg class="w-16 h-16 mx-auto drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
                 <p class="text-sm font-black text-white mt-2">كل عملة = <span class="text-amber-300">1 درهم</span></p>
-                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">صاوب حساب بالاسم وكود سري. كتربح عملات على المنتجات لي فيهم علامة العملة (كيتزادو ملي يتسلم الطلب)، وكل نهار تقدر تربح حتى 2 عملات ف لعبة ELVON Trade. ومن بعد تخلص بيهم ف الطلب الجاي.</p>
+                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">صاوب حساب بالاسم وكود سري. دخل أكواد العملات لي كننشرو باش تربح عملات، ومن بعد بدلهم بالمنتجات لي ف "متجر عملات ELVON".</p>
             </div>
             <div id="wallet-result"></div>
             <div id="recaptcha-box"></div>
-        </div>
-    </div>
-
-    <!-- لعبة ELVON Trade: طالع ولا هابط؟ -->
-    <div id="trade-modal" class="fixed inset-0 z-[72] hidden items-center justify-center p-3">
-        <div onclick="closeTradeGame()" class="absolute inset-0 bg-black/85 backdrop-blur-sm"></div>
-        <div class="relative w-full max-w-md bg-[#0b0d10] border border-emerald-500/20 rounded-3xl p-4 z-10 space-y-3 shadow-2xl">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2"><svg class="w-8 h-8" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><div><h3 class="text-base font-black text-white leading-tight">ELVON Trade</h3><p class="text-[10px] text-zinc-400 font-bold">طالع ولا هابط؟ جواب صحيح = 1 عملة</p></div></div>
-                <button onclick="closeTradeGame()" class="w-8 h-8 rounded-lg bg-black/60 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <div class="flex items-end justify-between bg-black/50 border border-zinc-800 rounded-2xl px-3 py-2">
-                <div><p class="text-[10px] text-zinc-500 font-bold" dir="ltr">ELVON / MAD</p><p id="tr-price" class="text-2xl font-black text-white" dir="ltr">10.000</p></div>
-                <div class="text-left"><p id="tr-chg" class="text-xs font-black text-emerald-400" dir="ltr">+0.00%</p><p class="text-[10px] text-zinc-500 font-bold">المحاولات اليوم: <b id="tr-tries" class="text-amber-300">2</b>/2</p></div>
-            </div>
-            <div class="relative bg-black/60 border border-zinc-800 rounded-2xl overflow-hidden">
-                <svg id="tr-chart" viewBox="0 0 360 200" class="w-full h-52 block" preserveAspectRatio="none"></svg>
-                <div id="tr-count" class="hidden absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/80 border border-zinc-700 text-xs font-black text-white"></div>
-            </div>
-            <div id="tr-msg" class="min-h-[40px] text-center text-sm font-black text-zinc-300 flex items-center justify-center">شنو بان ليك؟ الثمن غادي يطلع ولا يهبط ف 5 ثواني؟</div>
-            <div class="grid grid-cols-2 gap-2">
-                <button id="tr-up" onclick="tradeGuess('up')" class="py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-95">طالع <span class="text-xl leading-none">▲</span></button>
-                <button id="tr-down" onclick="tradeGuess('down')" class="py-3.5 rounded-2xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-95">هابط <span class="text-xl leading-none">▼</span></button>
-            </div>
-            <p class="text-[10px] text-zinc-500 text-center">لعبة فابور: ما كترهن والو وما كتخسر حتى عملة. عندك 2 محاولات كل نهار.</p>
         </div>
     </div>
 
@@ -1250,10 +1234,10 @@
                 <div class="flex items-center gap-3 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3">
                     <svg class="w-9 h-9 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
                     <div class="flex-1">
-                        <label class="block text-xs font-black text-amber-300 mb-1">عملات ELVON لي كيربح الزبون على كل وحدة</label>
-                        <input type="number" id="prod-coins" min="0" step="1" value="0" placeholder="مثال: 5"
+                        <label class="block text-xs font-black text-amber-300 mb-1">ثمن المنتج بالعملات (متجر العملات)</label>
+                        <input type="number" id="prod-coins" min="0" step="1" value="0" placeholder="مثال: 150"
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
-                        <p class="text-[10px] text-zinc-400 mt-1">كل عملة = 1 درهم. خليها 0 إلا ما بغيتيش هاد المنتج يعطي عملات.</p>
+                        <p class="text-[10px] text-zinc-400 mt-1">إلا حطيتي رقم، المنتج كيبان ف "متجر عملات ELVON" ويقدر الزبون يشريه بالعملات. خليها 0 إلا ما بغيتيهش ف متجر العملات.</p>
                     </div>
                 </div>
 
@@ -2202,7 +2186,7 @@
                                     <span class="text-sm sm:text-base font-black text-[#DC0A14]">${p.price} MAD</span>
                                     ${p.oldPrice ? `<span class="text-[11px] text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
                                 </div>
-                                ${Number(p.coins) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-[10px] font-black text-amber-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>اربح ${Math.floor(p.coins)} عملة</span></div>` : ''}
+                                ${Number(p.coins) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-[10px] font-black text-amber-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>ولا بـ ${Math.floor(p.coins)} عملة</span></div>` : ''}
                             </div>
                         </div>
 
@@ -2274,15 +2258,16 @@
         // =====================================================================
         // نموذج الطلب الاحترافي داخل الموقع (Order Form Modal -> WhatsApp)
         // =====================================================================
-        function openWhatsappOrderModal(productId, qty = 1) {
+        function openWhatsappOrderModal(productId, qty = 1, coinMode = false) {
             const p = products.find(item => item.id === productId);
             if (!p) return;
+            waCoinMode = !!coinMode && Number(p.coins) > 0;
 
             const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
             document.getElementById('wa-modal-prod-id').value = p.id;
             document.getElementById('wa-modal-prod-img').src = img;
             document.getElementById('wa-modal-prod-name').textContent = p.name;
-            document.getElementById('wa-modal-prod-unit-price').textContent = `السعر للوحدة: ${p.price} MAD`;
+            document.getElementById('wa-modal-prod-unit-price').textContent = waCoinMode ? `الثمن: ${Math.floor(p.coins)} عملة ELVON للوحدة` : `السعر للوحدة: ${p.price} MAD`;
             document.getElementById('wa-modal-qty').value = Math.max(1, qty);
             document.getElementById('wa-modal-variant').value = '';
             { const n = document.getElementById('wa-modal-notes'); if (n) n.value = ''; }
@@ -2306,6 +2291,11 @@
             const coins = coinsToUse('wa', subtotal);
             const total = subtotal - coins + shipping;
             const previewEl = document.getElementById('wa-modal-prod-total-preview');
+            if (previewEl && waCoinMode) {
+                const need = Math.floor(p.coins) * qty, have = walletCache ? walletCache.available : 0;
+                previewEl.innerHTML = `${need} عملة • التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD عند الاستلام'}${need > have ? `<br><span class="text-red-400">عندك غير ${have} عملة</span>` : ''}`;
+                return;
+            }
             if (previewEl) {
                 previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)`;
             }
@@ -2323,11 +2313,11 @@
         async function readWalletRaw(uid) {
             if (window.ElvonCloud?.ready) {
                 const main = await window.ElvonCloud.getPath(['wallets', uid]);
-                const games = await window.ElvonCloud.listPath(['wallets', uid, 'games']);
+                const games = await window.ElvonCloud.listPath(['wallets', uid, 'redeems']);
                 const ords = await window.ElvonCloud.listPath(['wallets', uid, 'orders']);
                 return { balance: Math.floor(Number(main && main.balance) || 0), games, ords };
             }
-            return { balance: Math.floor(Number(localStoreGet('elvon_wallets_v2', {})[uid]) || 0), games: (localStoreGet('elvon_games_v2', {})[uid] || []), ords: (localStoreGet('elvon_wallet_orders_v1', {})[uid] || []) };
+            return { balance: Math.floor(Number(localStoreGet('elvon_wallets_v2', {})[uid]) || 0), games: (localStoreGet('elvon_redeems_v1', {})[uid] || []), ords: (localStoreGet('elvon_wallet_orders_v1', {})[uid] || []) };
         }
         async function fetchWallet() {
             const acc = currentAccount();
@@ -2350,46 +2340,15 @@
         }
         async function refreshCoinBadge() { setCoinBadge(currentAccount() ? await fetchWallet() : null); }
         window.onElvonAuthChange = () => { walletCacheClear(); refreshCoinBadge(); refreshCoinBoxes(); const m = document.getElementById('wallet-modal'); if (m && !m.classList.contains('hidden')) renderWalletModal(); };
-        function coinsToUse(which, maxAmount) {
-            const box = document.getElementById('coin-use-' + which);
-            if (!box || !box.checked || !currentAccount() || !walletCache) return 0;
-            return Math.max(0, Math.min(walletCache.available, Math.floor(maxAmount)));
-        }
+        function coinsToUse() { return 0; } // الخلاص بالعملات ولا غير ف متجر العملات
         function earnPreview(which) {
             if (which === 'cart') return cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coins) || 0) * it.qty, 0);
             const p = products.find(x => x.id === document.getElementById('wa-modal-prod-id')?.value);
             const qty = Math.max(1, parseInt(document.getElementById('wa-modal-qty')?.value, 10) || 1);
             return p ? Math.floor(Number(p.coins) || 0) * qty : 0;
         }
-        async function refreshCoinBoxes() {
-            const acc = currentAccount();
-            const w = acc ? await fetchWallet() : null;
-            ['cart', 'wa'].forEach(which => {
-                const box = document.getElementById('coin-box-' + which);
-                const txt = document.getElementById('coin-text-' + which);
-                const chk = document.getElementById('coin-use-' + which);
-                if (!box) return;
-                const earn = earnPreview(which);
-                if (!acc) {
-                    chk.checked = false; chk.disabled = true; chk.classList.add('hidden');
-                    txt.innerHTML = `<button type="button" onclick="openWalletModal()" class="underline font-black text-amber-300">دخل لحسابك ف عملات ELVON</button> ${earn ? `باش تربح ${earn} عملة على هاد الطلب ولا تخلص بالعملات` : 'باش تخلص بالعملات ديالك'}`;
-                    box.classList.remove('hidden');
-                } else if (w && w.available > 0) {
-                    chk.disabled = false; chk.classList.remove('hidden');
-                    txt.innerHTML = `${esc(acc.name)}، عندك <b class="text-amber-300">${w.available} عملة</b> (= ${w.available} درهم). استعملهم ف هاد الطلب${earn ? ` • وغادي تربح ${earn} عملة` : ''}`;
-                    box.classList.remove('hidden');
-                } else if (earn) {
-                    chk.checked = false; chk.disabled = true; chk.classList.add('hidden');
-                    txt.innerHTML = `${esc(acc.name)}، غادي تربح <b class="text-amber-300">${earn} عملة</b> ملي يتسلم هاد الطلب`;
-                    box.classList.remove('hidden');
-                } else {
-                    box.classList.add('hidden'); chk.checked = false;
-                }
-            });
-            updateCartUI(); refreshWaModalSummary();
-        }
+        async function refreshCoinBoxes() { /* الصناديق القديمة تحيدو */ }
         function resetCoinBox() {
-            ['cart', 'wa'].forEach(w => { const c = document.getElementById('coin-use-' + w); if (c) c.checked = false; });
             walletCacheClear();
             setTimeout(refreshCoinBadge, 1500);
         }
@@ -2416,10 +2375,10 @@
                 box.innerHTML = `<div class="space-y-2.5">
                     <div class="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-elvon-black border border-elvon-border">${tab('login', 'دخول لحسابي')}${tab('signup', 'حساب جديد')}</div>
                     <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الاسم</label>
-                    <input id="acc-name" type="text" maxlength="30" autocomplete="username" placeholder="مثال: يوسف الطنجاوي" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"></div>
+                    <input id="acc-name" name="elvon-acc-name" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="مثال: يوسف الطنجاوي" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"></div>
                     <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الكود السري (4 حتى 8 أرقام)</label>
-                    <input id="acc-code" type="password" inputmode="numeric" maxlength="8" autocomplete="${isNew ? 'new-password' : 'current-password'}" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>
-                    ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">عاود الكود</label><input id="acc-code2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>` : ''}
+                    <input id="acc-code" name="elvon-acc-pin" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="-webkit-text-security:disc" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>
+                    ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">عاود الكود</label><input id="acc-code2" name="elvon-acc-pin2" type="text" inputmode="numeric" maxlength="8" autocomplete="off" style="-webkit-text-security:disc" placeholder="••••" class="w-full text-center tracking-[0.4em] text-lg font-black bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-400"></div>` : ''}
                     <button onclick="submitAccount()" id="acc-btn" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-sm">${isNew ? 'صاوب الحساب' : 'دخول'}</button>
                     <p class="text-[10px] text-zinc-500 text-center">${isNew ? 'حفظ الاسم والكود، غادي تحتاجهم باش تدخل من أي تيليفون.' : 'ما عندكش حساب؟ ضغط على "حساب جديد".'}</p>${note}</div>`;
                 return;
@@ -2435,12 +2394,62 @@
                     ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب كيتأكد</p>` : ''}
                     ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
                 </div>
-                <button onclick="openTradeGame()" class="w-full mt-3 rounded-2xl p-3 flex items-center gap-3 bg-gradient-to-l from-emerald-500/20 to-[#DC0A14]/20 border border-emerald-400/40 hover:border-emerald-300 transition-all">
-                    <span class="w-11 h-11 rounded-xl bg-black/60 flex items-center justify-center text-emerald-400 text-xl font-black">📈</span>
-                    <span class="flex-1 text-right"><span class="block text-sm font-black text-white">العب ELVON Trade</span><span class="block text-[11px] text-zinc-300 font-bold">${w.triesLeft ? `باقي ليك ${w.triesLeft} محاولات اليوم • كل جواب صحيح = 1 عملة` : 'كملتي المحاولات ديال اليوم، رجع غدا'}</span></span>
-                </button>
-                <p class="text-[11px] text-zinc-400 text-center mt-2">ملي تكون داخل لحسابك، كتربح العملات على الطلبات وكتقدر تخلص بيهم ف السلة.</p>
+                <div class="mt-3 rounded-2xl p-3 bg-amber-400/10 border border-amber-400/40 space-y-2">
+                    <p class="text-xs font-black text-amber-200 text-center">عندك كود ديال العملات؟</p>
+                    <div class="flex gap-2">
+                        <input id="redeem-code" type="text" maxlength="24" autocomplete="off" placeholder="دخل الكود هنا" class="flex-1 min-w-0 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm font-black text-white uppercase tracking-wider focus:outline-none focus:border-amber-400" dir="ltr">
+                        <button onclick="redeemCoinCode()" id="redeem-btn" class="px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-xs">استعمل</button>
+                    </div>
+                </div>
+                <button onclick="closeModalById('wallet-modal'); scrollToId('coin-store')" class="w-full mt-2 py-2.5 rounded-xl bg-elvon-black border border-amber-400/40 text-amber-200 text-xs font-black hover:border-amber-300">تسوق ف متجر العملات</button>
                 <button onclick="accountSignOut()" class="w-full mt-1 text-[11px] text-zinc-500 font-bold hover:text-white">خروج من الحساب</button>${note}`;
+        }
+        function cleanCoinCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24); }
+        async function redeemCoinCode() {
+            const acc = currentAccount(); if (!acc) { renderWalletModal(); return; }
+            const code = cleanCoinCode(document.getElementById('redeem-code')?.value);
+            if (code.length < 3) { renderWalletModal('دخل الكود صحيح'); return; }
+            const btn = document.getElementById('redeem-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            let cc, already, ok = false;
+            if (window.ElvonCloud?.ready) {
+                cc = await window.ElvonCloud.getPath(['coincodes', code]);
+                already = await window.ElvonCloud.getPath(['wallets', acc.uid, 'redeems', code]);
+                if (cc && cc.active && !already) ok = await window.ElvonCloud.setPath(['wallets', acc.uid, 'redeems', code], { coins: Math.floor(Number(cc.coins) || 0), at: Date.now() });
+            } else {
+                cc = (loadState('elvon_coincodes_v1', [])).find(x => x.code === code);
+                const all = loadState('elvon_redeems_v1', {}); const mine = all[acc.uid] || [];
+                already = mine.find(x => x._docId === code);
+                if (cc && cc.active && !already) { mine.push({ _docId: code, coins: Math.floor(Number(cc.coins) || 0), at: Date.now() }); all[acc.uid] = mine; saveState('elvon_redeems_v1', all); ok = true; }
+            }
+            walletCacheClear();
+            if (!cc || !cc.active) renderWalletModal('هاد الكود ماشي صحيح ولا سالا الوقت ديالو');
+            else if (already) renderWalletModal('ديجا استعملتي هاد الكود');
+            else if (!ok) renderWalletModal('ما قدرناش نزيدو العملات، عاود من بعد');
+            else { renderWalletModal(`✓ مبروك! تزادو ليك ${Math.floor(Number(cc.coins) || 0)} عملة`); refreshCoinBadge(); }
+        }
+        // ----- متجر العملات -----
+        function renderCoinStore() {
+            const sec = document.getElementById('coin-store'), grid = document.getElementById('coin-store-grid');
+            if (!sec || !grid) return;
+            const list = products.filter(p => Number(p.coins) > 0);
+            sec.classList.toggle('hidden', !list.length);
+            grid.innerHTML = list.map(p => {
+                const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
+                const out = typeof p.stock === 'number' && p.stock <= 0;
+                return `<div class="bg-elvon-black/70 border border-amber-400/25 rounded-2xl overflow-hidden flex flex-col">
+                    <img src="${img}" alt="${esc(p.name)}" class="w-full aspect-square object-cover cursor-pointer" onclick="openProductDetail('${p.id}')">
+                    <div class="p-2.5 flex-1 flex flex-col gap-1.5">
+                        <p class="text-[11px] sm:text-xs font-black text-white line-clamp-2 leading-snug">${esc(p.name)}</p>
+                        <p class="flex items-center gap-1 text-amber-300 font-black text-sm"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>${Math.floor(p.coins)} عملة</p>
+                        <button onclick="buyWithCoins('${p.id}')" ${out ? 'disabled' : ''} class="mt-auto py-2 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-black text-[11px] font-black">${out ? 'نفد المخزون' : 'بدل بالعملات'}</button>
+                    </div></div>`;
+            }).join('');
+        }
+        let waCoinMode = false;
+        async function buyWithCoins(id) {
+            if (!currentAccount()) { showToast('دخل لحسابك ف عملات ELVON باش تشري بالعملات'); openWalletModal(); return; }
+            await fetchWallet();
+            openWhatsappOrderModal(id, 1, true);
         }
         function accountErrorText(code) {
             const map = {
@@ -2456,11 +2465,11 @@
         }
         async function submitAccount() {
             const name = (document.getElementById('acc-name')?.value || '').trim().replace(/\s+/g, ' ');
-            const code = (document.getElementById('acc-code')?.value || '').trim();
+            const code = (document.getElementById('acc-code')?.value || '').replace(/\D/g, '');
             const isNew = walletMode === 'signup';
             if (name.length < 2) { renderWalletModal('دخل الاسم ديالك'); return; }
             if (!/^\d{4,8}$/.test(code)) { renderWalletModal('الكود خاصو يكون من 4 حتى 8 أرقام'); return; }
-            if (isNew && code !== (document.getElementById('acc-code2')?.value || '').trim()) { renderWalletModal('الكود ماشي بحال بحال ف الجوج'); return; }
+            if (isNew && code !== (document.getElementById('acc-code2')?.value || '').replace(/\D/g, '')) { renderWalletModal('الكود ماشي بحال بحال ف الجوج'); return; }
             const btn = document.getElementById('acc-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
             if (window.ElvonCloud?.ready) {
                 const r = isNew ? await window.ElvonCloud.signUpAccount(name, code) : await window.ElvonCloud.signInAccount(name, code);
@@ -2481,98 +2490,12 @@
             else saveState('elvon_local_account', null);
             walletCacheClear(); setCoinBadge(null); renderWalletModal(); refreshCoinBoxes();
         }
-        // ----- لعبة ELVON Trade -----
-        const trade = { pts: [], timer: null, round: null, base: 10, tries: 0, busy: false };
-        async function openTradeGame() {
-            const acc = currentAccount();
-            if (!acc) { openWalletModal(); return; }
-            closeModalById('wallet-modal');
-            const m = document.getElementById('trade-modal'); m.classList.remove('hidden'); m.classList.add('flex');
-            if (window.lucide) lucide.createIcons();
-            if (!trade.pts.length) { let p = 10; for (let i = 0; i < 70; i++) { p *= 1 + (Math.random() - .5) * .005; trade.pts.push(p); } trade.base = trade.pts[0]; }
-            clearInterval(trade.timer); trade.timer = setInterval(tradeTick, 160);
-            const w = await fetchWallet(); trade.tries = (w && w.triesLeft) || 0;
-            tradeUI(trade.tries ? 'شنو بان ليك؟ الثمن غادي يطلع ولا يهبط ف 5 ثواني؟' : 'كملتي المحاولات ديال اليوم. رجع غدا، عندك 2 محاولات جداد 👋');
-            drawTrade();
-        }
-        function closeTradeGame() {
-            if (trade.round) return;
-            clearInterval(trade.timer); trade.timer = null;
-            closeModalById('trade-modal');
-            refreshCoinBadge();
-        }
-        function tradeUI(msg, cls = 'text-zinc-300') {
-            document.getElementById('tr-tries').textContent = trade.tries;
-            const dis = !!trade.round || trade.tries <= 0 || trade.busy;
-            document.getElementById('tr-up').disabled = dis; document.getElementById('tr-down').disabled = dis;
-            if (msg !== undefined) { const el = document.getElementById('tr-msg'); el.innerHTML = msg; el.className = 'min-h-[40px] text-center text-sm font-black flex items-center justify-center ' + cls; }
-        }
-        function tradeTick() {
-            const last = trade.pts[trade.pts.length - 1];
-            const vol = trade.round ? .006 : .0035;
-            trade.pts.push(last * (1 + (Math.random() - .5) * vol));
-            if (trade.pts.length > 70) trade.pts.shift();
-            if (trade.round) {
-                const left = Math.max(0, 5 - (Date.now() - trade.round.start) / 1000);
-                const c = document.getElementById('tr-count'); c.classList.remove('hidden'); c.textContent = `⏱ ${left.toFixed(1)} ث`;
-                if (left <= 0) finishTrade();
-            }
-            drawTrade();
-        }
-        function drawTrade() {
-            const svg = document.getElementById('tr-chart'); if (!svg) return;
-            const pts = trade.pts, W = 360, H = 200, pad = 14;
-            let mn = Math.min(...pts), mx = Math.max(...pts);
-            if (trade.round) { mn = Math.min(mn, trade.round.entry); mx = Math.max(mx, trade.round.entry); }
-            const span = Math.max(mx - mn, .02);
-            const X = (i) => (i / (pts.length - 1)) * (W - 40), Y = (v) => H - pad - ((v - mn) / span) * (H - pad * 2);
-            const last = pts[pts.length - 1];
-            const ref = trade.round ? trade.round.entry : pts[0];
-            const up = last >= ref, col = up ? '#22c55e' : '#ef4444';
-            const line = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
-            let grid = ''; for (let i = 1; i < 5; i++) grid += `<line x1="0" x2="${W}" y1="${i * H / 5}" y2="${i * H / 5}" stroke="#ffffff10"/>`;
-            const entry = trade.round ? `<line x1="0" x2="${W}" y1="${Y(trade.round.entry)}" y2="${Y(trade.round.entry)}" stroke="#f4c542" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W - 4}" y="${Y(trade.round.entry) - 5}" fill="#f4c542" font-size="10" text-anchor="end" font-weight="800">${trade.round.dir === 'up' ? '▲ طالع' : '▼ هابط'}</text>` : '';
-            svg.innerHTML = `<defs><linearGradient id="trg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>${grid}
-                <path d="${line} L${X(pts.length - 1)} ${H} L0 ${H}Z" fill="url(#trg)"/>
-                <path d="${line}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>${entry}
-                <circle cx="${X(pts.length - 1)}" cy="${Y(last)}" r="4.5" fill="${col}"/><circle cx="${X(pts.length - 1)}" cy="${Y(last)}" r="9" fill="${col}" opacity=".25"/>
-                <rect x="${W - 38}" y="${Y(last) - 9}" width="38" height="18" rx="4" fill="${col}"/><text x="${W - 19}" y="${Y(last) + 4}" fill="#000" font-size="10" font-weight="900" text-anchor="middle">${last.toFixed(3)}</text>`;
-            document.getElementById('tr-price').textContent = last.toFixed(3);
-            const chg = ((last - trade.base) / trade.base) * 100;
-            const ce = document.getElementById('tr-chg'); ce.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`; ce.className = 'text-xs font-black ' + (chg >= 0 ? 'text-emerald-400' : 'text-red-400');
-        }
-        function tradeGuess(dir) {
-            if (trade.round || trade.tries <= 0 || trade.busy) return;
-            trade.round = { dir, entry: trade.pts[trade.pts.length - 1], start: Date.now() };
-            tradeUI(`اخترتي <span class="${dir === 'up' ? 'text-emerald-400' : 'text-red-400'} mx-1">${dir === 'up' ? 'طالع ▲' : 'هابط ▼'}</span> ... تسنى 5 ثواني`);
-        }
-        async function finishTrade() {
-            const r = trade.round; if (!r) return;
-            trade.round = null; trade.busy = true;
-            document.getElementById('tr-count').classList.add('hidden');
-            const last = trade.pts[trade.pts.length - 1];
-            const ok = (last > r.entry) === (r.dir === 'up');
-            const n = (currentAccount() || {}).uid;
-            const tryNo = 3 - trade.tries;
-            const rec = { coins: ok ? 1 : 0, at: Date.now(), dir: r.dir, ok };
-            let saved = true;
-            const id = `${todayKey()}_${tryNo}`;
-            if (window.ElvonCloud?.ready) saved = await window.ElvonCloud.setPath(['wallets', n, 'games', id], rec);
-            else { const all = loadState('elvon_games_v2', {}); (all[n] = all[n] || []).push({ ...rec, _docId: id }); saveState('elvon_games_v2', all); }
-            trade.busy = false;
-            if (!saved) { tradeUI('ما قدرناش نسجلو النتيجة، عاود من بعد.', 'text-red-300'); return; }
-            trade.tries = Math.max(0, trade.tries - 1);
-            walletCacheClear();
-            const more = trade.tries ? ` باقي ليك ${trade.tries} محاولة اليوم.` : ' كملتي المحاولات ديال اليوم، رجع غدا!';
-            tradeUI(ok ? `✓ صحيح! ربحتي 1 عملة 🎉${more}` : `✗ ماشي هاد المرة.${more}`, ok ? 'text-emerald-400' : 'text-red-300');
-            refreshCoinBadge();
-        }
         // تطبيق العملات ملي المدير كيبدل حالة الطلب
         async function adjustWallet(uid, delta) {
             if (!uid) return { ok: false };
             if (window.ElvonCloud?.ready && adminOrders) {
                 const main = await window.ElvonCloud.getPath(['wallets', uid]);
-                const games = await window.ElvonCloud.listPath(['wallets', uid, 'games']);
+                const games = await window.ElvonCloud.listPath(['wallets', uid, 'redeems']);
                 const gameCoins = games.reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
                 const cur = Math.floor(Number(main && main.balance) || 0);
                 const next = Math.max(-gameCoins, cur + delta);
@@ -2580,7 +2503,7 @@
                 return { ok, before: Math.max(0, cur + gameCoins), after: Math.max(0, next + gameCoins) };
             }
             const all = loadState('elvon_wallets_v2', {});
-            const games = (loadState('elvon_games_v2', {})[uid] || []).reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
+            const games = (loadState('elvon_redeems_v1', {})[uid] || []).reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
             const cur = Math.floor(Number(all[uid]) || 0);
             all[uid] = Math.max(-games, cur + delta);
             saveState('elvon_wallets_v2', all);
@@ -2620,6 +2543,7 @@
         }
 
         window.addEventListener('load', () => setTimeout(refreshCoinBadge, 2500));
+        { const _rsp = renderStoreProducts; renderStoreProducts = function () { const r = _rsp.apply(this, arguments); try { renderCoinStore(); } catch (e) {} return r; }; }
 
         // رقم طلب فريد (الوقت + حروف عشوائية) باش ما يتكررش حتى ملي يطلبو بزاف ديال الناس ف نفس الوقت
         function newOrderId() {
@@ -2675,8 +2599,14 @@
 
             const subtotal = p.price * qty;
             const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
-            const coinsUsed = coinsToUse('wa', subtotal);
-            const total = subtotal - coinsUsed + shipping;
+            const coinMode = waCoinMode && Number(p.coins) > 0;
+            if (coinMode) {
+                if (!currentAccount()) { showToast('دخل لحسابك باش تشري بالعملات'); openWalletModal(); return; }
+                const need = Math.floor(p.coins) * qty;
+                if (!walletCache || walletCache.available < need) { showToast(`ما عندكش عملات كافية: خاصك ${need} وعندك ${walletCache ? walletCache.available : 0}`); return; }
+            }
+            const coinsUsed = coinMode ? Math.floor(p.coins) * qty : 0;
+            const total = coinMode ? shipping : subtotal + shipping;
             const orderId = newOrderId();
 
             if (typeof p.stock === 'number') {
@@ -2690,13 +2620,14 @@
                 phone,
                 city,
                 address,
-                items: [{ id: p.id, name: variant ? `${p.name} (${variant})` : p.name, qty, price: p.price }],
+                items: [{ id: p.id, name: (variant ? `${p.name} (${variant})` : p.name) + (coinMode ? ' (بالعملات)' : ''), qty, price: coinMode ? 0 : p.price }],
+                ...(coinMode ? { paidWithCoins: true } : {}),
                 discount: 0,
                 shipping,
                 total,
                 notes: notes || '',
                 coinsUsed,
-                coinsEarn: currentAccount() ? Math.floor(Number(p.coins) || 0) * qty : 0,
+                coinsEarn: 0,
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
                 channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
@@ -2724,7 +2655,7 @@
                     `Quantité : ${qty}`,
                     `Prix : ${p.price} MAD`,
                     `Livraison : ${shipping === 0 ? 'Gratuite' : shipping + ' MAD'}`,
-                    coinsUsed ? `Pièces ELVON : -${coinsUsed} MAD` : null,
+                    coinsUsed ? `Payé avec ${coinsUsed} pièces ELVON` : null,
                     `Total (COD) : ${total} MAD`,
                     notes ? `Notes : ${notes}` : null,
                     ``,
@@ -2743,7 +2674,7 @@
                     `الكمية: ${qty}`,
                     `السعر: ${p.price} MAD`,
                     `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}`,
-                    coinsUsed ? `عملات ELVON: -${coinsUsed} MAD` : null,
+                    coinsUsed ? `الخلاص: ${coinsUsed} عملة ELVON (من الحساب: ${currentAccount() ? currentAccount().name : ''})` : null,
                     `المجموع: ${total} MAD`,
                     notes ? `ملاحظات: ${notes}` : null,
                     ``,
@@ -3285,6 +3216,7 @@
             if (tab === 'overview') renderOverview();
             if (tab === 'analytics') renderCharts();
             if (tab === 'repairs') renderRepairs();
+            if (tab === 'promos') loadCoinCodes();
             if (tab === 'knowledge') { fillKnowledgeFields(); renderFaqList(); }
             if (window.lucide) lucide.createIcons();
         }
@@ -3681,7 +3613,7 @@
                 items: JSON.parse(JSON.stringify(cart)),
                 coinsUsed: coins,
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
-                coinsEarn: !currentAccount() ? 0 : cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coins) || 0) * it.qty, 0),
+                coinsEarn: 0,
                 promoCode: activePromo ? activePromo.code : null,
                 discount,
                 shipping,
@@ -4222,6 +4154,50 @@
             showToast(`تم حفظ الكوبون ${code}`);
         }
 
+        // ===== أكواد عملات ELVON (المدير) =====
+        let coinCodes = [];
+        async function loadCoinCodes() {
+            if (window.ElvonCloud?.ready && adminOrders) coinCodes = (await window.ElvonCloud.listPath(['coincodes'])).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            else coinCodes = loadState('elvon_coincodes_v1', []);
+            renderCoinCodes();
+        }
+        function saveCoinCodesLocal() { if (!(window.ElvonCloud?.ready && adminOrders)) saveState('elvon_coincodes_v1', coinCodes); }
+        async function addCoinCode(e) {
+            e.preventDefault();
+            const code = cleanCoinCode(document.getElementById('new-coin-code').value);
+            const coins = Math.floor(Number(document.getElementById('new-coin-amount').value) || 0);
+            if (code.length < 3 || coins < 1) { showToast('دخل كود (3 حروف ولا أكثر) وعدد العملات'); return; }
+            const obj = { code, coins, active: true, createdAt: Date.now() };
+            if (window.ElvonCloud?.ready && adminOrders) { const ok = await window.ElvonCloud.saveItem('coincodes', code, obj); if (!ok) return; }
+            coinCodes = [obj, ...coinCodes.filter(c => c.code !== code)];
+            saveCoinCodesLocal(); renderCoinCodes();
+            document.getElementById('new-coin-code').value = ''; document.getElementById('new-coin-amount').value = '';
+            showToast(`تحفظ الكود ${code}: ${coins} عملة`);
+        }
+        async function toggleCoinCode(code) {
+            const c = coinCodes.find(x => x.code === code); if (!c) return;
+            c.active = !c.active;
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.saveItem('coincodes', code, { active: c.active });
+            saveCoinCodesLocal(); renderCoinCodes();
+        }
+        async function deleteCoinCode(code) {
+            if (!confirm(`حذف الكود ${code}؟`)) return;
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.deleteItem('coincodes', code);
+            coinCodes = coinCodes.filter(x => x.code !== code);
+            saveCoinCodesLocal(); renderCoinCodes();
+        }
+        function renderCoinCodes() {
+            const wrap = document.getElementById('admin-coincodes-list'); if (!wrap) return;
+            wrap.innerHTML = coinCodes.length ? coinCodes.map(c => `
+                <div class="bg-elvon-black border border-amber-400/30 rounded-2xl p-3.5 flex items-center justify-between">
+                    <div><p class="text-sm font-black text-white" dir="ltr">${esc(c.code)}</p><p class="text-xs text-amber-300 font-bold">${esc(c.coins)} عملة • ${c.active ? 'مفعل' : 'متوقف'}</p></div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="toggleCoinCode('${esc(c.code)}')" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs font-bold text-white">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+                        <button onclick="deleteCoinCode('${esc(c.code)}')" class="px-2.5 py-1 rounded-lg bg-red-500/20 text-xs font-bold text-red-300">حذف</button>
+                    </div>
+                </div>`).join('') : '<p class="text-xs text-zinc-500">ما كاين حتى كود ديال العملات.</p>';
+        }
+
         function togglePromoActive(idx) {
             if (!promos[idx]) return;
             promos[idx].active = !promos[idx].active;
@@ -4306,7 +4282,7 @@
                             <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">عملات: ${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي تأكد الطلب)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي تأكد الطلب)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD</td>
