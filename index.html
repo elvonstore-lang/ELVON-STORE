@@ -435,7 +435,7 @@
         <section id="coin-store" class="hidden rounded-3xl p-4 sm:p-5 border border-amber-400/35 bg-gradient-to-bl from-amber-500/10 via-elvon-card to-elvon-card space-y-3">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2.5"><svg class="w-10 h-10 drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
-                    <div><h2 class="text-base sm:text-lg font-black text-white">متجر عملات ELVON</h2><p class="text-[11px] text-zinc-400 font-bold">بدل العملات ديالك بهاد المنتجات • كل عملة = 1 درهم</p></div>
+                    <div><h2 class="text-base sm:text-lg font-black text-white">متجر عملات ELVON</h2><p class="text-[11px] text-zinc-400 font-bold">بدل العملات ديالك بهاد المنتجات</p></div>
                 </div>
                 <button onclick="openWalletModal()" class="shrink-0 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black">الرصيد ديالي</button>
             </div>
@@ -1133,7 +1133,7 @@
             </div>
             <div class="rounded-2xl p-4 text-center bg-gradient-to-br from-amber-500/15 to-[#DC0A14]/10 border border-amber-400/30">
                 <svg class="w-16 h-16 mx-auto drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
-                <p class="text-sm font-black text-white mt-2">كل عملة = <span class="text-amber-300">1 درهم</span></p>
+                <p class="text-sm font-black text-white mt-2">عملات <span class="text-amber-300">ELVON</span></p>
                 <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">صاوب حساب بالاسم وكود سري. دخل أكواد العملات لي كننشرو باش تربح عملات، ومن بعد بدلهم بالمنتجات لي ف "متجر عملات ELVON".</p>
             </div>
             <div id="wallet-result"></div>
@@ -2301,7 +2301,7 @@
             }
         }
 
-        // ===== عملات ELVON: كل عملة = 1 درهم (حساب بالاسم + الكود) =====
+        // ===== عملات ELVON (حساب بالاسم + الكود) =====
         let walletCache = null;
         const walletCacheClear = () => { walletCache = null; };
         const todayKey = () => Math.floor(Date.now() / 86400000);
@@ -2390,7 +2390,6 @@
                 <div class="bg-elvon-black border border-elvon-border rounded-2xl p-4 text-center space-y-1">
                     <p class="text-[11px] text-zinc-400 font-bold">مرحبا ${esc(acc.name)} 👋</p>
                     <p class="text-4xl font-black text-amber-300">${w.available}<span class="text-base text-white"> عملة</span></p>
-                    <p class="text-xs text-zinc-300 font-bold">= ${w.available} درهم</p>
                     ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب كيتأكد</p>` : ''}
                     ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
                 </div>
