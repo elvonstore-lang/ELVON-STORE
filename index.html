@@ -232,6 +232,22 @@
     </style>
 </head>
 <body class="antialiased selection:bg-[#DC0A14] selection:text-white pb-16 sm:pb-0">
+    <!-- عملة ELVON -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+        <linearGradient id="ecoin-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".45" stop-color="#f4c542"/><stop offset="1" stop-color="#b9831a"/></linearGradient>
+        <linearGradient id="ecoin-r" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a5a0e"/><stop offset="1" stop-color="#ffdf7a"/></linearGradient>
+        <symbol id="ECOIN" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="48" fill="url(#ecoin-r)"/>
+            <circle cx="50" cy="50" r="41" fill="url(#ecoin-g)"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#a87414" stroke-width="2.5" stroke-dasharray="3 3"/>
+            <g transform="translate(18 18) scale(.64)">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#DC0A14" stroke-width="7"/>
+                <path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="#DC0A14" stroke-width="9" stroke-linecap="round"/>
+                <path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="#DC0A14"/>
+            </g>
+            <path d="M22 34 Q34 14 58 12" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/>
+        </symbol>
+    </defs></svg>
 
     <!-- حاوية الإشعارات الفورية -->
     <div id="toast-container" class="fixed bottom-20 sm:bottom-6 left-4 z-[110] flex flex-col gap-2 pointer-events-none"></div>
@@ -318,9 +334,9 @@
                         FR
                     </button>
 
-                    <button onclick="openWishlistModal()" class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-elvon-border text-white transition-all" title="المفضلة" aria-label="المفضلة">
-                        <i data-lucide="heart" class="w-4 h-4 text-[#DC0A14]"></i>
-                        <span id="wishlist-count-badge" class="absolute -top-1 -left-1 bg-[#DC0A14] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    <button onclick="openWalletModal()" class="relative h-10 min-w-10 px-1.5 flex items-center justify-center gap-1 rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-amber-400/40 text-white transition-all" title="عملات ELVON" aria-label="عملات ELVON">
+                        <svg class="w-7 h-7 drop-shadow" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                        <span id="coin-badge" class="hidden text-xs font-black text-amber-300 pl-0.5"></span>
                     </button>
 
                     <button onclick="openElvonAiModal()" class="hidden sm:flex h-10 px-3 items-center gap-1.5 rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-[#DC0A14]/50 text-white text-xs font-black transition-all" title="ELVON AI مساعد التسوق الذكي">
@@ -511,6 +527,10 @@
                             <button onclick="selectCategory('protection'); scrollToId('store-products-grid')" class="hover:text-[#DC0A14]">الحماية</button>
                             <span>•</span>
                             <button onclick="openTrackOrderModal()" class="hover:text-[#DC0A14]">تتبع الطلب</button>
+                            <span>•</span>
+                            <button onclick="openWishlistModal()" class="hover:text-[#DC0A14]">المفضلة</button>
+                            <span>•</span>
+                            <button onclick="openWalletModal()" class="hover:text-[#DC0A14]">عملات ELVON</button>
                             <span>•</span>
                             <button onclick="openElvonAiModal()" class="hover:text-[#DC0A14]">مساعد ELVON AI</button>
                         </div>
@@ -878,6 +898,10 @@
                         <span data-i18n="subtotalLabel">المجموع الفرعي</span>
                         <span id="cart-subtotal" class="font-bold text-white">0 MAD</span>
                     </div>
+                    <div id="cart-coins-row" class="hidden justify-between text-amber-300 font-bold">
+                        <span>عملات ELVON</span>
+                        <span id="cart-coins">-0 MAD</span>
+                    </div>
                     <div id="cart-discount-row" class="hidden justify-between text-emerald-400 font-bold">
                         <span>الخصم</span>
                         <span id="cart-discount">-0 MAD</span>
@@ -897,9 +921,16 @@
                     <input type="text" id="customer-name" required placeholder="الاسم الكامل"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="tel" id="customer-phone" required placeholder="رقم الهاتف (06...)"
+                        <input type="tel" id="customer-phone" required placeholder="رقم الهاتف (06...)" oninput="onCoinPhone('cart', this.value)"
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                         <select id="customer-city" onchange="updateCartUI()" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]"><option value="طنجة">طنجة</option><option value="تطوان">تطوان</option><option value="الدار البيضاء">الدار البيضاء</option><option value="الرباط">الرباط</option><option value="فاس">فاس</option><option value="مراكش">مراكش</option><option value="أكادير">أكادير</option><option value="مكناس">مكناس</option><option value="وجدة">وجدة</option><option value="القنيطرة">القنيطرة</option><option value="سلا">سلا</option><option value="تمارة">تمارة</option><option value="المحمدية">المحمدية</option><option value="الجديدة">الجديدة</option><option value="آسفي">آسفي</option><option value="بني ملال">بني ملال</option><option value="خريبكة">خريبكة</option><option value="الناظور">الناظور</option><option value="تازة">تازة</option><option value="العرائش">العرائش</option><option value="القصر الكبير">القصر الكبير</option><option value="الحسيمة">الحسيمة</option><option value="شفشاون">شفشاون</option><option value="وزان">وزان</option><option value="أصيلة">أصيلة</option><option value="المضيق">المضيق</option><option value="الفنيدق">الفنيدق</option><option value="مرتيل">مرتيل</option><option value="سطات">سطات</option><option value="برشيد">برشيد</option><option value="بن سليمان">بن سليمان</option><option value="الخميسات">الخميسات</option><option value="تيفلت">تيفلت</option><option value="الصويرة">الصويرة</option><option value="ورزازات">ورزازات</option><option value="الرشيدية">الرشيدية</option><option value="ميدلت">ميدلت</option><option value="إفران">إفران</option><option value="خنيفرة">خنيفرة</option><option value="أزرو">أزرو</option><option value="صفرو">صفرو</option><option value="تيزنيت">تيزنيت</option><option value="إنزكان">إنزكان</option><option value="آيت ملول">آيت ملول</option><option value="تارودانت">تارودانت</option><option value="طانطان">طانطان</option><option value="كلميم">كلميم</option><option value="العيون">العيون</option><option value="الداخلة">الداخلة</option><option value="بوجدور">بوجدور</option><option value="السمارة">السمارة</option><option value="الفقيه بن صالح">الفقيه بن صالح</option><option value="قلعة السراغنة">قلعة السراغنة</option><option value="سيدي سليمان">سيدي سليمان</option><option value="سيدي قاسم">سيدي قاسم</option><option value="سيدي بنور">سيدي بنور</option><option value="الوالدية">الوالدية</option><option value="أزيلال">أزيلال</option><option value="بركان">بركان</option><option value="تاوريرت">تاوريرت</option><option value="جرادة">جرادة</option><option value="فجيج">فجيج</option><option value="بوعرفة">بوعرفة</option><option value="زاكورة">زاكورة</option><option value="تنغير">تنغير</option><option value="الدريوش">الدريوش</option><option value="العروي">العروي</option><option value="تاونات">تاونات</option><option value="كلميمة">كلميمة</option><option value="سيدي إفني">سيدي إفني</option><option value="اليوسفية">اليوسفية</option><option value="الحاجب">الحاجب</option><option value="مدينة أخرى">مدينة أخرى</option></select>
+                    </div>
+<div id="coin-box-cart" class="hidden">
+                        <label class="flex items-center gap-2 bg-amber-400/10 border border-amber-400/40 rounded-xl px-3 py-2 cursor-pointer">
+                            <input type="checkbox" id="coin-use-cart" onchange="updateCartUI()" class="w-4 h-4 accent-amber-400">
+                            <svg class="w-6 h-6 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                            <span id="coin-text-cart" class="text-[11px] font-bold text-amber-200 leading-snug"></span>
+                        </label>
                     </div>
                     <input type="text" id="customer-address" required placeholder="العنوان التفصيلي / الحي"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
@@ -956,7 +987,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-zinc-300 mb-1">رقم الهاتف *</label>
-                        <input type="tel" id="wa-modal-phone" required placeholder="06XXXXXXXX"
+                        <input type="tel" id="wa-modal-phone" required placeholder="06XXXXXXXX" oninput="onCoinPhone('wa', this.value)"
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                     </div>
                 </div>
@@ -973,6 +1004,13 @@
                     </div>
                 </div>
 
+<div id="coin-box-wa" class="hidden">
+                        <label class="flex items-center gap-2 bg-amber-400/10 border border-amber-400/40 rounded-xl px-3 py-2 cursor-pointer">
+                            <input type="checkbox" id="coin-use-wa" onchange="refreshWaModalSummary()" class="w-4 h-4 accent-amber-400">
+                            <svg class="w-6 h-6 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                            <span id="coin-text-wa" class="text-[11px] font-bold text-amber-200 leading-snug"></span>
+                        </label>
+                    </div>
                 <div>
                     <label class="block text-[11px] font-bold text-zinc-300 mb-1">العنوان بالتفصيل *</label>
                     <input type="text" id="wa-modal-address" required placeholder="الحي، الشارع، رقم المنزل..."
@@ -1102,6 +1140,27 @@
         </div>
     </div>
 
+    <!-- نافذة عملات ELVON -->
+    <div id="wallet-modal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
+        <div onclick="closeModalById('wallet-modal')" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative bg-elvon-card border border-amber-400/30 rounded-3xl w-full max-w-md max-h-[88vh] overflow-y-auto p-5 z-10 space-y-4">
+            <div class="flex items-center justify-between border-b border-elvon-border pb-3">
+                <h3 class="text-base font-black text-white flex items-center gap-2"><svg class="w-7 h-7" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>عملات ELVON</span></h3>
+                <button onclick="closeModalById('wallet-modal')" class="w-8 h-8 rounded-lg bg-elvon-black border border-elvon-border flex items-center justify-center text-zinc-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="rounded-2xl p-4 text-center bg-gradient-to-br from-amber-500/15 to-[#DC0A14]/10 border border-amber-400/30">
+                <svg class="w-16 h-16 mx-auto drop-shadow-lg" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                <p class="text-sm font-black text-white mt-2">كل عملة = <span class="text-amber-300">1 درهم</span></p>
+                <p class="text-[11px] text-zinc-300 mt-1 leading-relaxed">كتربح عملات على كل منتج فيه علامة العملة، وكيتزادو ف الحساب ديالك ملي كيتسلم الطلب. ومن بعد تقدر تخلص بيهم ف الطلب الجاي.</p>
+            </div>
+            <form onsubmit="checkWallet(event)" class="flex items-center gap-2">
+                <input type="tel" id="wallet-phone" required placeholder="رقم الهاتف لي كتطلب بيه (06...)" class="flex-1 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-xs">شوف الرصيد</button>
+            </form>
+            <div id="wallet-result"></div>
+        </div>
+    </div>
+
     <!-- نافذة تتبع الطلبات -->
     <div id="track-order-modal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
         <div onclick="closeModalById('track-order-modal')" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
@@ -1189,6 +1248,16 @@
                         <label class="block text-xs font-bold text-zinc-300 mb-1">المخزون</label>
                         <input type="number" id="prod-stock" required min="0" value="15"
                                class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-elvon-red">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3">
+                    <svg class="w-9 h-9 shrink-0" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
+                    <div class="flex-1">
+                        <label class="block text-xs font-black text-amber-300 mb-1">عملات ELVON لي كيربح الزبون على كل وحدة</label>
+                        <input type="number" id="prod-coins" min="0" step="1" value="0" placeholder="مثال: 5"
+                               class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                        <p class="text-[10px] text-zinc-400 mt-1">كل عملة = 1 درهم. خليها 0 إلا ما بغيتيش هاد المنتج يعطي عملات.</p>
                     </div>
                 </div>
 
@@ -2136,6 +2205,7 @@
                                     <span class="text-sm sm:text-base font-black text-[#DC0A14]">${p.price} MAD</span>
                                     ${p.oldPrice ? `<span class="text-[11px] text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
                                 </div>
+                                ${Number(p.coins) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-[10px] font-black text-amber-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>اربح ${Math.floor(p.coins)} عملة</span></div>` : ''}
                             </div>
                         </div>
 
@@ -2235,11 +2305,157 @@
             const city = document.getElementById('wa-modal-city').value || 'طنجة';
             const subtotal = p.price * qty;
             const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
-            const total = subtotal + shipping;
+            const coins = coinsToUse('wa', subtotal);
+            const total = subtotal - coins + shipping;
             const previewEl = document.getElementById('wa-modal-prod-total-preview');
             if (previewEl) {
-                previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'} • المجموع: ${total} MAD (COD)`;
+                previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)`;
             }
+        }
+
+        // ===== عملات ELVON: كل عملة = 1 درهم =====
+        const walletCache = {};
+        let coinTimers = {};
+        function localWallets() { return loadState('elvon_wallets_v1', {}); }
+        async function fetchWallet(phone) {
+            const n = normPhone(phone);
+            if (n.length < 9) return null;
+            let balance = 0;
+            if (window.ElvonCloud?.ready) {
+                const h = await phoneHash(phone);
+                const rows = h ? await window.ElvonCloud.listPath(['wallets', h, 'w']) : [];
+                const m = rows.find(r => r._docId === 'main');
+                balance = Math.max(0, Math.floor(Number(m && m.balance) || 0));
+            } else {
+                balance = Math.max(0, Math.floor(Number(localWallets()[n]) || 0));
+            }
+            const list = await lookupOrdersByPhone(phone, 50);
+            const live = list.filter(o => o.status !== 'ملغي');
+            const reserved = live.filter(o => o.coinsUsed > 0 && !o.coinsSpentApplied).reduce((sum, o) => sum + Math.floor(o.coinsUsed), 0);
+            const pending = live.filter(o => o.coinsEarn > 0 && !o.coinsEarnedApplied).reduce((sum, o) => sum + Math.floor(o.coinsEarn), 0);
+            const w = { balance, reserved, pending, available: Math.max(0, balance - reserved) };
+            walletCache[n] = w;
+            return w;
+        }
+        function setCoinBadge(w) {
+            const b = document.getElementById('coin-badge');
+            if (!b) return;
+            if (w && w.available > 0) { b.textContent = w.available; b.classList.remove('hidden'); } else b.classList.add('hidden');
+        }
+        function coinsToUse(which, maxAmount) {
+            const box = document.getElementById('coin-use-' + which);
+            if (!box || !box.checked) return 0;
+            const phone = document.getElementById(which === 'cart' ? 'customer-phone' : 'wa-modal-phone')?.value || '';
+            const w = walletCache[normPhone(phone)];
+            if (!w) return 0;
+            return Math.max(0, Math.min(w.available, Math.floor(maxAmount)));
+        }
+        function renderCoinBox(which, w) {
+            const box = document.getElementById('coin-box-' + which);
+            const txt = document.getElementById('coin-text-' + which);
+            const chk = document.getElementById('coin-use-' + which);
+            if (!box) return;
+            if (w && w.available > 0) {
+                txt.innerHTML = `عندك <b class="text-amber-300">${w.available} عملة</b> (= ${w.available} درهم). استعملهم ف هاد الطلب`;
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+                if (chk) chk.checked = false;
+            }
+            if (which === 'cart') updateCartUI(); else refreshWaModalSummary();
+        }
+        function onCoinPhone(which, value) {
+            clearTimeout(coinTimers[which]);
+            if (normPhone(value).length < 9) { renderCoinBox(which, null); return; }
+            coinTimers[which] = setTimeout(async () => {
+                const w = await fetchWallet(value);
+                renderCoinBox(which, w);
+                if (w) { saveState('elvon_last_phone', value); setCoinBadge(w); }
+            }, 450);
+        }
+        function resetCoinBox(which, phone) {
+            const chk = document.getElementById('coin-use-' + which);
+            if (chk) chk.checked = false;
+            const box = document.getElementById('coin-box-' + which);
+            if (box) box.classList.add('hidden');
+            delete walletCache[normPhone(phone)];
+            setTimeout(async () => { const w = await fetchWallet(phone); setCoinBadge(w); }, 1500);
+        }
+        function openWalletModal() {
+            const m = document.getElementById('wallet-modal');
+            const last = loadState('elvon_last_phone', '');
+            const inp = document.getElementById('wallet-phone');
+            if (inp && last && !inp.value) inp.value = last;
+            document.getElementById('wallet-result').innerHTML = '';
+            m.classList.remove('hidden'); m.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+            if (inp && inp.value) checkWallet();
+        }
+        async function checkWallet(e) {
+            if (e) e.preventDefault();
+            const phone = document.getElementById('wallet-phone').value.trim();
+            const res = document.getElementById('wallet-result');
+            if (normPhone(phone).length < 9) { res.innerHTML = '<p class="text-xs text-red-300 font-bold text-center">دخل رقم هاتف صحيح.</p>'; return; }
+            res.innerHTML = '<p class="text-xs text-zinc-400 text-center">كنقلبو...</p>';
+            const w = await fetchWallet(phone);
+            saveState('elvon_last_phone', phone);
+            setCoinBadge(w);
+            res.innerHTML = `
+                <div class="bg-elvon-black border border-elvon-border rounded-2xl p-4 text-center space-y-1">
+                    <p class="text-[11px] text-zinc-400 font-bold">الرصيد لي تقدر تستعمل</p>
+                    <p class="text-4xl font-black text-amber-300">${w.available}<span class="text-base text-white"> عملة</span></p>
+                    <p class="text-xs text-zinc-300 font-bold">= ${w.available} درهم</p>
+                    ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب كيتأكد</p>` : ''}
+                    ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
+                </div>
+                <p class="text-[11px] text-zinc-400 text-center mt-2">باش تخلص بالعملات: دخل نفس رقم الهاتف ف الطلب، وغادي يبان ليك خيار "استعمل العملات".</p>`;
+        }
+        // تطبيق العملات ملي المدير كيبدل حالة الطلب
+        async function adjustWallet(phone, delta) {
+            const n = normPhone(phone);
+            if (n.length < 9) return { ok: false };
+            if (window.ElvonCloud?.ready && adminOrders) {
+                const h = await phoneHash(phone);
+                const rows = await window.ElvonCloud.listPath(['wallets', h, 'w']);
+                const cur = Math.floor(Number((rows.find(r => r._docId === 'main') || {}).balance) || 0);
+                const next = Math.max(0, cur + delta);
+                const ok = await window.ElvonCloud.setPath(['wallets', h, 'w', 'main'], { balance: next, updatedAt: Date.now() });
+                return { ok, before: cur, after: next };
+            }
+            const all = localWallets();
+            const cur = Math.floor(Number(all[n]) || 0);
+            all[n] = Math.max(0, cur + delta);
+            saveState('elvon_wallets_v1', all);
+            return { ok: true, before: cur, after: all[n] };
+        }
+        async function applyOrderCoins(o, newStatus) {
+            const used = Math.floor(Number(o.coinsUsed) || 0), earn = Math.floor(Number(o.coinsEarn) || 0);
+            if (!used && !earn) return;
+            const active = newStatus !== 'ملغي';
+            let delta = 0; const patch = {};
+            if (used) {
+                if (active && newStatus !== 'جديد' && !o.coinsSpentApplied) { delta -= used; patch.coinsSpentApplied = true; }
+                if (!active && o.coinsSpentApplied) { delta += used; patch.coinsSpentApplied = false; }
+            }
+            if (earn) {
+                if (newStatus === 'تم التسليم' && !o.coinsEarnedApplied) { delta += earn; patch.coinsEarnedApplied = true; }
+                if (newStatus !== 'تم التسليم' && o.coinsEarnedApplied) { delta -= earn; patch.coinsEarnedApplied = false; }
+            }
+            if (!Object.keys(patch).length) return;
+            const r = await adjustWallet(o.phone, delta);
+            if (!r.ok) { showToast('ما قدرناش نحدثو عملات الزبون، عاود من بعد'); return; }
+            if (patch.coinsSpentApplied && r.before < used) showToast(`انتبه: الزبون كان عندو غير ${r.before} عملة وخلص بـ ${used}`);
+            Object.assign(o, patch);
+            if (window.ElvonCloud?.ready && adminOrders) window.ElvonCloud.saveItem('orders', o.id, patch);
+            if (delta) setTimeout(() => showToast(delta > 0 ? `تزادو ${delta} عملة ف حساب الزبون (الرصيد: ${r.after})` : `تنقصو ${-delta} عملة من حساب الزبون (الرصيد: ${r.after})`), 1600);
+        }
+
+        window.addEventListener('load', () => setTimeout(async () => { try { const last = loadState('elvon_last_phone', ''); if (last) setCoinBadge(await fetchWallet(last)); } catch (e) {} }, 2500));
+
+        // رقم طلب فريد (الوقت + حروف عشوائية) باش ما يتكررش حتى ملي يطلبو بزاف ديال الناس ف نفس الوقت
+        function newOrderId() {
+            const rnd = (window.crypto && crypto.getRandomValues) ? Array.from(crypto.getRandomValues(new Uint8Array(5)), b => (b % 36).toString(36)).join('') : Math.random().toString(36).slice(2, 7);
+            return ('ELV-' + Date.now().toString(36).slice(-5) + rnd).toUpperCase();
         }
 
         // حفظ الطلب ف السحابة وإظهار التأكيد (طلب من الموقع) أو فتح واتساب
@@ -2290,8 +2506,9 @@
 
             const subtotal = p.price * qty;
             const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
-            const total = subtotal + shipping;
-            const orderId = 'ELV-' + Math.floor(1000 + Math.random() * 9000);
+            const coinsUsed = coinsToUse('wa', subtotal);
+            const total = subtotal - coinsUsed + shipping;
+            const orderId = newOrderId();
 
             if (typeof p.stock === 'number') {
                 p.stock = Math.max(0, p.stock - qty);
@@ -2309,6 +2526,8 @@
                 shipping,
                 total,
                 notes: notes || '',
+                coinsUsed,
+                coinsEarn: Math.floor(Number(p.coins) || 0) * qty,
                 channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
                 date: new Date().toLocaleDateString('ar-MA'),
@@ -2335,6 +2554,7 @@
                     `Quantité : ${qty}`,
                     `Prix : ${p.price} MAD`,
                     `Livraison : ${shipping === 0 ? 'Gratuite' : shipping + ' MAD'}`,
+                    coinsUsed ? `Pièces ELVON : -${coinsUsed} MAD` : null,
                     `Total (COD) : ${total} MAD`,
                     notes ? `Notes : ${notes}` : null,
                     ``,
@@ -2353,12 +2573,14 @@
                     `الكمية: ${qty}`,
                     `السعر: ${p.price} MAD`,
                     `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}`,
+                    coinsUsed ? `عملات ELVON: -${coinsUsed} MAD` : null,
                     `المجموع: ${total} MAD`,
                     notes ? `ملاحظات: ${notes}` : null,
                     ``,
                     `شكراً لاختياركم ELVON STORE ❤️`
                 ].filter(v => v !== null).join('\n');
 
+            resetCoinBox('wa', phone);
             closeModalById('whatsapp-order-modal');
             if (via !== 'site') showToast('تم تجهيز رسالة الطلب، أكمل الإرسال داخل WhatsApp');
             finishOrder(newOrder, via, waText);
@@ -3172,8 +3394,9 @@
             const city = document.getElementById('customer-city')?.value || 'طنجة';
             const baseCityFee = shippingFeeFor(city);
             const shipping = subtotal === 0 || afterDiscount >= settings.freeShippingThreshold ? 0 : baseCityFee;
-            const total = afterDiscount + shipping;
-            return { subtotal, discount, shipping, total, city };
+            const coins = coinsToUse('cart', afterDiscount);
+            const total = afterDiscount - coins + shipping;
+            return { subtotal, discount, shipping, total, city, coins };
         }
 
         function updateCartUI() {
@@ -3228,8 +3451,10 @@
                 `;
             }).join('');
 
-            const { subtotal, discount, shipping, total } = computeCartTotals();
+            const { subtotal, discount, shipping, total, coins } = computeCartTotals();
             subEl.textContent = `${subtotal} MAD`;
+            const coinsRow = document.getElementById('cart-coins-row');
+            if (coinsRow) { coinsRow.classList.toggle('hidden', !coins); coinsRow.classList.toggle('flex', !!coins); document.getElementById('cart-coins').textContent = `-${coins} MAD`; }
             if (discRow && discEl) {
                 if (discount > 0) {
                     discRow.classList.remove('hidden');
@@ -3260,8 +3485,8 @@
             const city = document.getElementById('customer-city').value.trim();
             const address = document.getElementById('customer-address').value.trim();
 
-            const { subtotal, discount, shipping, total } = computeCartTotals();
-            const orderId = 'ELV-' + Math.floor(1000 + Math.random() * 9000);
+            const { subtotal, discount, shipping, total, coins } = computeCartTotals();
+            const orderId = newOrderId();
 
             // خصم المخزون
             cart.forEach(item => {
@@ -3279,6 +3504,8 @@
                 city,
                 address,
                 items: JSON.parse(JSON.stringify(cart)),
+                coinsUsed: coins,
+                coinsEarn: cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coins) || 0) * it.qty, 0),
                 promoCode: activePromo ? activePromo.code : null,
                 discount,
                 shipping,
@@ -3308,11 +3535,13 @@
                 `المجموع الفرعي: ${subtotal} MAD`,
                 discount > 0 ? `الخصم (${activePromo.code}): -${discount} MAD` : null,
                 `مصاريف التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}`,
+                coins ? `عملات ELVON: -${coins} MAD` : null,
                 `الإجمالي للدفع عند الاستلام (COD): ${total} MAD`
             ].filter(Boolean).join('\n');
 
             cart = [];
             activePromo = null;
+            resetCoinBox('cart', phone);
             const promoInput = document.getElementById('promo-code-input');
             const promoFb = document.getElementById('promo-feedback');
             if (promoInput) promoInput.value = '';
@@ -3359,21 +3588,21 @@
                 const h = await phoneHash(order.phone);
                 if (!h) return;
                 const rec = isUpdate
-                    ? { status: order.status, updatedAt: Date.now() }
-                    : { id: order.id, status: order.status, total: order.total, shipping: order.shipping, city: order.city, date: order.date, createdAt: order.createdAt, items: (order.items || []).map(i => ({ name: i.name, qty: i.qty })) };
+                    ? { status: order.status, updatedAt: Date.now(), coinsSpentApplied: !!order.coinsSpentApplied, coinsEarnedApplied: !!order.coinsEarnedApplied }
+                    : { id: order.id, status: order.status, total: order.total, shipping: order.shipping, city: order.city, date: order.date, createdAt: order.createdAt, items: (order.items || []).map(i => ({ name: i.name, qty: i.qty })), coinsUsed: order.coinsUsed || 0, coinsEarn: order.coinsEarn || 0, coinsSpentApplied: false, coinsEarnedApplied: false };
                 await window.ElvonCloud.setPath(['track', h, 'orders', order.id], rec);
             } catch (e) { /* التتبع السحابي اختياري */ }
         }
-        async function lookupOrdersByPhone(phone) {
+        async function lookupOrdersByPhone(phone, limit = 5) {
             const n = normPhone(phone);
             if (n.length < 9) return [];
             const found = new Map();
-            orders.filter(o => normPhone(o.phone) === n).forEach(o => found.set(o.id, { id: o.id, status: o.status, total: o.total, city: o.city, date: o.date, createdAt: o.createdAt, items: o.items }));
+            orders.filter(o => normPhone(o.phone) === n).forEach(o => found.set(o.id, { id: o.id, status: o.status, total: o.total, city: o.city, date: o.date, createdAt: o.createdAt, items: o.items, coinsUsed: o.coinsUsed || 0, coinsEarn: o.coinsEarn || 0, coinsSpentApplied: !!o.coinsSpentApplied, coinsEarnedApplied: !!o.coinsEarnedApplied }));
             if (window.ElvonCloud?.ready) {
                 const h = await phoneHash(phone);
                 if (h) (await window.ElvonCloud.listPath(['track', h, 'orders'])).forEach(o => found.set(o.id, Object.assign({}, found.get(o.id) || {}, o)));
             }
-            return [...found.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
+            return [...found.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, limit);
         }
         const ORDER_STATUS_HINT = {
             'جديد': 'توصلنا بطلبك وغادي نتواصلو معاك للتأكيد.',
@@ -3388,9 +3617,9 @@
             const q = document.getElementById('track-query-input').value.trim();
             const res = document.getElementById('track-order-result');
             let matches = [];
-            const idm = q.match(/elv-?\s?(\d{3,5})/i);
+            const idm = q.match(/elv-?\s?([a-z0-9]{4,10})/i);
             if (idm) {
-                const id = 'ELV-' + idm[1];
+                const id = 'ELV-' + idm[1].toUpperCase();
                 matches = orders.filter(o => String(o.id).toUpperCase() === id);
             } else if (normPhone(q).length >= 9) {
                 matches = await lookupOrdersByPhone(q);
@@ -3760,7 +3989,7 @@
             const T = (ar, f) => (fr ? f : ar);
             const compact = raw.replace(/[\s.\-]/g, '');
             const phoneM = compact.match(/(?:\+?212|0)[5-7]\d{8}/);
-            const idm = raw.match(/elv-?\s?(\d{3,5})/i);
+            const idm = raw.match(/elv-?\s?([a-z0-9]{4,10})/i);
             const wants = /(فين وصل|وين وصل|اين وصل|حاله (ال)?طلب|تتبع|suivi|ou en est|ou est ma commande|track|where is my order|وضعيه (ال)?طلب|طلبي|طلبيتي|ma commande|my order|كوماند)/.test(nq);
             if (!phoneM && !idm && !wants) return null;
             if (!phoneM && !idm && !aiCtx.awaitPhone && !wants) return null;
@@ -3782,7 +4011,7 @@
                 return { text: aiPick([T(`لقيت طلباتك، هادي آخر الأخبار:`, `Voici l'état de vos commandes :`), T(`تفضل، هادا هو وضع طلبك دابا:`, `Voilà où en est votre commande :`)]) + '\n\n' + list.map(fmt).join('\n\n'), products: [], chips: [], fallback: false };
             }
             if (idm) {
-                const id = 'ELV-' + idm[1];
+                const id = 'ELV-' + idm[1].toUpperCase();
                 const o = orders.find(x => String(x.id).toUpperCase() === id);
                 if (o) return { text: fmt(o), products: [], chips: [], fallback: false };
                 return ask();
@@ -3892,7 +4121,7 @@
                             <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">عملات: ${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي تأكد الطلب)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD</td>
@@ -3978,10 +4207,11 @@
             updateCartUI();
         }
 
-        function updateOrderStatus(idx, newStatus) {
+        async function updateOrderStatus(idx, newStatus) {
             const list = getAdminOrders();
             if (!list[idx]) return;
             list[idx].status = newStatus;
+            await applyOrderCoins(list[idx], newStatus);
             if (window.ElvonCloud?.ready && adminOrders) {
                 window.ElvonCloud.saveItem('orders', list[idx].id, { status: newStatus });
                 pushTracking(list[idx], true);
@@ -4009,6 +4239,7 @@
                     document.getElementById('prod-price').value = p.price;
                     document.getElementById('prod-old-price').value = p.oldPrice || '';
                     document.getElementById('prod-stock').value = p.stock;
+                    document.getElementById('prod-coins').value = Math.floor(Number(p.coins) || 0);
                     document.getElementById('prod-desc').value = p.desc || '';
                     modalImages = Array.isArray(p.images) ? [...p.images] : [];
                 }
@@ -4056,6 +4287,7 @@
             const oldPrice = oldPriceRaw ? parseFloat(oldPriceRaw) : 0;
             const stock = parseInt(document.getElementById('prod-stock').value, 10) || 0;
             const desc = document.getElementById('prod-desc').value.trim();
+            const coins = Math.max(0, Math.floor(parseFloat(document.getElementById('prod-coins')?.value) || 0));
 
             const finalImages = modalImages.length
                 ? [...modalImages]
@@ -4071,6 +4303,7 @@
                 oldPrice,
                 stock,
                 desc,
+                coins,
                 images: finalImages,
                 updatedAt: Date.now()
             };
