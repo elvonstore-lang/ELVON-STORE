@@ -49,14 +49,22 @@ You must create this yourself; no credentials are included in this repo.
 ## 4. Admin panel
 Hidden from customers. Open it with the small lock icon in the footer, the `#admin` URL hash, `Ctrl+Shift+A`, or 7 taps on the logo area. In cloud mode it signs in with your Firebase admin email and password.
 
-## 5. Smart ELVON AI (Gemini) — answers any question
+## 5. Smart ELVON AI — answers any question
 Without a key, ELVON AI uses its local engine (order tracking, comparison, store info, accessory tips).
 With a key it becomes a full smart assistant: general knowledge, tech, math, translation, writing, advice,
-fresh info via Google Search grounding, plus everything about your store (products, prices, delivery).
-1. Create a free key at https://aistudio.google.com/apikey.
-2. Vercel > Settings > Environment Variables: add `GEMINI_API_KEY`, then redeploy.
-   Optional: `ALLOWED_ORIGIN` (your site URL), `GEMINI_MODEL` (default `gemini-2.5-flash`), `AI_WEB_SEARCH=false` to turn off Google Search.
-3. That's it: the site calls `/api/ai` on its own domain automatically. (The admin panel > ELVON AI tab > AI server URL is only needed for a server on another domain.)
+plus everything about your store (products, prices, delivery).
+
+**Free option (recommended): Groq**
+1. Create a free account and key at https://console.groq.com/keys (no card needed).
+2. Vercel > Project > Settings > Environment Variables: add `GROQ_API_KEY`, then Redeploy.
+   Optional: `GROQ_MODEL` (default `llama-3.3-70b-versatile`).
+
+**Optional: Gemini** (needs billing on some Google accounts; adds Google Search for fresh info)
+- Key from https://aistudio.google.com/apikey, saved as `GEMINI_API_KEY`. Optional: `GEMINI_MODEL`, `AI_WEB_SEARCH=false`.
+- If both keys are set, Groq is tried first, then Gemini.
+
+Check that it works: open `https://YOUR-DOMAIN/api/ai` in the browser; `"ok": true` means the AI is live.
+The site calls `/api/ai` on its own domain automatically (the admin AI server URL is only for a server on another domain).
 
 Order tracking by phone number and repair booking always stay local; every other message goes to the AI with the full catalog and store info.
 
