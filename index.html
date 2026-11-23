@@ -661,7 +661,7 @@
                     <button onclick="switchAdminTab('ordersSite')" id="admin-tab-btn-ordersSite" class="admin-tab"><i data-lucide="globe" class="w-4 h-4"></i><span>طلبات الموقع</span><b class="admin-count" id="count-orders-site">0</b></button>
                     <button onclick="switchAdminTab('ordersWa')" id="admin-tab-btn-ordersWa" class="admin-tab"><i data-lucide="message-circle" class="w-4 h-4"></i><span>طلبات واتساب</span><b class="admin-count" id="count-orders-wa">0</b></button>
                     <button onclick="switchAdminTab('products')" id="admin-tab-btn-products" class="admin-tab"><i data-lucide="package" class="w-4 h-4"></i><span>المنتجات والمخزون</span><b class="admin-count" id="count-products">0</b></button>
-                    <button onclick="switchAdminTab('promos')" id="admin-tab-btn-promos" class="admin-tab"><i data-lucide="ticket" class="w-4 h-4"></i><span>كوبونات الخصم</span><b class="admin-count" id="count-promos">0</b></button>
+                    <button onclick="switchAdminTab('promos')" id="admin-tab-btn-promos" class="admin-tab"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>أكواد عملات ELVON</span><b class="admin-count" id="count-promos">0</b></button>
                     <button onclick="switchAdminTab('analytics')" id="admin-tab-btn-analytics" class="admin-tab"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>التحليلات</span></button>
                     <button onclick="switchAdminTab('repairs')" id="admin-tab-btn-repairs" class="admin-tab"><i data-lucide="wrench" class="w-4 h-4"></i><span>مواعيد الورشة</span><b class="admin-count" id="count-repairs">0</b></button>
                     <button onclick="switchAdminTab('knowledge')" id="admin-tab-btn-knowledge" class="admin-tab"><i data-lucide="bot" class="w-4 h-4"></i><span>ذكاء ELVON AI</span></button>
@@ -808,15 +808,7 @@
 
         <!-- التبويب: الكوبونات -->
         <div id="admin-panel-promos" class="hidden bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-4">
-            <h3 class="text-base font-black text-white">كوبونات الخصم</h3>
-            <form onsubmit="addPromoCode(event)" class="flex flex-wrap items-center gap-2">
-                <input type="text" id="new-promo-code" required placeholder="الكود (مثال: RAMADAN20)" class="flex-1 min-w-[160px] bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#DC0A14]">
-                <input type="number" id="new-promo-percent" required min="1" max="90" placeholder="% الخصم" class="w-28 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                <button type="submit" class="px-4 py-2 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-xs font-black">إضافة</button>
-            </form>
-            <div id="admin-promos-list" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
-
-            <div class="pt-4 mt-2 border-t border-elvon-border space-y-3">
+            <div class="space-y-3">
                 <div class="flex items-center gap-2"><svg class="w-7 h-7" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><div><h3 class="text-base font-black text-white">أكواد عملات ELVON</h3><p class="text-[11px] text-zinc-400">صاوب كود، والزبون لي داخل لحسابو ودخلو كيربح العدد ديال العملات لي حطيتي (مرة وحدة لكل زبون).</p></div></div>
                 <form onsubmit="addCoinCode(event)" class="flex flex-wrap items-center gap-2">
                     <input type="text" id="new-coin-code" required maxlength="24" placeholder="الكود (مثال: ELVON50)" class="flex-1 min-w-[160px] bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-400" dir="ltr">
@@ -903,14 +895,6 @@
             <div id="cart-items-container" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
 
             <div class="p-4 border-t border-elvon-border bg-elvon-card space-y-3 overflow-y-auto max-h-[68vh]">
-                <!-- كوبون الخصم -->
-                <div class="flex items-center gap-2">
-                    <input type="text" id="promo-code-input" placeholder="كود الخصم (مثال: ELVON10)"
-                           class="flex-1 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#DC0A14]">
-                    <button type="button" onclick="applyPromoCode()" class="px-3 py-2 rounded-xl bg-elvon-black hover:bg-zinc-800 border border-elvon-border text-xs font-black text-[#DC0A14]">تطبيق</button>
-                </div>
-                <p id="promo-feedback" class="text-[11px] text-emerald-400 font-bold hidden"></p>
-
                 <!-- ملخص الأسعار والتوصيل -->
                 <div class="space-y-1 text-xs bg-elvon-black/60 border border-elvon-border rounded-xl p-3">
                     <div class="flex justify-between text-zinc-400">
@@ -1661,7 +1645,7 @@
         let aiChatHistory = [];
         let reviews = [];
         let promos = [];
-        let activePromo = null;
+        let activePromo = null; // كوبونات الخصم تحيدو، العملات هي لي بقات
         let currentLang = 'ar';
         let adminUnlocked = false;
         let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -3238,7 +3222,7 @@
         // =====================================================================
         // لوحة التحكم: الكوبونات، نقاط الولاء، الحالة، والتحليلات، والأدوات الفنية
         // =====================================================================
-        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'كوبونات الخصم', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', accounts: 'حسابات العملات', settings: 'الإعدادات' };
+        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'أكواد عملات ELVON', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', accounts: 'حسابات العملات', settings: 'الإعدادات' };
         let adminOrderFilter = 'site';
         const orderChannel = (o) => (o && o.channel === 'الموقع') ? 'site' : 'wa';
         function switchAdminTab(tab) {
@@ -4319,6 +4303,7 @@
         }
         function renderCoinCodes() {
             const wrap = document.getElementById('admin-coincodes-list'); if (!wrap) return;
+            const pc = document.getElementById('count-promos'); if (pc) pc.textContent = coinCodes.length;
             wrap.innerHTML = coinCodes.length ? coinCodes.map(c => `
                 <div class="bg-elvon-black border border-amber-400/30 rounded-2xl p-3.5 flex items-center justify-between">
                     <div><p class="text-sm font-black text-white" dir="ltr">${esc(c.code)}</p><p class="text-xs text-amber-300 font-bold">${esc(c.coins)} عملة • ${c.active ? 'مفعل' : 'متوقف'}</p></div>
@@ -4357,7 +4342,7 @@
             const lowStockEl = document.getElementById('low-stock-summary');
             if (pCount) pCount.textContent = products.length;
             if (oCount) oCount.textContent = orders.length;
-            if (prCount) prCount.textContent = promos.length;
+            if (prCount) prCount.textContent = (typeof coinCodes !== "undefined" ? coinCodes.length : 0);
             renderOverview();
             renderFaqList();
             renderRepairs();
