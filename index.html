@@ -93,7 +93,12 @@
             // ===== حسابات الزبناء (عملات ELVON): رقم الهاتف + كلمة السر =====
             _norm(p) { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('212')) d = d.slice(3); d = d.replace(/^0+/, ''); return d.slice(-9); },
             async _phoneVer(n) {
-                try { const s = await getDoc(doc(this.db, 'phones', n)); return s.exists() ? Math.floor(Number(s.data().v) || 0) : 0; } catch (e) { return 0; }
+                try {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('elvon|' + n));
+                    const h = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+                    const s = await getDoc(doc(this.db, 'settings', 'phone_' + h.slice(0, 32)));
+                    return s.exists() ? Math.floor(Number(s.data().v) || 0) : 0;
+                } catch (e) { return 0; }
             },
             _acctEmail(n, v) { return `p${n}v${v}@users.elvon.store`; },
             account() {
@@ -104,8 +109,8 @@
             },
             async _ensureWallet(u, name, n) {
                 try {
-                    const s = await getDoc(doc(this.db, 'wallets', u.uid));
-                    if (!s.exists()) await setDoc(doc(this.db, 'wallets', u.uid), { name: String(name || u.displayName || '').trim() || 'زبون ELVON', phone: n, createdAt: Date.now() });
+                    // سجل الحساب (المدير وحده كيقراه) ف نفس مجموعة الطلبات
+                    await setDoc(doc(this.db, 'orders', 'ACCT_' + u.uid), { type: 'account', uid: u.uid, name: String(name || u.displayName || '').trim() || 'زبون ELVON', phone: n, status: 'حساب', createdAt: Date.now() });
                 } catch (e) { /* الرصيد كيتصاوب من بعد */ }
             },
             async signUpAccount(name, phone, pass) {
@@ -1636,6 +1641,7 @@
 
         // قائمة طلبات المدير: من السحابة عند تسجيل دخول المدير، وإلا الطلبات المحلية
         let adminOrders = null;
+        let adminAccountDocs = [];
         function getAdminOrders() { return adminOrders || orders; }
 
         let products = [];
@@ -1726,7 +1732,8 @@
             if (!C?.ready) return;
             if (!ordersUnsub) {
                 ordersUnsub = C.listenCollection('orders', (list) => {
-                    adminOrders = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    adminAccountDocs = list.filter(o => o.type === 'account');
+                    adminOrders = list.filter(o => o.type !== 'account').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     renderAdminTables();
                 });
             }
@@ -2319,7 +2326,31 @@
             }
         }
 
-        // ===== عملات ELVON (حساب بالاسم + الكود) =====
+        // ===== أماكن الحفظ ديال العملات (خدامة بالقواعد الحالية ديال Firebase) =====
+        // أكواد العملات: promos/COIN_<الكود> • رصيد المدير: settings/wal_<uid> • أكواد الزبون وطلباتو: track/w_<uid>/orders/*
+        // سجل الحسابات: orders/ACCT_<uid> • نسخة الرقم: settings/phone_<hash>
+        const WP = {
+            code: (c) => ['promos', 'COIN_' + c],
+            main: (uid) => ['settings', 'wal_' + uid],
+            items: (uid) => ['track', 'w_' + uid, 'orders'],
+            redeem: (uid, c) => ['track', 'w_' + uid, 'orders', 'R_' + c],
+            order: (uid, id) => ['track', 'w_' + uid, 'orders', id],
+            phone: async (n) => ['settings', 'phone_' + String(await phoneHash('0' + n) || '').slice(0, 32)]
+        };
+        const coinValueCache = {};
+        async function coinValue(code) {
+            if (code in coinValueCache) return coinValueCache[code];
+            const d = await window.ElvonCloud.getPath(WP.code(code));
+            return (coinValueCache[code] = d && d.type === 'coin' ? Math.floor(Number(d.coins) || 0) : 0);
+        }
+        async function cloudWalletItems(uid) {
+            const items = await window.ElvonCloud.listPath(WP.items(uid));
+            const red = items.filter(x => x.kind === 'redeem');
+            const games = await Promise.all(red.map(async r => ({ ...r, coins: await coinValue(r.code) })));
+            return { games, ords: items.filter(x => x.kind === 'order') };
+        }
+
+        // ===== عملات ELVON (حساب برقم الهاتف + كلمة السر) =====
         let walletCache = null;
         const walletCacheClear = () => { walletCache = null; };
         const todayKey = () => Math.floor(Date.now() / 86400000);
@@ -2330,9 +2361,8 @@
         }
         async function readWalletRaw(uid) {
             if (window.ElvonCloud?.ready) {
-                const main = await window.ElvonCloud.getPath(['wallets', uid]);
-                const games = await window.ElvonCloud.listPath(['wallets', uid, 'redeems']);
-                const ords = await window.ElvonCloud.listPath(['wallets', uid, 'orders']);
+                const main = await window.ElvonCloud.getPath(WP.main(uid));
+                const { games, ords } = await cloudWalletItems(uid);
                 return { balance: Math.floor(Number(main && main.balance) || 0), games, ords };
             }
             return { balance: Math.floor(Number(localStoreGet('elvon_wallets_v2', {})[uid]) || 0), games: (localStoreGet('elvon_redeems_v1', {})[uid] || []), ords: (localStoreGet('elvon_wallet_orders_v1', {})[uid] || []) };
@@ -2373,7 +2403,7 @@
         async function linkOrderToAccount(o) {
             if (!o.uid) return;
             const rec = { id: o.id, status: o.status, total: o.total, createdAt: o.createdAt, coinsUsed: o.coinsUsed || 0, coinsEarn: o.coinsEarn || 0, coinsSpentApplied: false, coinsEarnedApplied: false };
-            if (window.ElvonCloud?.ready) await window.ElvonCloud.setPath(['wallets', o.uid, 'orders', o.id], rec);
+            if (window.ElvonCloud?.ready) await window.ElvonCloud.setPath(WP.order(o.uid, o.id), { ...rec, kind: 'order', status: 'جديد' });
             else { const all = loadState('elvon_wallet_orders_v1', {}); (all[o.uid] = all[o.uid] || []).push(rec); saveState('elvon_wallet_orders_v1', all); }
         }
         // ----- نافذة العملات: دخول / حساب جديد ثم الرصيد واللعبة -----
@@ -2431,10 +2461,10 @@
             const btn = document.getElementById('redeem-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
             let cc, already, ok = false;
             if (window.ElvonCloud?.ready) {
-                cc = await window.ElvonCloud.getPath(['coincodes', code]);
+                cc = await window.ElvonCloud.getPath(WP.code(code)); if (cc && cc.type !== 'coin') cc = null;
                 if (!cc && window.ElvonCloud.lastError) { renderWalletModal(window.ElvonCloud.lastError === 'permission-denied' ? 'ما قدرناش نتحققو من الكود دابا (إعدادات المتجر ناقصة). عاود من بعد ولا تواصل معنا.' : 'مشكل ف الاتصال، عاود من بعد شوية.'); return; }
-                already = await window.ElvonCloud.getPath(['wallets', acc.uid, 'redeems', code]);
-                if (cc && cc.active && !already) ok = await window.ElvonCloud.setPath(['wallets', acc.uid, 'redeems', code], { coins: Math.floor(Number(cc.coins) || 0), at: Date.now() });
+                already = await window.ElvonCloud.getPath(WP.redeem(acc.uid, code));
+                if (cc && cc.active && !already) ok = await window.ElvonCloud.setPath(WP.redeem(acc.uid, code), { kind: 'redeem', code, status: 'جديد', at: Date.now() });
             } else {
                 cc = (loadState('elvon_coincodes_v1', [])).find(x => x.code === code);
                 const all = loadState('elvon_redeems_v1', {}); const mine = all[acc.uid] || [];
@@ -2521,12 +2551,12 @@
         async function adjustWallet(uid, delta) {
             if (!uid) return { ok: false };
             if (window.ElvonCloud?.ready && adminOrders) {
-                const main = await window.ElvonCloud.getPath(['wallets', uid]);
-                const games = await window.ElvonCloud.listPath(['wallets', uid, 'redeems']);
+                const main = await window.ElvonCloud.getPath(WP.main(uid));
+                const { games } = await cloudWalletItems(uid);
                 const gameCoins = games.reduce((sum, g) => sum + (Number(g.coins) || 0), 0);
                 const cur = Math.floor(Number(main && main.balance) || 0);
                 const next = Math.max(-gameCoins, cur + delta);
-                const ok = await window.ElvonCloud.setPath(['wallets', uid], { balance: next, updatedAt: Date.now() });
+                const ok = await window.ElvonCloud.setPath(WP.main(uid), { balance: next, updatedAt: Date.now() });
                 return { ok, before: Math.max(0, cur + gameCoins), after: Math.max(0, next + gameCoins) };
             }
             const all = loadState('elvon_wallets_v2', {});
@@ -2539,7 +2569,7 @@
         async function syncAccountOrder(o) {
             if (!o.uid) return;
             const rec = { status: o.status, coinsSpentApplied: !!o.coinsSpentApplied, coinsEarnedApplied: !!o.coinsEarnedApplied, updatedAt: Date.now() };
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.setPath(['wallets', o.uid, 'orders', o.id], rec);
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.setPath(WP.order(o.uid, o.id), rec);
             else { const all = loadState('elvon_wallet_orders_v1', {}); const r = (all[o.uid] || []).find(x => x.id === o.id); if (r) { Object.assign(r, rec); saveState('elvon_wallet_orders_v1', all); } }
         }
         async function applyOrderCoins(o, newStatus) {
@@ -4189,11 +4219,13 @@
             const cloud = window.ElvonCloud?.ready && adminOrders;
             let list = [];
             if (cloud) {
-                const ws = await window.ElvonCloud.listPath(['wallets']);
-                adminPhones = {}; (await window.ElvonCloud.listPath(['phones'])).forEach(p => { adminPhones[p._docId] = p; });
-                list = await Promise.all(ws.map(async w => {
-                    const red = await window.ElvonCloud.listPath(['wallets', w._docId, 'redeems']);
-                    return { uid: w._docId, name: w.name, phone: w.phone || '', closed: !!w.closed, createdAt: w.createdAt || 0, base: Math.floor(Number(w.balance) || 0), redeemed: red.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: red.length };
+                const accts = (adminAccountDocs || []);
+                adminPhones = {};
+                list = await Promise.all(accts.map(async a => {
+                    const main = (await window.ElvonCloud.getPath(WP.main(a.uid))) || {};
+                    const { games } = await cloudWalletItems(a.uid);
+                    adminPhones[a.phone] = (await window.ElvonCloud.getPath(await WP.phone(a.phone))) || {};
+                    return { uid: a.uid, name: a.name, phone: a.phone || '', closed: !!main.closed, createdAt: a.createdAt || 0, base: Math.floor(Number(main.balance) || 0), redeemed: games.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: games.length };
                 }));
             } else {
                 const info = loadState('elvon_local_walletinfo', {}), bal = loadState('elvon_wallets_v2', {}), red = loadState('elvon_redeems_v1', {});
@@ -4244,8 +4276,8 @@
             const ph = adminPhones[a.phone] || {};
             const rec = { v: Math.floor(Number(ph.v) || 0) + 1, carry: a.balance, carryFrom: uid, at: Date.now() };
             if (window.ElvonCloud?.ready && adminOrders) {
-                const ok1 = await window.ElvonCloud.setPath(['phones', a.phone], rec);
-                const ok2 = await window.ElvonCloud.setPath(['wallets', uid], { balance: -a.redeemed, closed: true, updatedAt: Date.now() });
+                const ok1 = await window.ElvonCloud.setPath(await WP.phone(a.phone), rec);
+                const ok2 = await window.ElvonCloud.setPath(WP.main(uid), { balance: -a.redeemed, closed: true, updatedAt: Date.now() });
                 if (!ok1 || !ok2) { showToast('ما قدرناش نعاودو الحساب، تأكد من القواعد ف Firebase'); return; }
             } else {
                 const phs = loadState('elvon_local_phones', {}); phs[a.phone] = rec; saveState('elvon_local_phones', phs);
@@ -4263,7 +4295,7 @@
             const r = await adjustWallet(uid, carry);
             if (!r.ok) { showToast('ما قدرناش ننقلو الرصيد'); return; }
             const rec = { ...ph, carry: 0, carriedTo: uid }; delete rec._docId;
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.setPath(['phones', a.phone], rec);
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.setPath(await WP.phone(a.phone), rec);
             else { const phs = loadState('elvon_local_phones', {}); phs[a.phone] = rec; saveState('elvon_local_phones', phs); }
             showToast(`تنقلو ${carry} عملة للحساب الجديد`);
             loadAccounts();
@@ -4272,7 +4304,7 @@
         // ===== أكواد عملات ELVON (المدير) =====
         let coinCodes = [];
         async function loadCoinCodes() {
-            if (window.ElvonCloud?.ready && adminOrders) coinCodes = (await window.ElvonCloud.listPath(['coincodes'])).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            if (window.ElvonCloud?.ready && adminOrders) coinCodes = (await window.ElvonCloud.listPath(['promos'])).filter(x => x.type === 'coin').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             else coinCodes = loadState('elvon_coincodes_v1', []);
             renderCoinCodes();
         }
@@ -4282,8 +4314,8 @@
             const code = cleanCoinCode(document.getElementById('new-coin-code').value);
             const coins = Math.floor(Number(document.getElementById('new-coin-amount').value) || 0);
             if (code.length < 3 || coins < 1) { showToast('دخل كود (3 حروف ولا أكثر) وعدد العملات'); return; }
-            const obj = { code, coins, active: true, createdAt: Date.now() };
-            if (window.ElvonCloud?.ready && adminOrders) { const ok = await window.ElvonCloud.saveItem('coincodes', code, obj); if (!ok) return; }
+            const obj = { type: 'coin', code, coins, active: true, createdAt: Date.now() };
+            if (window.ElvonCloud?.ready && adminOrders) { const ok = await window.ElvonCloud.saveItem('promos', 'COIN_' + code, obj); if (!ok) return; }
             coinCodes = [obj, ...coinCodes.filter(c => c.code !== code)];
             saveCoinCodesLocal(); renderCoinCodes();
             document.getElementById('new-coin-code').value = ''; document.getElementById('new-coin-amount').value = '';
@@ -4292,12 +4324,12 @@
         async function toggleCoinCode(code) {
             const c = coinCodes.find(x => x.code === code); if (!c) return;
             c.active = !c.active;
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.saveItem('coincodes', code, { active: c.active });
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.saveItem('promos', 'COIN_' + code, { active: c.active });
             saveCoinCodesLocal(); renderCoinCodes();
         }
         async function deleteCoinCode(code) {
             if (!confirm(`حذف الكود ${code}؟`)) return;
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.deleteItem('coincodes', code);
+            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.deleteItem('promos', 'COIN_' + code);
             coinCodes = coinCodes.filter(x => x.code !== code);
             saveCoinCodesLocal(); renderCoinCodes();
         }
