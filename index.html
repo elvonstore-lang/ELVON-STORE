@@ -600,14 +600,14 @@
 
                 <nav class="flex lg:flex-col gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
                     <button onclick="switchAdminTab('overview')" id="admin-tab-btn-overview" class="admin-tab"><i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>لوحة القيادة</span></button>
-                    <button onclick="switchAdminTab('orders')" id="admin-tab-btn-orders" class="admin-tab"><i data-lucide="shopping-bag" class="w-4 h-4"></i><span>الطلبات</span><b class="admin-count" id="count-orders">0</b></button>
+                    <button onclick="switchAdminTab('ordersSite')" id="admin-tab-btn-ordersSite" class="admin-tab"><i data-lucide="globe" class="w-4 h-4"></i><span>طلبات الموقع</span><b class="admin-count" id="count-orders-site">0</b></button>
+                    <button onclick="switchAdminTab('ordersWa')" id="admin-tab-btn-ordersWa" class="admin-tab"><i data-lucide="message-circle" class="w-4 h-4"></i><span>طلبات واتساب</span><b class="admin-count" id="count-orders-wa">0</b></button>
                     <button onclick="switchAdminTab('products')" id="admin-tab-btn-products" class="admin-tab"><i data-lucide="package" class="w-4 h-4"></i><span>المنتجات والمخزون</span><b class="admin-count" id="count-products">0</b></button>
                     <button onclick="switchAdminTab('promos')" id="admin-tab-btn-promos" class="admin-tab"><i data-lucide="ticket" class="w-4 h-4"></i><span>كوبونات الخصم</span><b class="admin-count" id="count-promos">0</b></button>
                     <button onclick="switchAdminTab('analytics')" id="admin-tab-btn-analytics" class="admin-tab"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>التحليلات</span></button>
                     <button onclick="switchAdminTab('repairs')" id="admin-tab-btn-repairs" class="admin-tab"><i data-lucide="wrench" class="w-4 h-4"></i><span>مواعيد الورشة</span><b class="admin-count" id="count-repairs">0</b></button>
                     <button onclick="switchAdminTab('knowledge')" id="admin-tab-btn-knowledge" class="admin-tab"><i data-lucide="bot" class="w-4 h-4"></i><span>ذكاء ELVON AI</span></button>
-                    <button onclick="switchAdminTab('diagnostics')" id="admin-tab-btn-diagnostics" class="admin-tab"><i data-lucide="calculator" class="w-4 h-4"></i><span>الأدوات الفنية</span></button>
-                    <button onclick="switchAdminTab('settings')" id="admin-tab-btn-settings" class="admin-tab"><i data-lucide="settings" class="w-4 h-4"></i><span>الإعدادات</span></button>
+                                        <button onclick="switchAdminTab('settings')" id="admin-tab-btn-settings" class="admin-tab"><i data-lucide="settings" class="w-4 h-4"></i><span>الإعدادات</span></button>
                 </nav>
 
                 <div class="hidden lg:block pt-3 border-t border-elvon-border space-y-2">
@@ -640,7 +640,7 @@
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
                         <div class="xl:col-span-2 bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
-                            <div class="p-4 border-b border-elvon-border flex items-center justify-between"><h3 class="text-sm font-black text-white">آخر الطلبات</h3><button onclick="switchAdminTab('orders')" class="text-xs font-bold text-[#DC0A14]">عرض الكل</button></div>
+                            <div class="p-4 border-b border-elvon-border flex items-center justify-between"><h3 class="text-sm font-black text-white">آخر الطلبات</h3><button onclick="switchAdminTab('ordersSite')" class="text-xs font-bold text-[#DC0A14]">عرض الكل</button></div>
                             <div id="ov-recent" class="divide-y divide-elvon-border"></div>
                         </div>
                         <div class="bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
@@ -726,71 +726,10 @@
             </div>
         </div>
 
-        <!-- التبويب الفني 2: حاسبة التوافق والقدرة الفنية للعملاء -->
-        <div id="admin-panel-diagnostics" class="hidden space-y-5">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div class="bg-elvon-card border border-elvon-border rounded-3xl p-5 space-y-4">
-                    <div class="flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-xl bg-[#DC0A14]/20 text-[#DC0A14] flex items-center justify-center">
-                            <i data-lucide="battery-charging" class="w-4 h-4"></i>
-                        </span>
-                        <div>
-                            <h3 class="text-sm sm:text-base font-black text-white">حاسبة كفاءة الشحن والبطارية المتنقلة</h3>
-                            <p class="text-[11px] text-zinc-400">تقدير عدد الشحنات الفعلية (بعد احتساب فقدان التحويل ~82%) وزمن الشحن التقريبي</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-[11px] font-bold text-zinc-300 mb-1">سعة الباور بانك (mAh)</label>
-                            <input type="number" id="diag-pb-mah" value="20000" min="1000" step="500" oninput="runTechDiagnostics()"
-                                   class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-zinc-300 mb-1">بطارية الهاتف (mAh)</label>
-                            <input type="number" id="diag-phone-mah" value="5000" min="1000" step="100" oninput="runTechDiagnostics()"
-                                   class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-zinc-300 mb-1">قدرة الشاحن (Watts)</label>
-                            <input type="number" id="diag-charger-w" value="35" min="5" max="240" step="5" oninput="runTechDiagnostics()"
-                                   class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                        </div>
-                    </div>
-
-                    <div id="diag-calc-output" class="bg-elvon-black border border-elvon-border rounded-2xl p-4 grid grid-cols-3 gap-3 text-center"></div>
-                </div>
-
-                <div class="bg-elvon-card border border-elvon-border rounded-3xl p-5 space-y-4">
-                    <div class="flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                            <i data-lucide="cpu" class="w-4 h-4"></i>
-                        </span>
-                        <div>
-                            <h3 class="text-sm sm:text-base font-black text-white">مطابقة الإكسسوارات المتوفرة حسب حاجة الزبون</h3>
-                            <p class="text-[11px] text-zinc-400">عرض فوري للإكسسوارات المتوفرة في المخزون حسب الفئة</p>
-                        </div>
-                    </div>
-
-                    <select id="diag-category-select" onchange="runTechDiagnostics()"
-                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
-                        <option value="chargers">شواحن وكابلات (PD / USB-C)</option>
-                        <option value="powerbanks">بطاريات متنقلة (Powerbanks)</option>
-                        <option value="audio">سماعات وإيربودز (ANC / لاسلكي)</option>
-                        <option value="protection">كفرات وحماية (MagSafe / 9H)</option>
-                        <option value="holders">حوامل وستاندات السيارة</option>
-                        <option value="watches">ساعات ذكية (AMOLED)</option>
-                    </select>
-
-                    <div id="diag-matched-products" class="space-y-2 max-h-52 overflow-y-auto"></div>
-                </div>
-            </div>
-        </div>
-
         <!-- التبويب: الطلبات -->
         <div id="admin-panel-orders" class="hidden space-y-5">
             <div class="bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
-                <div class="p-4 sm:p-5 border-b border-elvon-border"><h3 class="text-base font-black text-white">طلبات الزبناء</h3></div>
+                <div class="p-4 sm:p-5 border-b border-elvon-border flex items-center justify-between gap-2"><h3 id="admin-orders-heading" class="text-base font-black text-white">طلبات الموقع</h3><span id="admin-orders-sub" class="text-[11px] text-zinc-400 font-bold"></span></div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-right border-collapse">
                         <thead>
@@ -3094,12 +3033,17 @@
         // =====================================================================
         // لوحة التحكم: الكوبونات، نقاط الولاء، الحالة، والتحليلات، والأدوات الفنية
         // =====================================================================
-        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'كوبونات الخصم', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', diagnostics: 'الأدوات الفنية', settings: 'الإعدادات' };
+        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'كوبونات الخصم', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', settings: 'الإعدادات' };
+        let adminOrderFilter = 'site';
+        const orderChannel = (o) => (o && o.channel === 'الموقع') ? 'site' : 'wa';
         function switchAdminTab(tab) {
+            if (tab === 'orders') tab = 'ordersSite';
+            const panelTab = (tab === 'ordersSite' || tab === 'ordersWa') ? 'orders' : tab;
+            if (panelTab === 'orders') { adminOrderFilter = tab === 'ordersWa' ? 'wa' : 'site'; renderAdminTables(); }
             Object.keys(ADMIN_TAB_TITLES).forEach(t => {
                 const panel = document.getElementById(`admin-panel-${t}`);
                 const btn = document.getElementById(`admin-tab-btn-${t}`);
-                if (panel) panel.classList.toggle('hidden', t !== tab);
+                if (panel) panel.classList.toggle('hidden', t !== panelTab);
                 if (btn) btn.classList.toggle('is-active', t === tab);
             });
             const title = document.getElementById('admin-page-title');
@@ -3108,7 +3052,6 @@
             if (dt) dt.textContent = new Date().toLocaleDateString('ar-MA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             if (tab === 'overview') renderOverview();
             if (tab === 'analytics') renderCharts();
-            if (tab === 'diagnostics') runTechDiagnostics();
             if (tab === 'repairs') renderRepairs();
             if (tab === 'knowledge') { fillKnowledgeFields(); renderFaqList(); }
             if (window.lucide) lucide.createIcons();
@@ -4108,9 +4051,17 @@
 
             const adminList = getAdminOrders();
             if (oCount) oCount.textContent = adminList.length;
+            const siteList = adminList.filter(o => orderChannel(o) === 'site'), waList = adminList.filter(o => orderChannel(o) === 'wa');
+            const cS = document.getElementById('count-orders-site'), cW = document.getElementById('count-orders-wa');
+            if (cS) cS.textContent = siteList.filter(o => o.status === 'جديد').length || siteList.length;
+            if (cW) cW.textContent = waList.filter(o => o.status === 'جديد').length || waList.length;
+            const oHead = document.getElementById('admin-orders-heading'), oSub = document.getElementById('admin-orders-sub');
+            const shown = adminOrderFilter === 'wa' ? waList : siteList;
+            if (oHead) oHead.textContent = adminOrderFilter === 'wa' ? 'طلبات واتساب' : 'طلبات الموقع';
+            if (oSub) oSub.textContent = `${shown.length} طلب • ${shown.filter(o => o.status === 'جديد').length} جديد`;
             const oTable = document.getElementById('admin-orders-table');
             if (oTable) {
-                oTable.innerHTML = adminList.map((o, idx) => {
+                oTable.innerHTML = !shown.length ? `<tr><td colspan="5" class="py-10 text-center text-zinc-500 text-sm font-bold">${adminOrderFilter === 'wa' ? 'ما كاين حتى طلب عبر واتساب' : 'ما كاين حتى طلب من الموقع'}</td></tr>` : adminList.map((o, idx) => (orderChannel(o) === adminOrderFilter ? [o, idx] : null)).filter(Boolean).map(([o, idx]) => {
                     const itemsText = (o.items || []).map(i => `${i.name} (×${i.qty})`).join('، ');
                     const cleanPhone = String(o.phone || '').replace(/\D/g, '').replace(/^0/, '212');
                     const waFollowUrl = cleanPhone
