@@ -2384,14 +2384,18 @@
         // اختياري: رابط خادم خاص بك (مثل Cloudflare Worker) يتصل بنموذج ذكاء اصطناعي ويخفي المفتاح السري.
         // يستقبل POST {message, history, catalog, policy} ويرجع {reply}. إذا تركته فارغاً يشتغل المحرك المحلي.
         const ELVON_AI_ENDPOINT = '';
+        const ELVON_AI_VERCEL = 'https://elvon-store.vercel.app/api/ai';
         // إلا ما تحطش رابط، كنستعملو تلقائياً /api/ai ديال نفس الموقع (Vercel). إلا الخادم ما فيهش مفتاح، كنرجعو للمحرك المحلي.
         let aiServerOff = false;
         function aiResolveEndpoint() {
             const manual = String(settings.aiEndpoint || ELVON_AI_ENDPOINT || '').trim();
             if (/^https:\/\//i.test(manual)) return manual;
             if (aiServerOff) return '';
-            try { if (location.protocol === 'https:') return location.origin + '/api/ai'; } catch (e) {}
-            return '';
+            try {
+                // على Vercel نستعملو /api/ai ديال نفس الموقع. ف GitHub Pages ولا أي دومين آخر نمشيو لخادم Vercel.
+                if (location.protocol === 'https:' && /\.vercel\.app$/i.test(location.hostname)) return location.origin + '/api/ai';
+            } catch (e) {}
+            return ELVON_AI_VERCEL;
         }
         // وضع التخصص: ELVON AI يشتغل فقط ف تتبع الطلبات ومقارنة المنتجات (بلا اقتراحات جاهزة). ضعه false لتفعيل باقي الميزات.
         const AI_FOCUS = false;
