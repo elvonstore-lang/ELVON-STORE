@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'ضع-بريدك-هنا@gmail.com';
+      return request.auth != null && request.auth.token.email == 'elvonstore1@gmail.com';
     }
     // الكل يقرأ المنتجات والكوبونات والإعدادات، المدير فقط يعدل
     match /products/{id} { allow read: if true; allow write: if isAdmin(); }

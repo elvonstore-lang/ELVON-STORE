@@ -129,8 +129,9 @@
                 if (!this.ready) return null;
                 try {
                     const snap = await getDoc(doc(this.db, ...pathArr));
+                    this.lastError = null;
                     return snap.exists() ? snap.data() : null;
-                } catch (err) { return null; }
+                } catch (err) { this.lastError = (err && err.code) || 'unknown'; return null; }
             },
             async adminSignOut() {
                 try { if (this.auth) await signOut(this.auth); } catch (err) {}
@@ -2447,6 +2448,7 @@
             let cc, already, ok = false;
             if (window.ElvonCloud?.ready) {
                 cc = await window.ElvonCloud.getPath(['coincodes', code]);
+                if (!cc && window.ElvonCloud.lastError) { renderWalletModal(window.ElvonCloud.lastError === 'permission-denied' ? 'ما قدرناش نتحققو من الكود دابا (إعدادات المتجر ناقصة). عاود من بعد ولا تواصل معنا.' : 'مشكل ف الاتصال، عاود من بعد شوية.'); return; }
                 already = await window.ElvonCloud.getPath(['wallets', acc.uid, 'redeems', code]);
                 if (cc && cc.active && !already) ok = await window.ElvonCloud.setPath(['wallets', acc.uid, 'redeems', code], { coins: Math.floor(Number(cc.coins) || 0), at: Date.now() });
             } else {
