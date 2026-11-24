@@ -2382,7 +2382,7 @@
         // =====================================================================
         // نموذج الطلب الاحترافي داخل الموقع (Order Form Modal -> WhatsApp)
         // =====================================================================
-        function openWhatsappOrderModal(productId, qty = 1, coinMode = false) {
+        function openWhatsappOrderModal(productId, qty = 1, coinMode = false, only = '') {
             const p = products.find(item => item.id === productId);
             if (!p) return;
             waCoinMode = !!coinMode && Number(p.coins) > 0;
@@ -2394,7 +2394,8 @@
                 $('wa-modal-sub').textContent = c ? 'كتخلص بالعملات • التوصيل عند الاستلام' : 'الدفع نقداً عند الاستلام (COD)';
                 $('wa-modal-sitetxt').textContent = c ? 'تأكيد الطلب بالعملات' : 'تأكيد الطلب من الموقع';
                 $('wa-modal-sitebtn').className = 'w-full py-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ' + (c ? 'bg-black hover:bg-zinc-900 text-amber-300' : 'bg-[#DC0A14] hover:bg-[#B90810] text-white');
-                $('wa-modal-wabtn').classList.toggle('hidden', c);
+                $('wa-modal-wabtn').classList.toggle('hidden', c || only === 'site');
+                $('wa-modal-sitebtn').classList.toggle('hidden', !c && only === 'wa');
             }
 
             const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
@@ -3709,6 +3710,12 @@
             showToast('تمسح التقييم');
         }
 
+        function setDetailImg(i) {
+            const btn = document.querySelector(`.pdp-thumb[data-thumb="${i}"] img`); if (!btn) return;
+            document.getElementById('detail-main-img').src = btn.src;
+            document.querySelectorAll('.pdp-thumb').forEach(b => { const on = b.dataset.thumb == i; b.classList.toggle('border-[#DC0A14]', on); b.classList.toggle('border-transparent', !on); });
+            const c = document.getElementById('detail-img-count'); if (c) c.textContent = `${i + 1}/${document.querySelectorAll('.pdp-thumb').length / (window.innerWidth >= 640 ? 2 : 2)}`;
+        }
         function changeDetailQty(delta) {
             currentDetailQty = Math.max(1, currentDetailQty + delta);
             const el = document.getElementById('detail-qty-val');
@@ -4938,66 +4945,84 @@
                     <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     <span>العودة للمتجر</span>
                 </button>
-                <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="space-y-3">
-                        <div class="aspect-square rounded-2xl overflow-hidden bg-elvon-black border border-elvon-border">
-                            <img id="detail-main-img" src="${imgs[0]}" alt="${p.name}" class="w-full h-full object-cover">
-                        </div>
-                        ${imgs.length > 1 ? `
-                            <div class="grid grid-cols-5 gap-2">
-                                ${imgs.map((src, i) => `
-                                    <button onclick="document.getElementById('detail-main-img').src='${src}'" class="aspect-square rounded-xl overflow-hidden border border-elvon-border hover:border-[#DC0A14]">
-                                        <img src="${src}" alt="صورة ${i + 1}" class="w-full h-full object-cover">
-                                    </button>
-                                `).join('')}
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+                    <!-- الصور -->
+                    <div class="lg:col-span-5 bg-elvon-card border border-elvon-border rounded-3xl p-3 sm:p-4">
+                        <div class="flex gap-3">
+                            ${imgs.length > 1 ? `<div class="hidden sm:flex flex-col gap-2 w-16 shrink-0 max-h-[460px] overflow-y-auto no-scrollbar">
+                                ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb aspect-square w-16 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'} hover:border-[#DC0A14] transition-colors"><img src="${src}" alt="صورة ${i + 1}" class="w-full h-full object-cover"></button>`).join('')}
+                            </div>` : ''}
+                            <div class="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-elvon-black border border-elvon-border">
+                                <img id="detail-main-img" src="${imgs[0]}" alt="${esc(p.name)}" class="w-full h-full object-cover">
+                                ${imgs.length > 1 ? `<span id="detail-img-count" class="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[11px] font-black text-white" dir="ltr">1/${imgs.length}</span>` : ''}
                             </div>
-                        ` : ''}
+                        </div>
+                        ${imgs.length > 1 ? `<div class="sm:hidden flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+                            ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'}"><img src="${src}" alt="" class="w-full h-full object-cover"></button>`).join('')}
+                        </div>` : ''}
                     </div>
-                    <div class="space-y-4">
-                        <span class="inline-block px-3 py-1 rounded-full bg-[#DC0A14]/15 text-[#DC0A14] text-xs font-black">${CATEGORY_LABELS[p.category] || 'إكسسوار'}</span>
-                        <h1 class="text-xl sm:text-2xl font-black text-white">${p.name}</h1>
-                        <div class="flex items-baseline gap-2.5">
-                            <span class="text-2xl font-black text-[#DC0A14]">${p.price} MAD</span>
-                            ${p.oldPrice ? `<span class="text-sm text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
-                        </div>
-                        <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">${p.desc || ''}</p>
-                        <div class="flex flex-wrap items-center gap-3 pt-2">
-                            <div class="flex items-center gap-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2">
-                                <button onclick="changeDetailQty(-1)" class="w-6 h-6 rounded-lg bg-elvon-card text-white font-black">-</button>
-                                <span id="detail-qty-val" class="text-sm font-black text-white px-2">1</span>
-                                <button onclick="changeDetailQty(1)" class="w-6 h-6 rounded-lg bg-elvon-card text-white font-black">+</button>
+
+                    <!-- المعلومات والتقييمات -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
+                            <span class="inline-block px-3 py-1 rounded-full bg-[#DC0A14]/15 text-[#DC0A14] text-xs font-black">${CATEGORY_LABELS[p.category] || 'إكسسوار'}</span>
+                            <h1 class="text-lg sm:text-xl font-black text-white leading-snug">${esc(p.name)}</h1>
+                            <div class="flex items-baseline gap-2.5 flex-wrap">
+                                <span class="text-3xl font-black text-[#DC0A14]">${p.price} <span class="text-base">MAD</span></span>
+                                ${p.oldPrice ? `<span class="text-sm text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
+                                ${p.oldPrice > p.price ? `<span class="px-2 py-0.5 rounded-md bg-[#DC0A14] text-white text-xs font-black">-${Math.round((p.oldPrice - p.price) / p.oldPrice * 100)}%</span>` : ''}
                             </div>
-                            <button onclick="addToCart('${p.id}', currentDetailQty)" class="flex-1 py-3 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-elvon-border hover:border-[#DC0A14] text-white text-xs sm:text-sm font-black">
-                                إضافة للسلة
-                            </button>
-                            <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty)" class="flex-1 py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-xs sm:text-sm font-black">
-                                اطلب الآن
-                            </button>
-                            ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')" class="w-full sm:w-auto sm:flex-1 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs sm:text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
+                            ${p.brand ? `<p class="text-xs text-zinc-400 font-bold">الماركة: <span class="text-white">${esc(p.brand)}</span></p>` : ''}
+                            <div class="border-t border-elvon-border pt-3">
+                                <p class="text-xs font-black text-white mb-1.5">الوصف</p>
+                                <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${esc(p.desc || '')}</p>
+                            </div>
+                        </div>
+                        <details id="reviews-box" class="group bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
+                            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-3 p-4 sm:p-5">
+                                <span class="text-base font-black text-white">تقييمات الزبناء (<span id="rev-count">${prodReviews.length}</span>)</span>
+                                <span class="w-9 h-9 rounded-xl bg-elvon-black border border-elvon-border flex items-center justify-center text-zinc-300 transition-transform group-open:rotate-180"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+                            </summary>
+                            <div class="px-4 sm:px-6 pb-5 space-y-4">
+                                <form onsubmit="submitProductReview(event, '${p.id}')" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                                    <input type="text" id="rev-author" required maxlength="30" placeholder="اسمك" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                                    <select id="rev-rating" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                                                <option value="5">★★★★★ (5/5)</option>
+                                                <option value="4">★★★★☆ (4/5)</option>
+                                                <option value="3">★★★☆☆ (3/5)</option>
+                                                <option value="2">★★☆☆☆ (2/5)</option>
+                                                <option value="1">★☆☆☆☆ (1/5)</option>
+                                    </select>
+                                    <input type="text" id="rev-comment" required maxlength="400" placeholder="اكتب رأيك في المنتج..." class="sm:col-span-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                                    <button type="submit" class="sm:col-span-4 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black">إضافة تقييم</button>
+                                </form>
+                                <div id="rev-list" class="space-y-2">${reviewsListHtml(prodReviews)}</div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- الشرا -->
+                    <div class="lg:col-span-3 lg:sticky lg:top-24">
+                        <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
+                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> الدفع عند الاستلام</div>
+                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> توصيل لجميع مدن المغرب</div>
+                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> استبدال خلال 48 ساعة</div>
+                            <div class="border-t border-elvon-border pt-3">
+                                <p class="text-xs font-black text-white mb-2">الكمية</p>
+                                <div class="flex items-center justify-between bg-elvon-black border border-elvon-border rounded-xl px-2 py-1.5">
+                                    <button onclick="changeDetailQty(-1)" class="w-9 h-9 rounded-lg bg-elvon-card text-white font-black text-lg">−</button>
+                                    <span id="detail-qty-val" class="text-base font-black text-white">1</span>
+                                    <button onclick="changeDetailQty(1)" class="w-9 h-9 rounded-lg bg-elvon-card text-white font-black text-lg">+</button>
+                                </div>
+                                ${Number(p.stock) > 0 && Number(p.stock) <= 5 ? `<p class="text-[11px] text-amber-400 font-bold mt-1.5">بقاو غير ${p.stock} ف المخزون</p>` : ''}
+                            </div>
+                            <button onclick="addToCart('${p.id}', currentDetailQty)" class="w-full py-3.5 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-zinc-600 hover:border-white text-white text-sm font-black">إضافة للسلة</button>
+                            <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'site')" class="w-full py-3.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-sm font-black">تأكيد الطلب من الموقع</button>
+                            <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'wa')" class="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-sm font-black inline-flex items-center justify-center gap-2"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>اطلب عبر WhatsApp</button>
+                            ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')" class="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
                         </div>
                     </div>
                 </div>
-                <details id="reviews-box" class="group bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
-                    <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-3 p-4 sm:p-5">
-                        <span class="text-base font-black text-white">تقييمات الزبناء (<span id="rev-count">${prodReviews.length}</span>)</span>
-                        <span class="w-9 h-9 rounded-xl bg-elvon-black border border-elvon-border flex items-center justify-center text-zinc-300 transition-transform group-open:rotate-180"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-                    </summary>
-                    <div class="px-4 sm:px-6 pb-5 space-y-4">
-                        <form onsubmit="submitProductReview(event, '${p.id}')" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-                            <input type="text" id="rev-author" required maxlength="30" placeholder="اسمك" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                            <select id="rev-rating" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                                <option value="5">★★★★★ (5/5)</option>
-                                <option value="4">★★★★☆ (4/5)</option>
-                                <option value="3">★★★☆☆ (3/5)</option>
-                                <option value="2">★★☆☆☆ (2/5)</option>
-                                <option value="1">★☆☆☆☆ (1/5)</option>
-                            </select>
-                            <input type="text" id="rev-comment" required maxlength="400" placeholder="اكتب رأيك في المنتج..." class="sm:col-span-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                            <button type="submit" class="sm:col-span-4 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black">إضافة تقييم</button>
-                        </form>
-                        <div id="rev-list" class="space-y-2">${reviewsListHtml(prodReviews)}</div>
-                    </div>
-                </details>
                 ${related.length ? `
                     <div class="space-y-3">
                         <h3 class="text-base font-black text-white">منتجات مشابهة</h3>
