@@ -2630,9 +2630,18 @@
         }
         let waCoinMode = false;
         async function buyWithCoins(id) {
-            if (!currentAccount()) { showToast('دخل لحسابك ف عملات ELVON باش تشري بالعملات'); openWalletModal(); return; }
-            await fetchWallet();
-            openWhatsappOrderModal(id, 1, true);
+            try {
+                if (!currentAccount()) { showToast('دخل لحسابك ف عملات ELVON باش تشري بالعملات'); openWalletModal(); return; }
+                // نحلو النافذة دغيا، والرصيد كيتحمل من بعد
+                openWhatsappOrderModal(id, 1, true);
+                const prev = document.getElementById('wa-modal-prod-total-preview');
+                if (prev && !walletCache) prev.textContent = 'كنحملو الرصيد ديالك...';
+                await fetchWallet();
+                refreshWaModalSummary();
+            } catch (e) {
+                showToast('وقع مشكل، عاود جرب');
+                try { openWhatsappOrderModal(id, 1, true); } catch (e2) {}
+            }
         }
         function accountErrorText(code) {
             const map = {
@@ -2766,7 +2775,7 @@
             m.classList.remove('hidden'); m.classList.add('flex');
         }
 
-        function submitDirectWhatsappModalOrder(e) {
+        async function submitDirectWhatsappModalOrder(e) {
             e.preventDefault();
             const via = (e.submitter && e.submitter.dataset.via) || 'wa';
             const prodId = document.getElementById('wa-modal-prod-id').value;
@@ -2792,6 +2801,7 @@
             if (coinMode) {
                 if (!currentAccount()) { showToast('دخل لحسابك باش تشري بالعملات'); openWalletModal(); return; }
                 const need = Math.floor(p.coins) * qty;
+                if (!walletCache) { try { await fetchWallet(); } catch (er) {} }
                 if (!walletCache || walletCache.available < need) { showToast(`ما عندكش عملات كافية: خاصك ${need} وعندك ${walletCache ? walletCache.available : 0}`); return; }
             }
             const coinsUsed = coinMode ? Math.floor(p.coins) * qty : 0;
