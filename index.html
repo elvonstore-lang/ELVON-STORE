@@ -728,6 +728,7 @@
                     <button onclick="switchAdminTab('analytics')" id="admin-tab-btn-analytics" class="admin-tab"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>التحليلات</span></button>
                     <button onclick="switchAdminTab('repairs')" id="admin-tab-btn-repairs" class="admin-tab"><i data-lucide="wrench" class="w-4 h-4"></i><span>مواعيد الورشة</span><b class="admin-count" id="count-repairs">0</b></button>
                     <button onclick="switchAdminTab('knowledge')" id="admin-tab-btn-knowledge" class="admin-tab"><i data-lucide="bot" class="w-4 h-4"></i><span>ذكاء ELVON AI</span></button>
+                                        <button onclick="switchAdminTab('reviews')" id="admin-tab-btn-reviews" class="admin-tab"><i data-lucide="star" class="w-4 h-4"></i><span>تقييمات الزبناء</span><b class="admin-count" id="count-reviews">0</b></button>
                                         <button onclick="switchAdminTab('accounts')" id="admin-tab-btn-accounts" class="admin-tab"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>حسابات العملات</span><b class="admin-count" id="count-accounts">0</b></button>
                                         <button onclick="switchAdminTab('settings')" id="admin-tab-btn-settings" class="admin-tab"><i data-lucide="settings" class="w-4 h-4"></i><span>الإعدادات</span></button>
                 </nav>
@@ -895,6 +896,12 @@
                 <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4"><h4 class="text-sm font-black text-white mb-3">المنتجات حسب الفئة</h4><div class="h-64"><canvas id="categoryChart"></canvas></div></div>
                 <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4"><h4 class="text-sm font-black text-white mb-3">الطلبات في آخر 7 أيام</h4><div class="h-64"><canvas id="ordersChart"></canvas></div></div>
             </div>
+        </div>
+
+        <!-- التبويب: تقييمات الزبناء -->
+        <div id="admin-panel-reviews" class="hidden bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
+            <div><h3 class="text-base font-black text-white">تقييمات الزبناء</h3><p class="text-[11px] text-zinc-400">شنو كيقولو الزبناء على المنتجات. مسح أي تقييم فيه كلام خايب.</p></div>
+            <div id="admin-reviews-list" class="space-y-2"></div>
         </div>
 
         <!-- التبويب: حسابات العملات -->
@@ -3401,7 +3408,7 @@
         // =====================================================================
         // لوحة التحكم: الكوبونات، نقاط الولاء، الحالة، والتحليلات، والأدوات الفنية
         // =====================================================================
-        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'أكواد عملات ELVON', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', accounts: 'حسابات العملات', settings: 'الإعدادات' };
+        const ADMIN_TAB_TITLES = { overview: 'لوحة القيادة', ordersSite: 'طلبات الموقع', ordersWa: 'طلبات واتساب', orders: 'الطلبات', products: 'المنتجات والمخزون', promos: 'أكواد عملات ELVON', analytics: 'التحليلات', repairs: 'مواعيد الورشة', knowledge: 'ذكاء ELVON AI ومعلومات الشركة', reviews: 'تقييمات الزبناء', accounts: 'حسابات العملات', settings: 'الإعدادات' };
         let adminOrderFilter = 'site';
         const orderChannel = (o) => (o && o.channel === 'الموقع') ? 'site' : 'wa';
         function switchAdminTab(tab) {
@@ -3423,6 +3430,7 @@
             if (tab === 'repairs') renderRepairs();
             if (tab === 'promos') loadCoinCodes();
             if (tab === 'accounts') loadAccounts();
+            if (tab === 'reviews') loadAdminReviews();
             if (tab === 'knowledge') { fillKnowledgeFields(); renderFaqList(); }
             if (window.lucide) lucide.createIcons();
         }
@@ -3623,24 +3631,82 @@
             reader.readAsText(file);
         }
 
-        function submitProductReview(e, productId) {
+        // ===== تقييمات الزبناء: كيتحفظو ف السحابة (track/rv_<المنتج>/orders) باش يشوفهم الكل والمدير =====
+        const revPath = (pid) => ['track', 'rv_' + pid, 'orders'];
+        function reviewsListHtml(list) {
+            return list.length ? list.map(r => `
+                <div class="bg-elvon-black border border-elvon-border rounded-2xl p-3 text-xs">
+                    <div class="flex justify-between font-black text-white"><span>${esc(r.author)}</span><span class="text-amber-400">${'★'.repeat(Math.max(1, Math.min(5, Number(r.rating) || 5)))}</span></div>
+                    <p class="text-zinc-300 mt-1">${esc(r.comment)}</p>
+                    ${r.date ? `<p class="text-[10px] text-zinc-500 mt-1">${esc(r.date)}</p>` : ''}
+                </div>`).join('') : '<p class="text-xs text-zinc-500">لا توجد تقييمات بعد. كن أول من يقيّم هذا المنتج!</p>';
+        }
+        async function fetchReviews(pid) {
+            if (window.ElvonCloud?.ready) {
+                const list = await window.ElvonCloud.listPath(revPath(pid));
+                return list.filter(r => !r.hidden).map(r => ({ ...r, id: r._docId, productId: pid })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            }
+            return reviews.filter(r => r.productId === pid);
+        }
+        async function loadProductReviews(pid) {
+            const list = await fetchReviews(pid);
+            const box = document.getElementById('rev-list'), cnt = document.getElementById('rev-count');
+            if (box) box.innerHTML = reviewsListHtml(list);
+            if (cnt) cnt.textContent = list.length;
+        }
+        async function submitProductReview(e, productId) {
             e.preventDefault();
-            const author = document.getElementById('rev-author').value.trim();
-            const rating = parseInt(document.getElementById('rev-rating').value, 10) || 5;
-            const comment = document.getElementById('rev-comment').value.trim();
+            const author = document.getElementById('rev-author').value.trim().slice(0, 30);
+            const rating = Math.max(1, Math.min(5, parseInt(document.getElementById('rev-rating').value, 10) || 5));
+            const comment = document.getElementById('rev-comment').value.trim().slice(0, 400);
             if (!author || !comment) return;
-
-            reviews.unshift({
-                id: 'rev-' + Date.now(),
-                productId,
-                author,
-                rating,
-                comment,
-                date: new Date().toLocaleDateString('ar-MA')
-            });
-            saveState('elvon_acc_reviews_v1', reviews);
+            const rec = { id: 'rev-' + Date.now() + Math.random().toString(36).slice(2, 6), productId, author, rating, comment, date: new Date().toLocaleDateString('ar-MA'), createdAt: Date.now() };
+            if (window.ElvonCloud?.ready) {
+                const ok = await window.ElvonCloud.setPath([...revPath(productId), rec.id], { status: 'جديد', author, rating, comment, date: rec.date, createdAt: rec.createdAt });
+                if (!ok) { showToast('ما قدرناش ننشرو التقييم، عاود من بعد'); return; }
+            } else {
+                reviews.unshift(rec);
+                saveState('elvon_acc_reviews_v1', reviews);
+            }
             showToast('تم نشر تقييمك بنجاح');
-            openProductDetail(productId);
+            document.getElementById('rev-author').value = ''; document.getElementById('rev-comment').value = '';
+            loadProductReviews(productId);
+        }
+        // ----- لوحة التحكم: التقييمات -----
+        let adminReviews = [];
+        async function loadAdminReviews() {
+            const wrap = document.getElementById('admin-reviews-list');
+            if (wrap) wrap.innerHTML = '<p class="text-xs text-zinc-400 py-4 text-center">كنحملو التقييمات...</p>';
+            const all = await Promise.all(products.map(async p => (await fetchReviews(p.id)).map(r => ({ ...r, productName: p.name }))));
+            adminReviews = all.flat().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            renderAdminReviews();
+        }
+        function renderAdminReviews() {
+            const wrap = document.getElementById('admin-reviews-list'); if (!wrap) return;
+            const cnt = document.getElementById('count-reviews'); if (cnt) cnt.textContent = adminReviews.length;
+            wrap.innerHTML = adminReviews.length ? adminReviews.map(r => `
+                <div class="bg-elvon-black border border-elvon-border rounded-2xl p-3 flex items-start gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2"><span class="text-sm font-black text-white">${esc(r.author)}</span><span class="text-amber-400 text-xs">${'★'.repeat(Math.max(1, Math.min(5, Number(r.rating) || 5)))}</span><span class="text-[10px] text-zinc-500">${esc(r.date || '')}</span></div>
+                        <p class="text-xs text-zinc-200 mt-1 break-words">${esc(r.comment)}</p>
+                        <p class="text-[10px] text-zinc-500 mt-1 truncate">على: ${esc(r.productName)}</p>
+                    </div>
+                    <button onclick="deleteReview('${esc(r.productId)}', '${esc(r.id)}')" class="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black hover:bg-red-500/30">مسح</button>
+                </div>`).join('') : '<p class="text-xs text-zinc-500 py-6 text-center">ما كاين حتى تقييم.</p>';
+        }
+        async function deleteReview(pid, id) {
+            if (!confirm('مسح هاد التقييم؟')) return;
+            if (window.ElvonCloud?.ready) {
+                let ok = false;
+                try { ok = await window.ElvonCloud.deleteItem('track/rv_' + pid + '/orders', id); } catch (e) { ok = false; }
+                if (!ok) { showToast('ما قدرناش نمسحو التقييم (خاصك تكون داخل كمدير)'); return; }
+            } else {
+                reviews = reviews.filter(r => r.id !== id);
+                saveState('elvon_acc_reviews_v1', reviews);
+            }
+            adminReviews = adminReviews.filter(r => r.id !== id);
+            renderAdminReviews();
+            showToast('تمسح التقييم');
         }
 
         function changeDetailQty(delta) {
@@ -4863,6 +4929,7 @@
             currentDetailQty = 1;
             const imgs = (p.images && p.images.length) ? p.images : [createAccessoryVisual(p.category, p.name, 'ELVON')];
             const prodReviews = reviews.filter(r => r.productId === p.id);
+            loadProductReviews(p.id);
             const related = products.filter(item => item.id !== p.id && item.category === p.category).slice(0, 4);
 
             const view = document.getElementById('product-view');
@@ -4910,27 +4977,27 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-6 space-y-4">
-                    <h3 class="text-base font-black text-white">تقييمات الزبناء (${prodReviews.length})</h3>
-                    <form onsubmit="submitProductReview(event, '${p.id}')" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-                        <input type="text" id="rev-author" required placeholder="اسمك" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                        <select id="rev-rating" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                            <option value="5">★★★★★ (5/5)</option>
-                            <option value="4">★★★★☆ (4/5)</option>
-                            <option value="3">★★★☆☆ (3/5)</option>
-                        </select>
-                        <input type="text" id="rev-comment" required placeholder="اكتب رأيك في المنتج..." class="sm:col-span-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
-                        <button type="submit" class="sm:col-span-4 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black">إضافة تقييم</button>
-                    </form>
-                    <div class="space-y-2">
-                        ${prodReviews.length ? prodReviews.map(r => `
-                            <div class="bg-elvon-black border border-elvon-border rounded-2xl p-3 text-xs">
-                                <div class="flex justify-between font-black text-white"><span>${r.author}</span><span class="text-amber-400">${'★'.repeat(r.rating)}</span></div>
-                                <p class="text-zinc-300 mt-1">${r.comment}</p>
-                            </div>
-                        `).join('') : '<p class="text-xs text-zinc-500">لا توجد تقييمات بعد. كن أول من يقيّم هذا المنتج!</p>'}
+                <details id="reviews-box" class="group bg-elvon-card border border-elvon-border rounded-3xl overflow-hidden">
+                    <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-3 p-4 sm:p-5">
+                        <span class="text-base font-black text-white">تقييمات الزبناء (<span id="rev-count">${prodReviews.length}</span>)</span>
+                        <span class="w-9 h-9 rounded-xl bg-elvon-black border border-elvon-border flex items-center justify-center text-zinc-300 transition-transform group-open:rotate-180"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+                    </summary>
+                    <div class="px-4 sm:px-6 pb-5 space-y-4">
+                        <form onsubmit="submitProductReview(event, '${p.id}')" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                            <input type="text" id="rev-author" required maxlength="30" placeholder="اسمك" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                            <select id="rev-rating" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                                <option value="5">★★★★★ (5/5)</option>
+                                <option value="4">★★★★☆ (4/5)</option>
+                                <option value="3">★★★☆☆ (3/5)</option>
+                                <option value="2">★★☆☆☆ (2/5)</option>
+                                <option value="1">★☆☆☆☆ (1/5)</option>
+                            </select>
+                            <input type="text" id="rev-comment" required maxlength="400" placeholder="اكتب رأيك في المنتج..." class="sm:col-span-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
+                            <button type="submit" class="sm:col-span-4 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black">إضافة تقييم</button>
+                        </form>
+                        <div id="rev-list" class="space-y-2">${reviewsListHtml(prodReviews)}</div>
                     </div>
-                </div>
+                </details>
                 ${related.length ? `
                     <div class="space-y-3">
                         <h3 class="text-base font-black text-white">منتجات مشابهة</h3>
