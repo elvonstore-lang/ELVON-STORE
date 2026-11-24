@@ -442,9 +442,25 @@
 
                 <!-- اللغة، المفضلة، ELVON AI والسلة -->
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="toggleLanguage()" id="lang-toggle-btn" class="h-10 px-2.5 rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-elvon-border text-xs font-black text-[#DC0A14] transition-all" title="تبديل اللغة">
-                        FR
-                    </button>
+                    <div class="relative" id="lang-menu-wrap">
+                        <button onclick="toggleLangMenu(event)" class="h-10 px-2.5 rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-elvon-border text-xs font-black text-white transition-all flex items-center gap-1.5" title="اللغة" aria-label="اللغة">
+                            <span class="w-5 h-5 rounded-full overflow-hidden flex shrink-0 ring-1 ring-white/20"><svg viewBox="0 0 30 20" class="w-full h-full object-cover scale-150" aria-hidden="true"><rect width="30" height="20" fill="#C1272D"/><path d="M15 5.2l1.15 3.55h3.73l-3.02 2.19 1.15 3.55L15 12.3l-3.01 2.19 1.15-3.55-3.02-2.19h3.73z" fill="none" stroke="#006233" stroke-width=".9"/></svg></span>
+                            <span id="lang-toggle-btn" class="hidden sm:inline">العربية</span>
+                        </button>
+                        <div id="lang-menu" class="hidden absolute top-full mt-2 left-0 w-64 bg-white text-zinc-900 rounded-2xl shadow-2xl p-4 z-[60] text-right" onclick="event.stopPropagation()">
+                            <p id="lm-lang-h" class="text-sm font-black mb-2">اللغة</p>
+                            <div class="space-y-1">
+                                <label class="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-zinc-100 cursor-pointer"><input type="radio" name="site-lang" value="ar" onchange="setLanguage('ar')" class="w-5 h-5 accent-black"><span class="text-sm font-bold">العربية</span></label>
+                                <label class="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-zinc-100 cursor-pointer"><input type="radio" name="site-lang" value="fr" onchange="setLanguage('fr')" class="w-5 h-5 accent-black"><span class="text-sm font-bold">Français</span></label>
+                                <label class="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-zinc-100 cursor-pointer"><input type="radio" name="site-lang" value="en" onchange="setLanguage('en')" class="w-5 h-5 accent-black"><span class="text-sm font-bold">English</span></label>
+                            </div>
+                            <div class="border-t border-zinc-200 my-3"></div>
+                            <p id="lm-cur-h" class="text-sm font-black mb-1">العملة</p>
+                            <p class="text-sm font-bold text-zinc-600" dir="ltr">MAD : DH</p>
+                            <div class="border-t border-zinc-200 my-3"></div>
+                            <p class="flex items-center gap-2 text-xs font-bold text-zinc-500"><span class="w-5 h-5 rounded-full overflow-hidden flex shrink-0"><svg viewBox="0 0 30 20" class="w-full h-full scale-150" aria-hidden="true"><rect width="30" height="20" fill="#C1272D"/><path d="M15 5.2l1.15 3.55h3.73l-3.02 2.19 1.15 3.55L15 12.3l-3.01 2.19 1.15-3.55-3.02-2.19h3.73z" fill="none" stroke="#006233" stroke-width=".9"/></svg></span><span id="lm-country">كتتسوق دابا ف ELVON STORE من المغرب</span></p>
+                        </div>
+                    </div>
 
                     <button onclick="openWalletModal()" class="relative h-10 min-w-10 px-1.5 flex items-center justify-center gap-1 rounded-xl bg-elvon-card hover:bg-elvon-cardHover border border-amber-400/40 text-white transition-all" title="عملات ELVON" aria-label="عملات ELVON">
                         <svg class="w-7 h-7 drop-shadow" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>
@@ -1394,6 +1410,35 @@
                 confirmSiteBtn: 'Confirmer la commande sur le site (paiement à la livraison)',
                 searchPlaceholder: 'Rechercher chargeur, écouteurs, coque...',
                 langToggle: 'AR'
+            },
+            en: {
+                topTrustBar: 'Cash on delivery (COD) • Free delivery over 300 MAD • Quick WhatsApp confirmation',
+                trackOrderBtn: 'Track order',
+                storeLocationLink: 'Tangier, Morocco',
+                citySubtitle: 'Tangier, Morocco',
+                waFloating: 'ELVON WhatsApp',
+                lightningTitle: 'Flash deals ⚡',
+                clearanceTitle: 'Clearance sale 🔥',
+                limitedStock: 'Limited stock',
+                viewAll: 'View all',
+                accessoriesSection: 'Phone accessories',
+                noResultsTitle: 'No matching products',
+                noResultsDesc: 'Try another keyword or show all available accessories.',
+                showAllBtn: 'Show all products',
+                codTitle: 'Cash on delivery (COD)',
+                codDesc: 'Pay in cash when you receive and check your order, in Tangier and across Morocco.',
+                shippingTitle: 'Fast delivery, free over 300 MAD',
+                shippingDesc: 'Fast delivery in and outside Tangier, with shipping fees calculated by city.',
+                returnTitle: 'Delivery & returns',
+                returnDesc: 'Exchange or return within 48 hours for a manufacturing defect, in original condition.',
+                supportHeading: 'ELVON STORE support — Tangier, Morocco',
+                cartTitle: 'Shopping cart',
+                subtotalLabel: 'Subtotal',
+                totalCodLabel: 'Total (COD)',
+                confirmWhatsappBtn: 'Or order via WhatsApp',
+                confirmSiteBtn: 'Confirm order on the site (cash on delivery)',
+                searchPlaceholder: 'Search accessories, chargers, earbuds, cases...',
+                langToggle: 'EN'
             }
         };
 
@@ -1851,6 +1896,25 @@
             if (window.lucide) lucide.createIcons();
         }
 
+        const LANG_NAMES = { ar: 'العربية', fr: 'Français', en: 'English' };
+        const LANG_MENU_TEXT = {
+            ar: ['اللغة', 'العملة', 'كتتسوق دابا ف ELVON STORE من المغرب'],
+            fr: ['Langue', 'Devise', 'Vous achetez sur ELVON STORE depuis le Maroc'],
+            en: ['Language', 'Currency', 'You are shopping on ELVON STORE from Morocco']
+        };
+        function toggleLangMenu(e) {
+            if (e) e.stopPropagation();
+            const m = document.getElementById('lang-menu');
+            m.classList.toggle('hidden');
+            document.querySelectorAll('input[name="site-lang"]').forEach(r => { r.checked = r.value === currentLang; });
+        }
+        document.addEventListener('click', () => { const m = document.getElementById('lang-menu'); if (m) m.classList.add('hidden'); });
+        function setLanguage(lang) {
+            currentLang = I18N_DICT[lang] ? lang : 'ar';
+            saveState('elvon_acc_lang_v1', currentLang);
+            applyLanguage(currentLang);
+            document.getElementById('lang-menu')?.classList.add('hidden');
+        }
         function toggleLanguage() {
             currentLang = currentLang === 'ar' ? 'fr' : 'ar';
             saveState('elvon_acc_lang_v1', currentLang);
@@ -1872,7 +1936,11 @@
             if (searchInput) searchInput.placeholder = dict.searchPlaceholder;
 
             const langBtn = document.getElementById('lang-toggle-btn');
-            if (langBtn) langBtn.textContent = dict.langToggle;
+            if (langBtn) langBtn.textContent = LANG_NAMES[lang] || LANG_NAMES.ar;
+            const mt = LANG_MENU_TEXT[lang] || LANG_MENU_TEXT.ar;
+            const menu = document.getElementById('lang-menu');
+            if (menu) { menu.style.textAlign = lang === 'ar' ? 'right' : 'left'; menu.dir = lang === 'ar' ? 'rtl' : 'ltr'; }
+            [['lm-lang-h', 0], ['lm-cur-h', 1], ['lm-country', 2]].forEach(([id, i]) => { const el = document.getElementById(id); if (el) el.textContent = mt[i]; });
         }
 
         function updateHeaderBadges() {
