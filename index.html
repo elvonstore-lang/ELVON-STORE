@@ -542,22 +542,14 @@
                     <span id="visible-count-label" class="text-xs font-bold text-zinc-400">0 منتج</span>
                     <select id="brand-filter-select" onchange="renderStoreProducts()" class="bg-elvon-card border border-elvon-border text-white text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#DC0A14]">
                         <option value="all">كل الماركات</option>
-                        <option value="Apple">Apple / MagSafe</option>
-                        <option value="Samsung">Samsung</option>
-                        <option value="Xiaomi">Xiaomi</option>
-                        <option value="Universal">Universal / عام</option>
+                        <option value="apple">Apple</option>
+                        <option value="android">Android</option>
                     </select>
                     <select id="price-filter-select" onchange="renderStoreProducts()" class="bg-elvon-card border border-elvon-border text-white text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#DC0A14]">
                         <option value="all">كل الأسعار</option>
                         <option value="under-100">أقل من 100 MAD</option>
                         <option value="100-300">100 - 300 MAD</option>
                         <option value="over-300">أكثر من 300 MAD</option>
-                    </select>
-                    <select id="sort-products-select" onchange="renderStoreProducts()" class="bg-elvon-card border border-elvon-border text-white text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#DC0A14]">
-                        <option value="featured">الترتيب</option>
-                        <option value="newest">المنتجات الجديدة</option>
-                        <option value="price-asc">السعر: الأرخص أولاً</option>
-                        <option value="price-desc">السعر: الأغلى أولاً</option>
                     </select>
                 </div>
             </div>
@@ -2175,7 +2167,7 @@
             const grid = document.getElementById('store-products-grid');
             const emptyState = document.getElementById('empty-search-state');
             const countLabel = document.getElementById('visible-count-label');
-            const sortBy = document.getElementById('sort-products-select').value;
+            const sortBy = document.getElementById('sort-products-select')?.value || 'featured';
             const priceFilter = document.getElementById('price-filter-select').value;
             const brandFilter = document.getElementById('brand-filter-select')?.value || 'all';
 
@@ -2186,9 +2178,8 @@
                     || (activeCategory === 'coins' && Number(p.coins) > 0)
                     || p.category === activeCategory;
                 const matchDeal = activeDealFilter === 'all' || p.deal === activeDealFilter;
-                const matchBrand = brandFilter === 'all'
-                    || (p.brand && p.brand.toLowerCase() === brandFilter.toLowerCase())
-                    || p.name.toLowerCase().includes(brandFilter.toLowerCase());
+                const isApple = /apple|iphone|ipad|airpods|magsafe|lightning|ايفون|آيفون|أيفون/i.test(`${p.brand || ''} ${p.name || ''}`);
+                const matchBrand = brandFilter === 'all' || (brandFilter === 'apple' ? isApple : !isApple);
                 const matchPrice = priceFilter === 'all'
                     || (priceFilter === 'under-100' && p.price < 100)
                     || (priceFilter === '100-300' && p.price >= 100 && p.price <= 300)
