@@ -4,63 +4,54 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'elvonstore1@gmail.com';
     }
-    // الكل يقرأ المنتجات والكوبونات والإعدادات، المدير فقط يعدل
+    function signedIn() { return request.auth != null; }
+    // حجم معقول باش حتى واحد ما يعمر القاعدة بالزبل
+    function smallDoc() { return request.resource.data.size() <= 40; }
+
+    // المنتجات والإعدادات: الكل يقرا، المدير وحده يكتب
     match /products/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /promos/{id}   { allow read: if true; allow write: if isAdmin(); }
+    // promos: فيها أكواد العملات (COIN_...) — الزبون كيقرا غير الكود لي عارف
+    match /promos/{id}   { allow get: if true; allow list: if isAdmin(); allow write: if isAdmin(); }
+    // settings: فيها الرصيد (wal_...) ونسخة الرقم (phone_...) — المدير وحده يكتب
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
-    // الزبون يقدر يرسل طلب فقط، والمدير وحده يقرأه ويعدله
-    match /orders/{id}   { allow create: if true; allow read, update, delete: if isAdmin(); }
-    // مواعيد الورشة: الزبون ينشئ موعداً جديداً فقط، والمدير وحده يقرأه ويعدله
-    match /appointments/{id} {
-      allow create: if request.resource.data.status == 'جديد';
+
+    // الطلبات: الزبون كيصيفط طلب جديد فقط، والمدير وحده يقرا ويبدل
+    match /orders/{id} {
+      allow create: if smallDoc() && (
+        // طلب عادي
+        (request.resource.data.status == 'جديد' && request.resource.data.total is number && request.resource.data.total >= 0
+          && (!('coinsSpentApplied' in request.resource.data) || request.resource.data.coinsSpentApplied == false)
+          && (!('coinsEarnedApplied' in request.resource.data) || request.resource.data.coinsEarnedApplied == false))
+        // سجل حساب العملات: غير مول الحساب
+        || (signedIn() && request.resource.data.type == 'account' && id == 'ACCT_' + request.auth.uid && request.resource.data.uid == request.auth.uid)
+      );
       allow read, update, delete: if isAdmin();
     }
-    // أكواد العملات: الزبون يقدر يقرأ غير الكود لي عارف (ما يقدرش يشوف اللائحة)، والمدير وحده يصاوبهم
-    match /coincodes/{c} {
-      allow get: if true;
-      allow list, write: if isAdmin();
+
+    // مواعيد الورشة
+    match /appointments/{id} {
+      allow create: if smallDoc() && request.resource.data.status == 'جديد';
+      allow read, update, delete: if isAdmin();
     }
-    // عملات ELVON: حسابات الزبناء (رقم الهاتف + كلمة السر) — wallets/{uid}
-    // الزبون يقرأ غير الحساب ديالو، والمدير وحده يبدل الرصيد
-    function isUser(u) {
-      return request.auth != null && request.auth.uid == u;
-    }
-    // phones/{الرقم}: نسخة الحساب (كتبدل ملي الزبون كينسا كلمة السر) — المدير وحده يكتب
-    match /phones/{n} {
-      allow get: if true;
-      allow list, write: if isAdmin();
-    }
-    match /wallets/{u} {
-      allow get: if isUser(u) || isAdmin();
-      allow create: if isAdmin() || (isUser(u)
-        && request.resource.data.keys().hasOnly(['name', 'phone', 'createdAt'])
-        && request.auth.token.email.matches('p' + request.resource.data.phone + 'v[0-9]+@users[.]elvon[.]store'));
-      allow update: if isAdmin();
-      allow list, delete: if isAdmin();
-      // أكواد العملات لي دخل الزبون: مرة وحدة لكل كود، وبنفس العدد لي حط المدير
-      match /redeems/{c} {
-        allow get, list: if isUser(u) || isAdmin();
-        allow create: if isUser(u)
-          && exists(/databases/$(database)/documents/coincodes/$(c))
-          && get(/databases/$(database)/documents/coincodes/$(c)).data.active == true
-          && request.resource.data.coins == get(/databases/$(database)/documents/coincodes/$(c)).data.coins
-          && request.resource.data.keys().hasOnly(['coins', 'at']);
-        allow update, delete: if isAdmin();
-      }
-      // نسخة من طلبات الزبون باش يشوف العملات المحجوزة والجاية
-      match /orders/{o} {
-        allow get, list: if isUser(u) || isAdmin();
-        allow create: if isUser(u)
-          && request.resource.data.coinsSpentApplied == false
-          && request.resource.data.coinsEarnedApplied == false;
-        allow update, delete: if isAdmin();
-      }
-    }
-    // تتبع الطلب بالهاتف: الزبون يقدر يقرأ طلباته (بمعرفة رقمه) وينشئ سجلاً جديداً بحالة "جديد" فقط، والمدير وحده يغير الحالة
-    match /track/{phoneHash}/orders/{orderId} {
+
+    // track: تتبع الطلبات، التقييمات (rv_)، أكواد/طلبات العملات (w_<uid>)، استعمالات الأكواد (c_<code>)
+    match /track/{key}/orders/{docId} {
       allow get, list: if true;
-      allow create: if request.resource.data.status == 'جديد';
+      allow create: if smallDoc() && request.resource.data.status == 'جديد'
+        // حساب العملات: غير مول الحساب كيكتب ف w_ ديالو
+        && (!key.matches('w_.*') || (signedIn() && key == 'w_' + request.auth.uid
+              && (!('coinsSpentApplied' in request.resource.data) || request.resource.data.coinsSpentApplied == false)
+              && (!('coinsEarnedApplied' in request.resource.data) || request.resource.data.coinsEarnedApplied == false)))
+        // استعمال الكود: غير بسمية الحساب ديالو
+        && (!key.matches('c_.*') || (signedIn() && docId == request.auth.uid))
+        // التقييم: نجوم من 1 حتى 5 وكلام قصير
+        && (!key.matches('rv_.*') || (request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+              && request.resource.data.comment is string && request.resource.data.comment.size() <= 400
+              && request.resource.data.author is string && request.resource.data.author.size() <= 30));
       allow update, delete: if isAdmin();
     }
+
+    // أي حاجة أخرى ممنوعة
+    match /{document=**} { allow read, write: if false; }
   }
 }
