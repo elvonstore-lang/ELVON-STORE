@@ -302,9 +302,9 @@
     .eai-aurora{position:absolute;inset:-40% -20% auto -20%;height:70%;background:conic-gradient(from 180deg at 50% 50%,rgba(220,10,20,.0),rgba(220,10,20,.25),rgba(255,120,60,.12),rgba(124,58,237,.12),rgba(220,10,20,.0));filter:blur(60px);opacity:.55;animation:eaiSpin 18s linear infinite;pointer-events:none}
     @keyframes eaiSpin{to{transform:rotate(360deg)}}
     .eai-head{background:rgba(10,10,13,.55);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.06)}
-    .eai-orb{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff3b44,#99070e 60%,#3a0306);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 8px 24px rgba(220,10,20,.45);position:relative}
-    .eai-orb:after{content:'';position:absolute;inset:-3px;border-radius:16px;background:conic-gradient(from 0deg,#ff3b44,#ffb36b,#7c3aed,#ff3b44);z-index:-1;filter:blur(6px);opacity:.6;animation:eaiSpin 6s linear infinite}
-    .eai-grad-text{background:linear-gradient(90deg,#ff3b44,#ffb36b);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .eai-orb{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:#000;border:2px solid #DC0A14;box-shadow:0 0 18px rgba(220,10,20,.55);position:relative;padding:4px}
+    .eai-orb:after{content:'';position:absolute;inset:-6px;border-radius:18px;background:radial-gradient(circle,rgba(220,10,20,.45),transparent 70%);z-index:-1;animation:eaiGlow 3s ease-in-out infinite}@keyframes eaiGlow{50%{opacity:.4}}
+    .eai-grad-text{color:#DC0A14}
     .eai-live{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:eaiPulse 2s infinite}
     @keyframes eaiPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
     .eai-icon-btn{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#a1a1aa;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);transition:.2s}
@@ -315,7 +315,7 @@
     .eai-send{width:42px;height:42px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#ff3b44,#b90810);box-shadow:0 6px 18px rgba(220,10,20,.45);transition:.15s}
     .eai-send:hover{transform:translateY(-1px)}.eai-send:active{transform:scale(.94)}
     .eai-msg-ai{display:flex;gap:10px;align-items:flex-start}
-    .eai-avatar{width:30px;height:30px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff3b44,#7a0509);box-shadow:0 4px 14px rgba(220,10,20,.35);margin-top:2px}
+    .eai-avatar{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#000;border:1.5px solid #DC0A14;box-shadow:0 0 12px rgba(220,10,20,.4);margin-top:2px;padding:3px}
     .eai-ai-text{color:#e4e4e7;font-size:14px;line-height:1.9;white-space:pre-line;font-weight:500}
     .eai-ai-text strong{color:#fff;font-weight:800}
     .eai-li{color:#ff4d55;font-weight:900;margin-inline-end:4px}
@@ -325,7 +325,7 @@
     .eai-typing i:nth-child(2){animation-delay:.15s}.eai-typing i:nth-child(3){animation-delay:.3s}
     @keyframes eaiDot{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
     .eai-hero{text-align:center;padding:18px 4px 6px}
-    .eai-hero-orb{width:72px;height:72px;margin:0 auto 14px;border-radius:24px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff3b44,#99070e 60%,#3a0306);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 14px 40px rgba(220,10,20,.5);animation:eaiFloat 4s ease-in-out infinite}
+    .eai-hero-orb{width:92px;height:92px;margin:0 auto 16px;border-radius:24px;display:flex;align-items:center;justify-content:center;background:#000;border:3px solid #DC0A14;box-shadow:0 0 50px rgba(220,10,20,.6);animation:eaiFloat 4s ease-in-out infinite;padding:10px}
     @keyframes eaiFloat{50%{transform:translateY(-6px)}}
     .eai-hero h2{font-size:24px;font-weight:900;color:#fff;line-height:1.35}
     .eai-sugg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;text-align:right}
@@ -339,6 +339,15 @@
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
         <linearGradient id="ecoin-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".45" stop-color="#f4c542"/><stop offset="1" stop-color="#b9831a"/></linearGradient>
         <linearGradient id="ecoin-r" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a5a0e"/><stop offset="1" stop-color="#ffdf7a"/></linearGradient>
+        <symbol id="ELOGO" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#DC0A14" stroke-width="6.5"/>
+            <line x1="8" y1="50" x2="22" y2="50" stroke="#DC0A14" stroke-width="5"/>
+            <circle cx="24" cy="50" r="4" fill="#000" stroke="#DC0A14" stroke-width="4"/>
+            <circle cx="50" cy="92" r="4.5" fill="#000" stroke="#DC0A14" stroke-width="4"/>
+            <circle cx="77" cy="46" r="4.5" fill="#000" stroke="#DC0A14" stroke-width="4"/>
+            <path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="#DC0A14" stroke-width="8.5" stroke-linecap="round"/>
+            <path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="#DC0A14"/>
+        </symbol>
         <symbol id="ECOIN" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="48" fill="url(#ecoin-r)"/>
             <circle cx="50" cy="50" r="41" fill="url(#ecoin-g)"/>
@@ -1102,7 +1111,7 @@
             <!-- رأس المساعد -->
             <div class="eai-head relative flex items-center justify-between px-4 sm:px-5 py-3.5">
                 <div class="flex items-center gap-3">
-                    <div class="eai-orb"><svg viewBox="0 0 100 100" class="w-6 h-6 text-white" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="7"/><path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="currentColor"/></svg></div>
+                    <div class="eai-orb"><svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true"><use href="#ELOGO"/></svg></div>
                     <div>
                         <h3 class="text-[15px] sm:text-base font-black text-white tracking-wide" dir="ltr">ELVON <span class="eai-grad-text">AI</span></h3>
                         <p class="text-[11px] text-zinc-400 font-bold flex items-center gap-1.5"><span class="eai-live"></span>متصل • كيجاوب على أي سؤال</p>
@@ -2818,7 +2827,7 @@
             if (!box || box.children.length > 0) return;
             const sugg = [['🎧', 'بغيت سماعات مزيانة بأقل من 200 درهم'], ['⚡', 'شنو أحسن شاحن سريع لآيفون؟'], ['📦', 'بغيت نتبع الطلب ديالي'], ['🌍', 'ترجم ليا: شكرا بزاف بالفرنسية']];
             box.innerHTML = `<div id="eai-hero" class="eai-hero ai-in">
-                <div class="eai-hero-orb"><svg viewBox="0 0 100 100" class="w-10 h-10 text-white" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="7"/><path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="currentColor"/></svg></div>
+                <div class="eai-hero-orb"><svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true"><use href="#ELOGO"/></svg></div>
                 <h2>أهلا 👋 أنا <span class="eai-grad-text" dir="ltr">ELVON AI</span></h2>
                 <p class="text-sm text-zinc-400 font-semibold mt-1.5">كيفاش نقدر نعاونك اليوم؟</p>
                 <div class="eai-sugg">${sugg.map(([i, q]) => `<button type="button" onclick="askAiPreset(this.dataset.q)" data-q="${esc(q)}"><b>${i}</b>${esc(q)}</button>`).join('')}</div>
@@ -3208,6 +3217,18 @@
             el.innerHTML = aiFmt(text);
         }
 
+        // كنلقاو المنتجات لي ذكرهم الجواب (حتى إلا ما كتبش السمية كاملة)
+        function aiProductsMentioned(text) {
+            const tn = aiNorm(text);
+            const words = (s) => aiNorm(s).replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length >= 3);
+            const stop = new Set(['شاحن', 'سريع', 'كابل', 'سماعات', 'لاسلكيه', 'لجميع', 'هواتف', 'حمايه', 'with', 'for', 'the', 'and', 'مع', 'بقدره', 'موديل', 'تقنيه', 'منفذ']);
+            return products.filter(p => p && p.name && Number(p.stock) > 0).map(p => {
+                if (tn.includes(aiNorm(p.name))) return [p, 99];
+                const key = words(p.name + ' ' + (p.brand || '')).filter(w => !stop.has(w) && /[a-z0-9]/.test(w) || (w.length >= 5 && !stop.has(w)));
+                const hits = key.filter(w => tn.includes(w)).length;
+                return [p, hits >= 2 ? hits : (hits === 1 && key.some(w => /[a-z]{3,}\d|\d{2,}[a-z]|^[a-z]{4,}$/.test(w) && tn.includes(w)) ? 1 : 0)];
+            }).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(x => x[0]);
+        }
         async function appendAiBubble(role, text, matchedProducts = [], chips = [], action = null) {
             const box = document.getElementById('elvon-ai-messages');
             if (!box) return;
@@ -3219,7 +3240,7 @@
                 wrapper.innerHTML = `<div class="eai-user">${esc(text)}</div>`;
                 box.appendChild(wrapper);
             } else {
-                wrapper.innerHTML = `<div class="eai-avatar"><svg viewBox="0 0 100 100" class="w-[18px] h-[18px] text-white" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="7"/><path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="currentColor"/></svg></div><div class="eai-ai-col flex-1 min-w-0 flex flex-col items-start space-y-2.5"></div>`;
+                wrapper.innerHTML = `<div class="eai-avatar"><svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true"><use href="#ELOGO"/></svg></div><div class="eai-ai-col flex-1 min-w-0 flex flex-col items-start space-y-2.5"></div>`;
                 const col = wrapper.lastElementChild;
                 const bubble = document.createElement('div');
                 bubble.className = 'eai-ai-text';
@@ -3275,7 +3296,7 @@
             const box = document.getElementById('elvon-ai-messages');
             const typingEl = document.createElement('div');
             typingEl.className = 'eai-msg-ai ai-in';
-            typingEl.innerHTML = `<div class="eai-avatar"><svg viewBox="0 0 100 100" class="w-[18px] h-[18px] text-white" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="7"/><path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="currentColor"/></svg></div><div class="eai-typing"><i></i><i></i><i></i></div>`;
+            typingEl.innerHTML = `<div class="eai-avatar"><svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true"><use href="#ELOGO"/></svg></div><div class="eai-typing"><i></i><i></i><i></i></div>`;
             box.appendChild(typingEl);
             box.scrollTop = box.scrollHeight;
 
@@ -3299,7 +3320,7 @@
                         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
                         body: JSON.stringify({
                             message: userText, history: aiChatHistory.slice(-16),
-                            catalog: products.map(p => ({ name: p.name, brand: p.brand, category: CATEGORY_LABELS[p.category], price_mad: p.price, old_price_mad: p.oldPrice || null, stock: p.stock, specs: p.desc })),
+                            catalog: products.map(p => ({ id: p.id, name: p.name, brand: p.brand, category: CATEGORY_LABELS[p.category], price_mad: p.price, old_price_mad: p.oldPrice || null, stock: p.stock, specs: p.desc })),
                             store: { address: settings.address, maps: settings.mapsUrl, hours: settings.hours, phone: settings.phoneDisplay, about: settings.about, faq: settings.faq || [] },
                             policy: { cod: true, free_shipping_from: settings.freeShippingThreshold, tanger_fee: settings.shippingFee, other_fee: settings.otherCitiesFee, exchange_hours: 48 }
                         })
@@ -3309,12 +3330,13 @@
                         const d = await r.json();
                         if (d && d.disabled) aiServerOff = true;
                         if (d && d.reply) {
-                            const t = String(d.reply);
-                            const tn = aiNorm(t);
-                            // نخليو بطاقات المنتجات غير إلا الجواب الذكي ذكرهم
-                            const keep = (reply.products || []).filter(p => p && p.name && tn.includes(aiNorm(p.name)));
-                            const named = keep.length ? keep : products.filter(p => p && p.name && Number(p.stock) > 0 && aiNorm(p.name).length > 4 && tn.includes(aiNorm(p.name))).slice(0, 4);
-                            reply = { text: t, products: named, chips: [], action: reply.action };
+                            let t = String(d.reply);
+                            // الذكاء الاصطناعي كيرجع [[products: id1, id2]] ف اللخر: كنبينو البطاقات باش يطلب الزبون نيشان
+                            let ids = [];
+                            t = t.replace(/\[\[\s*products?\s*:([^\]]*)\]\]/gi, (m, list) => { ids = ids.concat(list.split(/[,\s]+/).map(x => x.trim()).filter(Boolean)); return ''; }).trim();
+                            let named = ids.map(id => products.find(p => p.id === id)).filter(Boolean);
+                            if (!named.length) named = aiProductsMentioned(t);
+                            reply = { text: t, products: [...new Set(named)].slice(0, 4), chips: [], action: reply.action };
                         }
                     } else if (r.status === 404) aiServerOff = true;
                 } catch (e) { /* نبقى على الجواب المحلي */ }
