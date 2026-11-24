@@ -562,6 +562,8 @@
                 <button onclick="selectCategory('audio')" data-cat="audio" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🎧 سماعات وإيربودز</button>
                 <button onclick="selectCategory('protection')" data-cat="protection" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🛡️ كفرات وحماية</button>
                 <button onclick="selectCategory('watches')" data-cat="watches" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">⌚ ساعات ذكية</button>
+                <button onclick="selectCategory('powerbanks')" data-cat="powerbanks" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🔋 بطاريات متنقلة</button>
+                <button onclick="selectCategory('car')" data-cat="car" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🚗 إكسسوارات السيارات</button>
 
             </div>
         </section>
@@ -1248,6 +1250,7 @@
                             <option value="protection">كفرات وحماية</option>
                             <option value="watches">ساعات ذكية</option>
                             <option value="powerbanks">بطاريات متنقلة</option>
+                            <option value="car">إكسسوارات السيارات</option>
                         </select>
                     </div>
                     <div>
@@ -1400,7 +1403,8 @@
             holders: 'حوامل وستاندات',
             protection: 'كفرات وحماية',
             watches: 'ساعات ذكية',
-            powerbanks: 'بطاريات متنقلة'
+            powerbanks: 'بطاريات متنقلة',
+            car: 'إكسسوارات السيارات'
         };
 
         // توليد صور المنتجات (SVG) بأربع لقطات: العرض الرئيسي، المميزات، محتويات العلبة، ضمانات المتجر
@@ -2176,6 +2180,7 @@
                     || (activeCategory === 'bestsellers' && (p.deal === 'lightning' || p.stock <= 15))
                     || (activeCategory === 'new' && idx < 4)
                     || (activeCategory === 'coins' && Number(p.coins) > 0)
+                    || (activeCategory === 'car' && (p.category === 'holders' || /سيار|طوموبيل|voiture|car\b|auto\b|ولاعه|allume/i.test(p.name)))
                     || p.category === activeCategory;
                 const matchDeal = activeDealFilter === 'all' || p.deal === activeDealFilter;
                 const isApple = /apple|iphone|ipad|airpods|magsafe|lightning|ايفون|آيفون|أيفون/i.test(`${p.brand || ''} ${p.name || ''}`);
