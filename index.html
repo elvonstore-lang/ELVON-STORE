@@ -2287,7 +2287,7 @@
                 const isFav = wishlist.includes(p.id);
 
                 return `
-                    <article class="product-card bg-elvon-card border border-elvon-border rounded-2xl overflow-hidden flex flex-col justify-between">
+                    <article onclick="openProductDetail('${p.id}')" class="product-card bg-elvon-card border border-elvon-border hover:border-[#DC0A14]/60 rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-colors">
                         <div>
                             <div onclick="openProductDetail('${p.id}')" class="relative aspect-square bg-zinc-900 overflow-hidden cursor-pointer group">
                                 <img src="${img}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
@@ -2318,20 +2318,6 @@
                             </div>
                         </div>
 
-                        <div class="px-3 pb-3 grid grid-cols-2 gap-1.5">
-                            <button onclick="addToCart('${p.id}', 1)"
-                                    class="py-2 px-2 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-elvon-border hover:border-[#DC0A14] text-white text-[11px] font-black flex items-center justify-center gap-1 transition-all active:scale-95">
-                                <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-[#DC0A14]"></i>
-                                <span>للسلة</span>
-                            </button>
-                            ${activeCategory === 'coins' && Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')"
-                                    class="py-2 px-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-[11px] font-black flex items-center justify-center gap-1 transition-all active:scale-95">
-                                <span>بدل بالعملات</span>
-                            </button>` : `<button onclick="openWhatsappOrderModal('${p.id}', 1)"
-                                    class="py-2 px-2 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-[11px] font-black flex items-center justify-center gap-1 transition-all active:scale-95">
-                                <span>اطلب الآن</span>
-                            </button>`}
-                        </div>
                     </article>
                 `;
             }).join('');
@@ -4908,7 +4894,7 @@
                             ${p.oldPrice ? `<span class="text-sm text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
                         </div>
                         <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">${p.desc || ''}</p>
-                        <div class="flex items-center gap-3 pt-2">
+                        <div class="flex flex-wrap items-center gap-3 pt-2">
                             <div class="flex items-center gap-2 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2">
                                 <button onclick="changeDetailQty(-1)" class="w-6 h-6 rounded-lg bg-elvon-card text-white font-black">-</button>
                                 <span id="detail-qty-val" class="text-sm font-black text-white px-2">1</span>
@@ -4918,8 +4904,9 @@
                                 إضافة للسلة
                             </button>
                             <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty)" class="flex-1 py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-xs sm:text-sm font-black">
-                                اطلب الآن عبر WhatsApp
+                                اطلب الآن
                             </button>
+                            ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')" class="w-full sm:w-auto sm:flex-1 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs sm:text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
                         </div>
                     </div>
                 </div>
