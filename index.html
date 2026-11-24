@@ -2,6 +2,8 @@
 <html lang="ar" dir="rtl" class="scroll-smooth dark">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://www.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://elvon-store.vercel.app https://*.vercel.app https://*.workers.dev https://cdn.jsdelivr.net; frame-src https://*.firebaseapp.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html{touch-action:manipulation}input,select,textarea{font-size:16px!important}</style> <link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#050505"> <title>ELVON STORE | متجر إلفون للإكسسوارات - طنجة، المغرب</title>
     <meta name="description" content="متجر ELVON STORE في طنجة للإكسسوارات والملحقات الذكية: شواحن سريعة، سماعات لاسلكية، كفرات حماية، حوامل، ساعات ذكية وبطاريات متنقلة. الدفع عند الاستلام وتوصيل مجاني فوق 300 درهم.">
@@ -1800,9 +1802,6 @@
                 renderStoreProducts();
                 renderAdminTables();
             });
-            C.listenCollection('promos', (list) => {
-                if (list.length) { promos = list; saveState('elvon_acc_promos_v1', promos); renderAdminTables(); }
-            });
             C.listenCollection('settings', (list) => {
                 const cfg = list.find(x => x._docId === 'main');
                 if (!cfg) return;
@@ -1822,7 +1821,7 @@
             if (!C?.ready) return;
             if (!ordersUnsub) {
                 ordersUnsub = C.listenCollection('orders', (list) => {
-                    adminAccountDocs = list.filter(o => o.type === 'account');
+                    adminAccountDocs = list.filter(o => o.type === 'account' && /^[A-Za-z0-9_-]{6,64}$/.test(String(o.uid || '')) && o._docId === 'ACCT_' + o.uid);
                     adminOrders = list.filter(o => o.type !== 'account').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     renderAdminTables();
                 });
@@ -2039,7 +2038,8 @@
             if (!container) return;
             const item = document.createElement('div');
             item.className = 'bg-elvon-card border border-elvon-red/70 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2';
-            item.innerHTML = `<span class="w-2 h-2 rounded-full bg-elvon-red"></span><span>${msg}</span>`;
+            item.innerHTML = `<span class="w-2 h-2 rounded-full bg-elvon-red"></span><span></span>`;
+            item.lastElementChild.textContent = String(msg == null ? '' : msg);
             container.appendChild(item);
             setTimeout(() => item.remove(), 2600);
         }
@@ -2140,10 +2140,10 @@
                 return `
                     <div onclick="openProductDetail('${p.id}')" class="group cursor-pointer bg-elvon-black border border-elvon-border hover:border-elvon-red rounded-xl p-2 transition-all">
                         <div class="relative aspect-square rounded-lg overflow-hidden bg-zinc-900 mb-1.5">
-                            <img src="${img}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            <img src="${esc(img)}" alt="${esc(p.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                             ${discount > 0 ? `<span class="absolute top-1 right-1 ${badgeColor} text-white text-[10px] font-black px-1.5 py-0.5 rounded">-${discount}%</span>` : ''}
                         </div>
-                        <p class="text-[11px] font-bold text-zinc-200 truncate">${p.name}</p>
+                        <p class="text-[11px] font-bold text-zinc-200 truncate">${esc(p.name)}</p>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-xs sm:text-sm font-black text-elvon-red">${p.price} MAD</span>
                             ${p.oldPrice ? `<span class="text-[10px] text-zinc-500 line-through">${p.oldPrice}</span>` : ''}
@@ -2190,9 +2190,9 @@
                 return `
                     <div onclick="document.getElementById('search-suggest').classList.add('hidden'); openProductDetail('${p.id}')"
                          class="flex items-center gap-3 p-2.5 hover:bg-elvon-cardHover cursor-pointer border-b border-elvon-border last:border-none">
-                        <img src="${img}" alt="${p.name}" class="w-10 h-10 rounded-lg object-cover shrink-0">
+                        <img src="${esc(img)}" alt="${esc(p.name)}" class="w-10 h-10 rounded-lg object-cover shrink-0">
                         <div class="flex-1 min-w-0">
-                            <p class="text-xs font-bold text-white truncate">${p.name}</p>
+                            <p class="text-xs font-bold text-white truncate">${esc(p.name)}</p>
                             <p class="text-[11px] text-zinc-400">${CATEGORY_LABELS[p.category] || ''}</p>
                         </div>
                         <span class="text-xs font-black text-elvon-red shrink-0">${p.price} MAD</span>
@@ -2297,7 +2297,7 @@
                     <article onclick="openProductDetail('${p.id}')" class="product-card bg-elvon-card border border-elvon-border hover:border-[#DC0A14]/60 rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-colors">
                         <div>
                             <div onclick="openProductDetail('${p.id}')" class="relative aspect-square bg-zinc-900 overflow-hidden cursor-pointer group">
-                                <img src="${img}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                <img src="${esc(img)}" alt="${esc(p.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                                 <div class="absolute top-2 right-2 flex flex-col gap-1">
                                     ${dealBadge}
                                     ${discount > 0 ? `<span class="bg-black/85 border border-[#DC0A14]/50 text-[#DC0A14] text-[10px] font-black px-1.5 py-0.5 rounded-md">-${discount}%</span>` : ''}
@@ -2311,10 +2311,10 @@
                             <div class="p-3 space-y-1">
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="text-[10px] font-bold text-zinc-400">${CATEGORY_LABELS[p.category] || 'إكسسوار'}</span>
-                                    ${p.brand ? `<span class="text-[10px] font-extrabold text-zinc-500">${p.brand}</span>` : ''}
+                                    ${p.brand ? `<span class="text-[10px] font-extrabold text-zinc-500">${esc(p.brand)}</span>` : ''}
                                 </div>
                                 <h3 onclick="openProductDetail('${p.id}')" class="text-xs sm:text-sm font-extrabold text-white line-clamp-2 cursor-pointer hover:text-[#DC0A14] transition-colors min-h-[2.4rem]">
-                                    ${p.name}
+                                    ${esc(p.name)}
                                 </h3>
                                 <div class="flex items-baseline gap-1.5 pt-1">
                                     <span class="text-sm sm:text-base font-black text-[#DC0A14]">${p.price} MAD</span>
@@ -2360,9 +2360,9 @@
                     return `
                         <div class="flex items-center justify-between gap-3 bg-elvon-black border border-elvon-border rounded-2xl p-2.5">
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <img src="${img}" alt="${p.name}" class="w-12 h-12 rounded-xl object-cover shrink-0">
+                                <img src="${esc(img)}" alt="${esc(p.name)}" class="w-12 h-12 rounded-xl object-cover shrink-0">
                                 <div class="min-w-0">
-                                    <p class="text-xs font-black text-white truncate cursor-pointer hover:text-[#DC0A14]" onclick="closeModalById('wishlist-modal'); openProductDetail('${p.id}')">${p.name}</p>
+                                    <p class="text-xs font-black text-white truncate cursor-pointer hover:text-[#DC0A14]" onclick="closeModalById('wishlist-modal'); openProductDetail('${p.id}')">${esc(p.name)}</p>
                                     <p class="text-xs font-black text-[#DC0A14]">${p.price} MAD</p>
                                 </div>
                             </div>
@@ -2475,7 +2475,7 @@
         const todayKey = () => Math.floor(Date.now() / 86400000);
         function localStoreGet(k, d) { return loadState(k, d); }
         function currentAccount() {
-            if (window.ElvonCloud?.ready) return window.ElvonCloud.account();
+            if (window.ElvonCloud?.ready) { try { return window.ElvonCloud.account ? window.ElvonCloud.account() : null; } catch (e) { return null; } }
             return loadState('elvon_local_account', null);
         }
         async function readWalletRaw(uid) {
@@ -2620,7 +2620,7 @@
                 const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
                 const out = typeof p.stock === 'number' && p.stock <= 0;
                 return `<div class="bg-elvon-black/70 border border-amber-400/25 rounded-2xl overflow-hidden flex flex-col">
-                    <img src="${img}" alt="${esc(p.name)}" class="w-full aspect-square object-cover cursor-pointer" onclick="openProductDetail('${p.id}')">
+                    <img src="${esc(img)}" alt="${esc(p.name)}" class="w-full aspect-square object-cover cursor-pointer" onclick="openProductDetail('${p.id}')">
                     <div class="p-2.5 flex-1 flex flex-col gap-1.5">
                         <p class="text-[11px] sm:text-xs font-black text-white line-clamp-2 leading-snug">${esc(p.name)}</p>
                         <p class="flex items-center gap-1 text-amber-300 font-black text-sm"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>${Math.floor(p.coins)} عملة</p>
@@ -3579,7 +3579,7 @@
                 matchedBox.innerHTML = items.length ? items.map(p => `
                     <div class="flex items-center justify-between bg-elvon-black border border-elvon-border rounded-xl p-2.5 text-xs">
                         <div class="min-w-0">
-                            <p class="font-bold text-white truncate">${p.name}</p>
+                            <p class="font-bold text-white truncate">${esc(p.name)}</p>
                             <p class="text-[10px] text-zinc-400">المخزون: ${p.stock} • ${p.brand || 'Universal'}</p>
                         </div>
                         <span class="font-black text-[#DC0A14] shrink-0">${p.price} MAD</span>
@@ -3830,9 +3830,9 @@
                 const img = (prod && prod.images && prod.images[0]) || createAccessoryVisual('chargers', item.name, 'ELVON');
                 return `
                     <div class="flex items-center gap-3 bg-elvon-card border border-elvon-border rounded-2xl p-2.5">
-                        <img src="${img}" alt="${item.name}" class="w-14 h-14 rounded-xl object-cover shrink-0">
+                        <img src="${esc(img)}" alt="${esc(item.name)}" class="w-14 h-14 rounded-xl object-cover shrink-0">
                         <div class="flex-1 min-w-0">
-                            <p class="text-xs font-extrabold text-white truncate">${item.name}</p>
+                            <p class="text-xs font-extrabold text-white truncate">${esc(item.name)}</p>
                             <p class="text-xs font-black text-[#DC0A14] mt-0.5">${item.price * item.qty} MAD</p>
                             <div class="flex items-center gap-2 mt-1.5">
                                 <button onclick="updateCartItemQty('${item.id}', -1)" class="w-6 h-6 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-black">-</button>
@@ -4933,7 +4933,7 @@
             if (!container) return;
             container.innerHTML = modalImages.map((src, idx) => `
                 <div class="relative aspect-square rounded-xl overflow-hidden border border-elvon-border bg-elvon-black">
-                    <img src="${src}" alt="صورة ${idx + 1}" class="w-full h-full object-cover">
+                    <img src="${esc(src)}" alt="صورة ${idx + 1}" class="w-full h-full object-cover">
                     <button type="button" onclick="removeModalImage(${idx})"
                             class="absolute top-1 left-1 w-5 h-5 rounded-full bg-elvon-red text-white text-xs font-black flex items-center justify-center">×</button>
                 </div>
@@ -4956,18 +4956,18 @@
                     <div class="lg:col-span-5 bg-elvon-card border border-elvon-border rounded-3xl p-3 sm:p-4 order-1 lg:order-none">
                         <div class="flex gap-3">
                             ${imgs.length > 1 ? `<div class="hidden sm:flex flex-col gap-2 w-16 shrink-0 max-h-[460px] overflow-y-auto no-scrollbar">
-                                ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb aspect-square w-16 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'} hover:border-[#DC0A14] transition-colors"><img src="${src}" alt="صورة ${i + 1}" class="w-full h-full object-cover"></button>`).join('')}
+                                ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb aspect-square w-16 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'} hover:border-[#DC0A14] transition-colors"><img src="${esc(src)}" alt="صورة ${i + 1}" class="w-full h-full object-cover"></button>`).join('')}
                             </div>` : ''}
                             <div class="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-elvon-black border border-elvon-border">
                                 <button onclick="switchView('store')" title="العودة للمتجر" aria-label="العودة للمتجر" class="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-[#DC0A14] hover:bg-[#B90810] text-white flex items-center justify-center shadow-lg shadow-[#DC0A14]/40 transition-transform active:scale-90">
                     <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </button>
-                                <img id="detail-main-img" src="${imgs[0]}" alt="${esc(p.name)}" class="w-full h-full object-cover">
+                                <img id="detail-main-img" src="${esc(imgs[0])}" alt="${esc(p.name)}" class="w-full h-full object-cover">
                                 ${imgs.length > 1 ? `<span id="detail-img-count" class="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[11px] font-black text-white" dir="ltr">1/${imgs.length}</span>` : ''}
                             </div>
                         </div>
                         ${imgs.length > 1 ? `<div class="sm:hidden flex gap-2 mt-3 overflow-x-auto no-scrollbar">
-                            ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'}"><img src="${src}" alt="" class="w-full h-full object-cover"></button>`).join('')}
+                            ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'}"><img src="${esc(src)}" alt="" class="w-full h-full object-cover"></button>`).join('')}
                         </div>` : ''}
                     </div>
 
@@ -5036,8 +5036,8 @@
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             ${related.map(rp => `
                                 <div onclick="openProductDetail('${rp.id}')" class="cursor-pointer bg-elvon-card border border-elvon-border hover:border-[#DC0A14] rounded-2xl p-2.5">
-                                    <img src="${(rp.images && rp.images[0]) || createAccessoryVisual(rp.category, rp.name, 'ELVON')}" alt="${rp.name}" class="aspect-square w-full object-cover rounded-xl mb-2">
-                                    <p class="text-xs font-bold text-white truncate">${rp.name}</p>
+                                    <img src="${esc((rp.images && rp.images[0]) || createAccessoryVisual(rp.category, rp.name, 'ELVON'))}" alt="${esc(rp.name)}" class="aspect-square w-full object-cover rounded-xl mb-2">
+                                    <p class="text-xs font-bold text-white truncate">${esc(rp.name)}</p>
                                     <p class="text-xs font-black text-[#DC0A14]">${rp.price} MAD</p>
                                 </div>
                             `).join('')}
