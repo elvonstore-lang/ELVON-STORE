@@ -4941,9 +4941,6 @@
 
             const view = document.getElementById('product-view');
             view.innerHTML = `
-                <button onclick="switchView('store')" title="العودة للمتجر" aria-label="العودة للمتجر" class="w-11 h-11 rounded-full bg-[#DC0A14] hover:bg-[#B90810] text-white flex items-center justify-center shadow-lg shadow-[#DC0A14]/40 transition-transform active:scale-90">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                </button>
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
                     <!-- الصور -->
                     <div class="lg:col-span-5 bg-elvon-card border border-elvon-border rounded-3xl p-3 sm:p-4 order-1 lg:order-none">
@@ -4952,6 +4949,9 @@
                                 ${imgs.map((src, i) => `<button onclick="setDetailImg(${i})" data-thumb="${i}" class="pdp-thumb aspect-square w-16 rounded-xl overflow-hidden border-2 ${i === 0 ? 'border-[#DC0A14]' : 'border-transparent'} hover:border-[#DC0A14] transition-colors"><img src="${src}" alt="صورة ${i + 1}" class="w-full h-full object-cover"></button>`).join('')}
                             </div>` : ''}
                             <div class="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-elvon-black border border-elvon-border">
+                                <button onclick="switchView('store')" title="العودة للمتجر" aria-label="العودة للمتجر" class="absolute top-2 right-2 z-10 w-10 h-10 rounded-full bg-[#DC0A14] hover:bg-[#B90810] text-white flex items-center justify-center shadow-lg shadow-[#DC0A14]/40 transition-transform active:scale-90">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
                                 <img id="detail-main-img" src="${imgs[0]}" alt="${esc(p.name)}" class="w-full h-full object-cover">
                                 ${imgs.length > 1 ? `<span id="detail-img-count" class="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[11px] font-black text-white" dir="ltr">1/${imgs.length}</span>` : ''}
                             </div>
@@ -5003,11 +5003,7 @@
                     <!-- الشرا -->
                     <div class="lg:col-span-3 lg:sticky lg:top-24 order-2 lg:order-none">
                         <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
-                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> الدفع عند الاستلام</div>
-                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> توصيل لجميع مدن المغرب</div>
-                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> استبدال خلال 48 ساعة</div>
-                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> ضمان جودة المنتوج</div>
-                            <div class="flex items-center gap-2 text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span> توصيل سريع</div>
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-2"><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>الدفع عند الاستلام</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>توصيل لجميع مدن المغرب</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>استبدال خلال 48 ساعة</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>ضمان جودة المنتوج</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>توصيل سريع</span></div></div>
                             <div class="border-t border-elvon-border pt-3">
                                 <p class="text-xs font-black text-white mb-2">الكمية</p>
                                 <div class="flex items-center justify-between bg-elvon-black border border-elvon-border rounded-xl px-2 py-1.5">
