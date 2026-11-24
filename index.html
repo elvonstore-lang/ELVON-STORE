@@ -2,7 +2,6 @@
 <html lang="ar" dir="rtl" class="scroll-smooth dark">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://www.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://elvon-store.vercel.app https://*.vercel.app https://*.workers.dev https://cdn.jsdelivr.net; frame-src https://*.firebaseapp.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html{touch-action:manipulation}input,select,textarea{font-size:16px!important}</style> <link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#050505"> <title>ELVON STORE | متجر إلفون للإكسسوارات - طنجة، المغرب</title>
@@ -1794,6 +1793,7 @@
             const C = window.ElvonCloud;
             C.listenCollection('products', (list) => {
                 cloudProductsCount = list.length;
+                if (list.length) saveState('elvon_cloud_seen', true);
                 products = list.length
                     ? list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
                     : JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
@@ -1841,10 +1841,52 @@
             }
         }
 
+        // ===== احتياط: إلا ما تحملش Firebase (التيليفون، شبكة ضعيفة...) كنجيبو المنتجات مباشرة من Firestore REST =====
+        const ELVON_REST = { project: 'elvon-store', key: 'AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64' };
+        function fsVal(v) {
+            if (!v || typeof v !== 'object') return null;
+            if ('stringValue' in v) return v.stringValue;
+            if ('integerValue' in v) return Number(v.integerValue);
+            if ('doubleValue' in v) return Number(v.doubleValue);
+            if ('booleanValue' in v) return v.booleanValue;
+            if ('nullValue' in v) return null;
+            if ('timestampValue' in v) return v.timestampValue;
+            if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsVal);
+            if ('mapValue' in v) { const o = {}; Object.entries(v.mapValue.fields || {}).forEach(([k, x]) => { o[k] = fsVal(x); }); return o; }
+            return null;
+        }
+        async function fetchProductsRest() {
+            try {
+                let all = [], token = '';
+                for (let i = 0; i < 5; i++) {
+                    const url = `https://firestore.googleapis.com/v1/projects/${ELVON_REST.project}/databases/(default)/documents/products?pageSize=300&key=${ELVON_REST.key}${token ? '&pageToken=' + encodeURIComponent(token) : ''}`;
+                    const r = await fetch(url);
+                    if (!r.ok) break;
+                    const d = await r.json();
+                    (d.documents || []).forEach(doc => { const o = fsVal({ mapValue: { fields: doc.fields || {} } }); o._docId = doc.name.split('/').pop(); if (!o.id) o.id = o._docId; all.push(o); });
+                    if (!d.nextPageToken) break; token = d.nextPageToken;
+                }
+                return all;
+            } catch (e) { return []; }
+        }
+        async function ensureProductsLoaded() {
+            if (cloudProductsCount >= 0) return; // Firebase خدام
+            const list = await fetchProductsRest();
+            if (cloudProductsCount >= 0 || !list.length) return;
+            products = list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            saveState('elvon_acc_products_v2', products);
+            saveState('elvon_cloud_seen', true);
+            renderDealsRows(); renderStoreProducts();
+            try { renderAdminTables(); } catch (e) {}
+        }
+
         async function initApp() {
             setupSecretAdminEntry();
             storageAvailable = checkStorage();
             products = loadState('elvon_acc_products_v2', INITIAL_PRODUCTS);
+            // المنتجات ديال المثال ما كيبانوش ف الموقع الحقيقي: كنتسناو المنتجات الحقيقية
+            if (!loadState('elvon_cloud_seen', false) && products.length && products.every(p => INITIAL_PRODUCTS.some(i => i.id === p.id))) products = [];
+            setTimeout(ensureProductsLoaded, window.ElvonCloud ? 6000 : 0);
             orders = loadState('elvon_acc_orders_v2', INITIAL_ORDERS);
             cart = loadState('elvon_acc_cart_v2', []);
             wishlist = loadState('elvon_acc_wishlist_v1', []);
