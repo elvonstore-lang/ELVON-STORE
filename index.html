@@ -2683,7 +2683,7 @@
         function accountErrorText(code) {
             const map = {
                 'auth/email-already-in-use': 'هاد الرقم عندو ديجا حساب. دخل لحسابك، ولا تواصل معنا إلا نسيتي كلمة السر.',
-                'auth/invalid-credential': 'الرقم ولا كلمة السر غالطين.',
+                'auth/invalid-credential': 'الرقم ولا كلمة السر غالطين. تأكد من لغة الكلافي والحروف الكبار والصغار. إلا نسيتيها، تواصل معنا ف واتساب نعاودو ليك الحساب.',
                 'auth/wrong-password': 'الرقم ولا كلمة السر غالطين.',
                 'auth/user-not-found': 'ما كاينش حساب بهاد الرقم. صاوب حساب جديد.',
                 'auth/weak-password': 'كلمة السر خاصها تكون 6 حروف ولا أرقام على الأقل.',
@@ -2699,15 +2699,26 @@
             const phone = document.getElementById('acc-phone')?.value || '';
             const pass = document.getElementById('acc-pass')?.value || '';
             const n = normPhone(phone);
+            if (/[\u0600-\u06FF]/.test(pass)) { renderWalletModal('كلمة السر فيها حروف عربية: بدل لغة الكلافي (Alt + Shift) وعاود كتبها'); return; }
             if (isNew && name.length < 2) { renderWalletModal('دخل الاسم ديالك'); return; }
             if (n.length < 9) { renderWalletModal('دخل رقم هاتف صحيح (06... ولا 07...)'); return; }
             if (pass.length < 6) { renderWalletModal('كلمة السر خاصها تكون 6 حروف ولا أرقام على الأقل'); return; }
             if (isNew && pass !== (document.getElementById('acc-pass2')?.value || '')) { renderWalletModal('كلمة السر ماشي بحال بحال ف الجوج'); return; }
             const btn = document.getElementById('acc-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
             saveState('elvon_last_phone', '0' + n);
+            // نتسناو شوية إلا Firebase مازال كيتحمل
+            for (let i = 0; i < 16 && window.ElvonCloud && !window.ElvonCloud.ready; i++) await new Promise(r => setTimeout(r, 250));
+            const localAll = loadState('elvon_local_accounts2', {});
             if (window.ElvonCloud?.ready) {
-                const r = isNew ? await window.ElvonCloud.signUpAccount(name, n, pass) : await window.ElvonCloud.signInAccount(n, pass);
+                let r = isNew ? await window.ElvonCloud.signUpAccount(name, n, pass) : await window.ElvonCloud.signInAccount(n, pass);
+                // حساب قديم تصاوب ف هاد المتصفح بلا سحابة: كننقلوه للسحابة أوتوماتيكيا
+                if (!r.ok && !isNew && localAll[n] && localAll[n].pass === pass) {
+                    const up = await window.ElvonCloud.signUpAccount(localAll[n].name || 'زبون ELVON', n, pass);
+                    if (up.ok) r = up;
+                }
                 if (!r.ok) { renderWalletModal(accountErrorText(r.code)); return; }
+            } else if (window.ElvonCloud || !storageAvailable) {
+                renderWalletModal('ما قدرناش نتاصلو بالسيرفر دابا. حدث الصفحة (F5) وعاود جرب.'); return;
             } else {
                 const all = loadState('elvon_local_accounts2', {});
                 if (isNew) { if (all[n]) { renderWalletModal(accountErrorText('auth/email-already-in-use')); return; } all[n] = { name, pass }; saveState('elvon_local_accounts2', all); }
