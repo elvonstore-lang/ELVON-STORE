@@ -2697,14 +2697,14 @@
         // قيمة من الجوائز، وبين كل دورة والأخرى 24 ساعة على الأقل.
         const WHEEL = [
             { v: 5, w: 14, c: '#f59e0b' }, { v: 0, w: 26, c: '#18181b' }, { v: 10, w: 6, c: '#DC0A14' }, { v: 1, w: 22, c: '#27272a' },
-            { v: 50, w: 0.4, c: '#fbbf24' }, { v: 2, w: 19, c: '#18181b' }, { v: 20, w: 1.6, c: '#DC0A14' }, { v: 3, w: 11, c: '#27272a' }
+            { v: 50, w: 0, c: '#fbbf24' }, { v: 2, w: 19, c: '#18181b' }, { v: 20, w: 0, c: '#DC0A14' }, { v: 3, w: 11, c: '#27272a' }
         ];
         const WHEEL_START = Date.UTC(2026, 10, 24);
         const WHEEL_GAP = 24 * 3600 * 1000;
         function validSpins(list) {
             const ok = [];
             list.map(x => ({ ...x, at: Math.floor(Number(x.at) || 0), coins: Math.floor(Number(x.coins)) }))
-                .filter(x => String(x._docId) === 'S_' + x.at && x.at >= WHEEL_START && x.at <= Date.now() + 10 * 60000 && WHEEL.some(sg => sg.v === x.coins))
+                .filter(x => String(x._docId) === 'S_' + x.at && x.at >= WHEEL_START && x.at <= Date.now() + 10 * 60000 && WHEEL.some(sg => sg.v === x.coins && sg.w > 0))
                 .sort((a, b) => a.at - b.at)
                 .forEach(x => { if (!ok.length || x.at - ok[ok.length - 1].at >= WHEEL_GAP - 60000) ok.push(x); });
             return ok;
