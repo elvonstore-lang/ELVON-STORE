@@ -829,9 +829,12 @@
                     <h3 class="text-base font-black text-white">جميع الإكسسوارات والمخزون</h3>
                     <p id="low-stock-summary" class="text-[11px] text-zinc-400 mt-0.5"></p>
                 </div>
-                <button onclick="openProductModal()" class="px-3.5 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black flex items-center gap-1.5">
-                    <i data-lucide="image-plus" class="w-4 h-4"></i> إكسسوار جديد
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="optimizeAllImages()" id="opt-img-btn" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5" title="كيصغر الصور باش يولي الموقع أسرع">⚡ ضغط الصور</button>
+                    <button onclick="openProductModal()" class="px-3.5 py-2 rounded-xl bg-[#DC0A14] text-white text-xs font-black flex items-center gap-1.5">
+                        <i data-lucide="image-plus" class="w-4 h-4"></i> إكسسوار جديد
+                    </button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-right border-collapse">
@@ -1753,6 +1756,55 @@
         let currentDetailQty = 1;
         let categoryChartInstance = null;
         let ordersChartInstance = null;
+
+        // ===== الصور: صورة صغيرة ف المنتج (للائحة) + الصور الكبار ف وثيقة بوحدها كتحمل غير ملي يتحل المنتج =====
+        const GAL = (id) => ['track', 'g_' + id, 'orders', 'imgs'];
+        const galleryCache = {};
+        async function loadGallery(p) {
+            if (!p || !p.hasGallery) return (p && p.images) || [];
+            if (galleryCache[p.id]) return galleryCache[p.id];
+            let d = null;
+            try {
+                if (window.ElvonCloud?.ready) d = await window.ElvonCloud.getPath(GAL(p.id));
+                else {
+                    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${ELVON_REST.project}/databases/(default)/documents/${GAL(p.id).join('/')}?key=${ELVON_REST.key}`);
+                    if (r.ok) { const j = await r.json(); d = fsVal({ mapValue: { fields: j.fields || {} } }); }
+                }
+            } catch (e) { d = null; }
+            const imgs = d && Array.isArray(d.images) && d.images.length ? d.images : (p.images || []);
+            galleryCache[p.id] = imgs;
+            return imgs;
+        }
+        async function packImages(list) {
+            const full = [];
+            for (const src of list) full.push(String(src).startsWith('data:image/') ? await compressImageDataUrl(src, 640, 0.68) : src);
+            const thumb = full.length ? (String(full[0]).startsWith('data:image/') ? await compressImageDataUrl(full[0], 360, 0.62) : full[0]) : '';
+            return { full, thumb };
+        }
+        async function optimizeAllImages() {
+            if (!(window.ElvonCloud?.ready && adminOrders)) { showToast('خاصك تكون داخل كمدير ومتصل بالسحابة'); return; }
+            if (!confirm('ضغط صور كاع المنتجات؟ غادي ياخد شي دقيقة. ما تسدش الصفحة حتى يسالي.')) return;
+            const btn = document.getElementById('opt-img-btn'); if (btn) btn.disabled = true;
+            let done = 0, saved = 0, before = 0, after = 0;
+            for (const p of products) {
+                try {
+                    const src = p.hasGallery ? await loadGallery(p) : (p.images || []);
+                    if (!src.length) { done++; continue; }
+                    before += JSON.stringify(p.images || []).length;
+                    const { full, thumb } = await packImages(src);
+                    const ok1 = await window.ElvonCloud.setPath(GAL(p.id), { status: 'جديد', images: full, updatedAt: Date.now() });
+                    if (!ok1) { done++; continue; }
+                    const ok2 = await window.ElvonCloud.saveItem('products', p.id, { images: [thumb], hasGallery: true, imagesCount: full.length });
+                    if (ok2) { galleryCache[p.id] = full; p.images = [thumb]; p.hasGallery = true; p.imagesCount = full.length; saved++; after += thumb.length; }
+                } catch (e) {}
+                done++;
+                if (btn) btn.textContent = `⚡ ${done}/${products.length}`;
+            }
+            if (btn) { btn.disabled = false; btn.textContent = '⚡ ضغط الصور'; }
+            saveState('elvon_acc_products_v2', products);
+            renderStoreProducts(); renderDealsRows(); renderAdminTables();
+            showToast(`سالا ✓ ${saved} منتج • التحميل ديال الصفحة نقص من ${Math.round(before / 1024)}KB لـ ${Math.round(after / 1024)}KB`);
+        }
 
         function compressImageDataUrl(dataUrl, maxDim = 720, quality = 0.72) {
             return new Promise((resolve) => {
@@ -4838,6 +4890,7 @@
                     document.getElementById('prod-coins-earn').value = Math.floor(Number(p.coinsEarn) || 0);
                     document.getElementById('prod-desc').value = p.desc || '';
                     modalImages = Array.isArray(p.images) ? [...p.images] : [];
+                    if (p.hasGallery) loadGallery(p).then(g => { if (document.getElementById('prod-id').value === p.id) { modalImages = [...g]; renderModalImagesPreview(); } });
                 }
             } else {
                 title.textContent = 'إضافة منتج جديد';
@@ -4886,6 +4939,13 @@
             const coins = Math.max(0, Math.floor(parseFloat(document.getElementById('prod-coins')?.value) || 0));
             const coinsEarn = Math.max(0, Math.floor(parseFloat(document.getElementById('prod-coins-earn')?.value) || 0));
 
+            if (id) {
+                const old = products.find(x => x.id === id);
+                if (old && old.hasGallery) {
+                    const g = await loadGallery(old);
+                    if (modalImages.length === 1 && old.images && modalImages[0] === old.images[0]) modalImages = [...g];
+                }
+            }
             const finalImages = modalImages.length
                 ? [...modalImages]
                 : [createAccessoryVisual(category, name, CATEGORY_LABELS[category] || 'ELVON')];
@@ -4903,9 +4963,15 @@
                 coins,
                 coinsEarn,
                 images: finalImages,
+                hasGallery: false,
                 updatedAt: Date.now()
             };
 
+            if (window.ElvonCloud?.ready && finalImages.some(x => String(x).startsWith('data:image/'))) {
+                const { full, thumb } = await packImages(finalImages);
+                const ok = await window.ElvonCloud.setPath(GAL(savedObj.id), { status: 'جديد', images: full, updatedAt: Date.now() });
+                if (ok) { galleryCache[savedObj.id] = full; savedObj.images = [thumb]; savedObj.hasGallery = true; savedObj.imagesCount = full.length; }
+            }
             if (JSON.stringify(savedObj).length > 900000) {
                 showToast('حجم الصور كبير جداً، قلل عدد الصور أو استعمل روابط صور');
                 return;
@@ -4937,6 +5003,7 @@
             saveState('elvon_acc_products_v2', products);
             if (window.ElvonCloud?.ready) {
                 await window.ElvonCloud.deleteItem('products', productId);
+                try { await window.ElvonCloud.deleteItem('track/g_' + productId + '/orders', 'imgs'); } catch (e) {}
             }
             renderDealsRows();
             renderStoreProducts();
@@ -4988,11 +5055,15 @@
             `).join('');
         }
 
+        let currentDetailId = null;
         function openProductDetail(productId) {
             const p = products.find(item => item.id === productId);
             if (!p) return;
             currentDetailQty = 1;
-            const imgs = (p.images && p.images.length) ? p.images : [createAccessoryVisual(p.category, p.name, 'ELVON')];
+            if (p.hasGallery && !galleryCache[p.id]) { loadGallery(p).then(() => { if (document.getElementById('detail-main-img') && currentDetailId === p.id) { const y = scrollY; const q = currentDetailQty; openProductDetail(p.id); currentDetailQty = q; const el = document.getElementById('detail-qty-val'); if (el) el.textContent = q; window.scrollTo(0, y); } }); }
+            currentDetailId = p.id;
+            const gal = galleryCache[p.id] || p.images;
+            const imgs = (gal && gal.length) ? gal : [createAccessoryVisual(p.category, p.name, 'ELVON')];
             const prodReviews = reviews.filter(r => r.productId === p.id);
             loadProductReviews(p.id);
             const related = products.filter(item => item.id !== p.id && item.category === p.category).slice(0, 4);
