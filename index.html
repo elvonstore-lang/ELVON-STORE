@@ -286,6 +286,7 @@
         @media (min-width:1024px){.admin-tab{width:100%}}
             .ai-in{animation:aiIn .22s ease-out both}
         @keyframes aiIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+        #detail-buy-btns.stock-out button { opacity: .4; pointer-events: none; }
     </style>
 <style>
     .coin-order h3, .coin-order label, .coin-order p, .coin-order #wa-modal-prod-name { color:#111 !important; }
@@ -1841,8 +1842,131 @@
         let cloudProductsCount = -1;
         let ordersUnsub = null;
 
+        // ===== المخزون =====
+        // كل طلب كيحجز الكمية ديالو ف track/stock/orders (كيبان لجميع الزبناء ف الحين).
+        // ملي المدير كيدخل للوحة التحكم، الحجوزات كتنقص من المخزون ديال المنتج وكتمسح.
+        // إلغاء الطلب كيرجع الكمية.
+        const STOCK_COL = 'track/stock/orders';
+        let stockRes = [];
+        let stockFolding = false;
+        const isAdminMode = () => !!adminOrders;
+        const resQty = (q) => Math.max(0, Math.floor(Number(q)) || 0);
+        function reservedQty(id) {
+            return stockRes.reduce((sum, r) => sum + (r.status === 'ملغي' ? 0 : (r.items || []).reduce((a, i) => a + (i && i.id === id ? resQty(i.qty) : 0), 0)), 0);
+        }
+        function stockLeft(p) {
+            if (!p || typeof p.stock !== 'number' || isNaN(p.stock)) return Infinity;
+            return Math.max(0, Math.floor(p.stock));
+        }
+        function applyStock() {
+            const admin = isAdminMode();
+            (products || []).forEach(p => {
+                if (p && '_base' in p) { p.stock = p._base; delete p._base; }
+                if (p && !admin && typeof p.stock === 'number') {
+                    const r = reservedQty(p.id);
+                    if (r) { p._base = p.stock; p.stock = Math.max(0, p.stock - r); }
+                }
+            });
+        }
+        function stockLineHtml(p) {
+            const left = stockLeft(p);
+            if (left === Infinity) return '';
+            if (left <= 0) return '<span class="text-red-400">نفد المخزون</span>';
+            return `<span class="${left <= 5 ? 'text-amber-400' : 'text-emerald-400'}">متوفر: ${left} ${left === 1 ? 'قطعة' : 'قطع'}</span>`;
+        }
+        function refreshStockViews() {
+            try { renderStoreProducts(); } catch (e) {}
+            try { renderAdminTables(); } catch (e) {}
+            try { updateDetailStock(); } catch (e) {}
+        }
+        function updateDetailStock() {
+            const line = document.getElementById('detail-stock-line');
+            if (!line || !currentDetailId) return;
+            const p = products.find(x => x.id === currentDetailId);
+            if (!p) return;
+            const left = stockLeft(p);
+            line.innerHTML = left === Infinity ? '' : (left <= 0 ? '❌ نفد المخزون دابا' : `📦 متوفر ف المخزون: ${left} ${left === 1 ? 'قطعة' : 'قطع'}`);
+            line.className = 'text-[11px] font-black mt-1.5 ' + (left <= 0 ? 'text-red-400' : left <= 5 ? 'text-amber-400' : 'text-emerald-400');
+            const btns = document.getElementById('detail-buy-btns');
+            if (btns) btns.classList.toggle('stock-out', left <= 0);
+            if (left !== Infinity && currentDetailQty > Math.max(1, left)) { currentDetailQty = Math.max(1, left); const q = document.getElementById('detail-qty-val'); if (q) q.textContent = currentDetailQty; }
+        }
+        function startStockListener() {
+            const C = window.ElvonCloud;
+            if (!C?.ready) return;
+            C.listenCollection(STOCK_COL, (list) => {
+                stockRes = list.filter(r => r && Array.isArray(r.items));
+                applyStock();
+                refreshStockViews();
+                if (isAdminMode()) foldStock();
+            });
+        }
+        async function fetchStockRest() {
+            try {
+                const r = await fetch(`https://firestore.googleapis.com/v1/projects/${ELVON_REST.project}/databases/(default)/documents/${STOCK_COL}?pageSize=300&key=${ELVON_REST.key}`);
+                if (!r.ok) return;
+                const d = await r.json();
+                stockRes = (d.documents || []).map(doc => { const o = fsVal({ mapValue: { fields: doc.fields || {} } }); o._docId = doc.name.split('/').pop(); return o; }).filter(o => Array.isArray(o.items));
+            } catch (e) {}
+        }
+        // حجز الكمية ملي الزبون كيطلب (ما كنتسناوش الجواب باش ما يتبلوكاش واتساب)
+        function reserveStock(order) {
+            if (!window.ElvonCloud?.ready) return false;
+            const items = (order.items || []).filter(i => i && i.id && products.some(p => p.id === i.id && typeof p.stock === 'number')).map(i => ({ id: String(i.id), qty: Math.max(1, resQty(i.qty)) }));
+            if (!items.length) return false;
+            stockRes = stockRes.filter(r => r._docId !== order.id).concat([{ _docId: order.id, status: 'جديد', items }]);
+            applyStock(); refreshStockViews();
+            window.ElvonCloud.setPath(['track', 'stock', 'orders', order.id], { status: 'جديد', items, createdAt: Date.now() });
+            return true;
+        }
+        // لوحة التحكم: نقص الحجوزات من المخزون ديال المنتجات ومسحها
+        async function foldStock() {
+            if (stockFolding || !isAdminMode() || !window.ElvonCloud?.ready) return;
+            stockFolding = true;
+            const C = window.ElvonCloud;
+            try {
+                for (const r of stockRes.slice()) {
+                    const ok = await C.deleteItem(STOCK_COL, r._docId);
+                    if (!ok) break;
+                    stockRes = stockRes.filter(x => x._docId !== r._docId);
+                    if (r.status === 'ملغي') continue;
+                    const changed = new Map();
+                    (r.items || []).forEach(i => {
+                        const p = products.find(x => x.id === i.id);
+                        if (p && typeof p.stock === 'number') { p.stock = Math.max(0, p.stock - resQty(i.qty)); changed.set(p.id, p.stock); }
+                    });
+                    for (const [id, st] of changed) await C.saveItem('products', id, { stock: st });
+                }
+            } finally { stockFolding = false; }
+            refreshStockViews();
+        }
+        // إلغاء الطلب كيرجع الكمية، والرجوع من الإلغاء كينقصها عاوتاني
+        async function applyOrderStock(o, newStatus) {
+            if (!o || !o.stockReserved || !window.ElvonCloud?.ready || !isAdminMode()) return;
+            const cancel = newStatus === 'ملغي' && !o.stockReturned;
+            const undo = newStatus !== 'ملغي' && !!o.stockReturned;
+            if (!cancel && !undo) return;
+            for (let k = 0; k < 40 && stockFolding; k++) await new Promise(r => setTimeout(r, 150));
+            const C = window.ElvonCloud;
+            if (cancel && stockRes.some(r => r._docId === o.id)) {
+                await C.deleteItem(STOCK_COL, o.id);
+                stockRes = stockRes.filter(r => r._docId !== o.id);
+            } else {
+                const sign = cancel ? 1 : -1;
+                for (const it of (o.items || [])) {
+                    const p = products.find(x => x.id === it.id);
+                    if (p && typeof p.stock === 'number') { p.stock = Math.max(0, p.stock + sign * resQty(it.qty)); await C.saveItem('products', p.id, { stock: p.stock }); }
+                }
+            }
+            o.stockReturned = cancel;
+            await C.saveItem('orders', o.id, { stockReturned: cancel });
+            refreshStockViews();
+            setTimeout(() => showToast(cancel ? '↩️ رجعات الكمية ديال هاد الطلب للمخزون' : '📦 تنقصات الكمية من المخزون عاوتاني'), 1300);
+        }
+
         function startCloudListeners() {
             const C = window.ElvonCloud;
+            startStockListener();
             C.listenCollection('products', (list) => {
                 cloudProductsCount = list.length;
                 if (list.length) saveState('elvon_cloud_seen', true);
@@ -1850,6 +1974,7 @@
                     ? list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
                     : JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
                 saveState('elvon_acc_products_v2', products);
+                applyStock();
                 renderDealsRows();
                 renderStoreProducts();
                 renderAdminTables();
@@ -1875,7 +2000,9 @@
                 ordersUnsub = C.listenCollection('orders', (list) => {
                     adminAccountDocs = list.filter(o => o.type === 'account' && /^[A-Za-z0-9_-]{6,64}$/.test(String(o.uid || '')) && o._docId === 'ACCT_' + o.uid);
                     adminOrders = list.filter(o => o.type !== 'account').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    applyStock();
                     renderAdminTables();
+                    foldStock();
                 });
             }
             if (!apptUnsub) {
@@ -1928,6 +2055,7 @@
             products = list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             saveState('elvon_acc_products_v2', products);
             saveState('elvon_cloud_seen', true);
+            await fetchStockRest(); applyStock();
             renderDealsRows(); renderStoreProducts();
             try { renderAdminTables(); } catch (e) {}
         }
@@ -2104,6 +2232,7 @@
         function lockAdminSession() {
             adminUnlocked = false;
             adminOrders = null;
+            applyStock();
             adminAppointments = null;
             if (apptUnsub) { try { apptUnsub(); } catch (e) {} apptUnsub = null; }
             if (ordersUnsub) { try { ordersUnsub(); } catch (e) {} ordersUnsub = null; }
@@ -2396,6 +2525,7 @@
                                     ${dealBadge}
                                     ${discount > 0 ? `<span class="bg-black/85 border border-[#DC0A14]/50 text-[#DC0A14] text-[10px] font-black px-1.5 py-0.5 rounded-md">-${discount}%</span>` : ''}
                                 </div>
+                                ${stockLeft(p) <= 0 ? `<div class="absolute inset-0 bg-black/55 flex items-center justify-center"><span class="bg-red-600 text-white text-[11px] font-black px-3 py-1 rounded-full">نفد المخزون</span></div>` : ''}
                             </div>
                             <div class="p-3 space-y-1">
                                 <div class="flex items-center justify-between gap-1">
@@ -2409,6 +2539,7 @@
                                     <span class="text-sm sm:text-base font-black text-[#DC0A14]">${p.price} MAD</span>
                                     ${p.oldPrice ? `<span class="text-[11px] text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
                                 </div>
+                                ${stockLineHtml(p) ? `<p class="text-[10px] font-black">${stockLineHtml(p)}</p>` : ''}
                                 ${Number(p.coins) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-[10px] font-black text-amber-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>ولا بـ ${Math.floor(p.coins)} عملة</span></div>` : ''}
                                 ${Number(p.coinsEarn) > 0 ? `<div class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/40 text-[10px] font-black text-emerald-300" title="عملات ELVON"><svg class="w-3.5 h-3.5" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><span>اربح ${Math.floor(p.coinsEarn)} عملة</span></div>` : ''}
                             </div>
@@ -2474,6 +2605,9 @@
         function openWhatsappOrderModal(productId, qty = 1, coinMode = false, only = '') {
             const p = products.find(item => item.id === productId);
             if (!p) return;
+            const left = stockLeft(p);
+            if (left <= 0) { showToast('هاد المنتج نفد من المخزون، رجع من بعد 🙏'); return; }
+            qty = Math.min(Math.max(1, qty), left);
             waCoinMode = !!coinMode && Number(p.coins) > 0;
             {
                 const c = waCoinMode, $ = (id) => document.getElementById(id);
@@ -2894,6 +3028,7 @@
                 showToast('يرجى ملء جميع الحقول المطلوبة');
                 return;
             }
+            { const left = stockLeft(p); if (qty > left) { showToast(left <= 0 ? 'سمح لينا، هاد المنتج نفد من المخزون' : `سمح لينا، باقي غير ${left} ف المخزون`); return; } }
 
             const subtotal = p.price * qty;
             const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
@@ -2908,7 +3043,7 @@
             const total = coinMode ? shipping : subtotal + shipping;
             const orderId = newOrderId();
 
-            if (typeof p.stock === 'number') {
+            if (typeof p.stock === 'number' && !window.ElvonCloud?.ready) {
                 p.stock = Math.max(0, p.stock - qty);
                 saveState('elvon_acc_products_v2', products);
             }
@@ -2935,6 +3070,7 @@
             };
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
+            newOrder.stockReserved = reserveStock(newOrder);
             pushTracking(newOrder);
             renderStoreProducts();
             renderAdminTables();
@@ -3827,6 +3963,9 @@
             const c = document.getElementById('detail-img-count'); if (c) c.textContent = `${i + 1}/${document.querySelectorAll('.pdp-thumb').length / (window.innerWidth >= 640 ? 2 : 2)}`;
         }
         function changeDetailQty(delta) {
+            const dp = products.find(x => x.id === currentDetailId);
+            const left = stockLeft(dp);
+            if (delta > 0 && currentDetailQty + delta > left) { showToast(left <= 0 ? 'هاد المنتج نفد من المخزون' : `باقي غير ${left} ف المخزون`); return; }
             currentDetailQty = Math.max(1, currentDetailQty + delta);
             const el = document.getElementById('detail-qty-val');
             if (el) el.textContent = currentDetailQty;
@@ -3981,13 +4120,14 @@
             const city = document.getElementById('customer-city').value.trim();
             const address = document.getElementById('customer-address').value.trim();
 
+            { const bad = cart.find(it => it.qty > stockLeft(products.find(x => x.id === it.id))); if (bad) { const left = stockLeft(products.find(x => x.id === bad.id)); showToast(left <= 0 ? `"${bad.name}" نفد من المخزون، حيدو من السلة` : `"${bad.name}": باقي غير ${left} ف المخزون`); return; } }
             const { subtotal, discount, shipping, total, coins } = computeCartTotals();
             const orderId = newOrderId();
 
             // خصم المخزون
             cart.forEach(item => {
                 const prod = products.find(p => p.id === item.id);
-                if (prod && typeof prod.stock === 'number') {
+                if (prod && typeof prod.stock === 'number' && !window.ElvonCloud?.ready) {
                     prod.stock = Math.max(0, prod.stock - item.qty);
                 }
             });
@@ -4015,6 +4155,7 @@
 
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
+            newOrder.stockReserved = reserveStock(newOrder);
             pushTracking(newOrder);
 
             const lines = cart.map(i => `• ${i.name} (×${i.qty}) = ${i.price * i.qty} MAD`).join('\n');
@@ -4832,6 +4973,8 @@
             if (!p) return;
 
             const existing = cart.find(item => item.id === productId);
+            const left = stockLeft(p);
+            if ((existing ? existing.qty : 0) + qty > left) { showToast(left <= 0 ? 'هاد المنتج نفد من المخزون' : `باقي غير ${left} ف المخزون`); return; }
             if (existing) {
                 existing.qty += qty;
             } else {
@@ -4846,6 +4989,7 @@
         function updateCartItemQty(productId, delta) {
             const idx = cart.findIndex(item => item.id === productId);
             if (idx === -1) return;
+            if (delta > 0) { const left = stockLeft(products.find(x => x.id === productId)); if (cart[idx].qty + delta > left) { showToast(`باقي غير ${left} ف المخزون`); return; } }
             cart[idx].qty += delta;
             if (cart[idx].qty <= 0) {
                 cart.splice(idx, 1);
@@ -4859,6 +5003,7 @@
             if (!list[idx]) return;
             list[idx].status = newStatus;
             await applyOrderCoins(list[idx], newStatus);
+            await applyOrderStock(list[idx], newStatus);
             if (window.ElvonCloud?.ready && adminOrders) {
                 window.ElvonCloud.saveItem('orders', list[idx].id, { status: newStatus });
                 pushTracking(list[idx], true);
@@ -5140,12 +5285,14 @@
                                     <span id="detail-qty-val" class="text-base font-black text-white">1</span>
                                     <button onclick="changeDetailQty(1)" class="w-9 h-9 rounded-lg bg-elvon-card text-white font-black text-lg">+</button>
                                 </div>
-                                ${Number(p.stock) > 0 && Number(p.stock) <= 5 ? `<p class="text-[11px] text-amber-400 font-bold mt-1.5">بقاو غير ${p.stock} ف المخزون</p>` : ''}
+                                <p id="detail-stock-line" class="text-[11px] font-black mt-1.5"></p>
                             </div>
+                            <div id="detail-buy-btns" class="space-y-3">
                             <button onclick="addToCart('${p.id}', currentDetailQty)" class="w-full py-3.5 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-zinc-600 hover:border-white text-white text-sm font-black">إضافة للسلة</button>
                             <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'site')" class="w-full py-3.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-sm font-black">تأكيد الطلب من الموقع</button>
                             <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'wa')" class="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-sm font-black inline-flex items-center justify-center gap-2"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>اطلب عبر WhatsApp</button>
                             ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')" class="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -5164,6 +5311,7 @@
                     </div>
                 ` : ''}
             `;
+            updateDetailStock();
             switchView('product');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
