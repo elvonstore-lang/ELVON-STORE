@@ -2969,7 +2969,7 @@
         }
         function accountErrorText(code) {
             const map = {
-                'auth/email-already-in-use': 'هاد الرقم عندو ديجا حساب. دخل لحسابك، ولا تواصل معنا إلا نسيتي كلمة السر.',
+                'auth/email-already-in-use': 'هاد الرقم عندو ديجا حساب، وكل رقم عندو حساب واحد برك. دخل لحسابك، ولا تواصل معنا إلا نسيتي كلمة السر.',
                 'auth/invalid-credential': 'الرقم ولا كلمة السر غالطين. تأكد من لغة الكلافي والحروف الكبار والصغار. إلا نسيتيها، تواصل معنا ف واتساب نعاودو ليك الحساب.',
                 'auth/wrong-password': 'الرقم ولا كلمة السر غالطين.',
                 'auth/user-not-found': 'ما كاينش حساب بهاد الرقم. صاوب حساب جديد.',
@@ -2988,7 +2988,10 @@
             const n = normPhone(phone);
             if (/[\u0600-\u06FF]/.test(pass)) { renderWalletModal('كلمة السر فيها حروف عربية: بدل لغة الكلافي (Alt + Shift) وعاود كتبها'); return; }
             if (isNew && name.length < 2) { renderWalletModal('دخل الاسم ديالك'); return; }
-            if (n.length < 9) { renderWalletModal('دخل رقم هاتف صحيح (06... ولا 07...)'); return; }
+            if (!/^[67]\d{8}$/.test(n) || /^(\d)\1{8}$/.test(n) || /^[67](\d)\1{7}$/.test(n) || /^[67](0{7}|12345678|23456789|87654321)/.test(n)) { renderWalletModal('دخل رقم هاتف مغربي صحيح (06... ولا 07...)'); return; }
+            // حساب واحد ف كل رقم (السيرفر ما كيقبلش جوج حسابات بنفس الرقم)، وحساب جديد واحد ف كل تيليفون
+            const devPhone = loadState('elvon_device_phone', '');
+            if (isNew && devPhone && devPhone !== n) { renderWalletModal(`هاد التيليفون عندو ديجا حساب بالرقم 0${devPhone.slice(0, 1)}•••••${devPhone.slice(-3)}. دخل لهاد الحساب، ما يمكنش تصاوب حساب آخر.`); return; }
             if (pass.length < 6) { renderWalletModal('كلمة السر خاصها تكون 6 حروف ولا أرقام على الأقل'); return; }
             if (isNew && pass !== (document.getElementById('acc-pass2')?.value || '')) { renderWalletModal('كلمة السر ماشي بحال بحال ف الجوج'); return; }
             const btn = document.getElementById('acc-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
@@ -3014,6 +3017,7 @@
                 saveState('elvon_local_account', { uid: luid, name: all[n].name, phone: n });
                 const ws = loadState('elvon_local_walletinfo', {}); if (!ws[luid]) ws[luid] = { name: all[n].name, phone: n, createdAt: Date.now() }; saveState('elvon_local_walletinfo', ws);
             }
+            if (!loadState('elvon_device_phone', '')) saveState('elvon_device_phone', n);
             walletMode = 'login';
             walletCacheClear();
             renderWalletModal(isNew ? '✓ تصاوب الحساب ديالك، مرحبا بيك!' : '✓ دخلتي لحسابك');
