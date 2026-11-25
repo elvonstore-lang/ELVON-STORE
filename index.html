@@ -2689,7 +2689,102 @@
             const items = await window.ElvonCloud.listPath(WP.items(uid));
             const red = items.filter(x => x.kind === 'redeem');
             const games = await Promise.all(red.map(async r => ({ ...r, coins: await coinValue(r.code, uid) })));
-            return { games, ords: items.filter(x => x.kind === 'order') };
+            return { games: games.concat(validSpins(items.filter(x => x.kind === 'spin'))), ords: items.filter(x => x.kind === 'order') };
+        }
+
+        // ===== عجلة الحظ: دورة وحدة كل 24 ساعة، الربح كيتزاد للرصيد ديال عملات ELVON =====
+        // كل دورة كتسجل ف track/w_<uid>/orders/S_<الوقت>. كنحسبو غير الدورات الصحيحة:
+        // قيمة من الجوائز، وبين كل دورة والأخرى 24 ساعة على الأقل.
+        const WHEEL = [
+            { v: 5, w: 14, c: '#f59e0b' }, { v: 0, w: 26, c: '#18181b' }, { v: 10, w: 6, c: '#DC0A14' }, { v: 1, w: 22, c: '#27272a' },
+            { v: 50, w: 0.4, c: '#fbbf24' }, { v: 2, w: 19, c: '#18181b' }, { v: 20, w: 1.6, c: '#DC0A14' }, { v: 3, w: 11, c: '#27272a' }
+        ];
+        const WHEEL_START = Date.UTC(2026, 10, 24);
+        const WHEEL_GAP = 24 * 3600 * 1000;
+        function validSpins(list) {
+            const ok = [];
+            list.map(x => ({ ...x, at: Math.floor(Number(x.at) || 0), coins: Math.floor(Number(x.coins)) }))
+                .filter(x => String(x._docId) === 'S_' + x.at && x.at >= WHEEL_START && x.at <= Date.now() + 10 * 60000 && WHEEL.some(sg => sg.v === x.coins))
+                .sort((a, b) => a.at - b.at)
+                .forEach(x => { if (!ok.length || x.at - ok[ok.length - 1].at >= WHEEL_GAP - 60000) ok.push(x); });
+            return ok;
+        }
+        function wheelSvg() {
+            const cx = 110, cy = 110, r = 104, n = WHEEL.length, step = 360 / n;
+            const pt = (a, rr) => [cx + rr * Math.sin(a * Math.PI / 180), cy - rr * Math.cos(a * Math.PI / 180)].map(v => v.toFixed(2)).join(' ');
+            const segs = WHEEL.map((sg, i) => {
+                const a0 = i * step, a1 = a0 + step, mid = a0 + step / 2;
+                const dark = sg.c === '#f59e0b' || sg.c === '#fbbf24';
+                const label = sg.v ? sg.v : 'حظ آخر';
+                return `<path d="M${cx} ${cy} L${pt(a0, r)} A${r} ${r} 0 0 1 ${pt(a1, r)} Z" fill="${sg.c}" stroke="#fbbf24" stroke-width="1.5"/>
+                    <g transform="rotate(${mid} ${cx} ${cy})"><text x="${cx}" y="${cy - 70}" text-anchor="middle" dominant-baseline="middle" font-family="Cairo, sans-serif" font-weight="900" font-size="${sg.v ? 20 : 12}" fill="${dark ? '#000' : '#fff'}">${label}</text>${sg.v ? `<text x="${cx}" y="${cy - 52}" text-anchor="middle" font-family="Cairo, sans-serif" font-weight="800" font-size="9" fill="${dark ? '#000' : '#fbbf24'}">عملة</text>` : ''}</g>`;
+            }).join('');
+            const dots = Array.from({ length: 16 }, (_, i) => `<circle cx="${pt(i * 22.5, 109).split(' ')[0]}" cy="${pt(i * 22.5, 109).split(' ')[1]}" r="2.6" fill="#fff7d6"/>`).join('');
+            return `<div class="relative mx-auto" style="width:220px;height:220px">
+                <svg viewBox="0 0 220 220" class="absolute inset-0 w-full h-full"><circle cx="110" cy="110" r="109" fill="#fbbf24"/></svg>
+                <svg id="wheel-disc" viewBox="0 0 220 220" class="absolute inset-0 w-full h-full" style="transform:rotate(${wheelRestRot}deg)">${segs}</svg>
+                <svg viewBox="0 0 220 220" class="absolute inset-0 w-full h-full pointer-events-none">${dots}<circle cx="110" cy="110" r="22" fill="#050505" stroke="#fbbf24" stroke-width="3"/><text x="110" y="111" text-anchor="middle" dominant-baseline="middle" font-family="Cairo, sans-serif" font-weight="900" font-size="9" fill="#fbbf24">ELVON</text><path d="M110 22 L98 0 L122 0 Z" fill="#DC0A14" stroke="#fff" stroke-width="2"/></svg>
+            </div>`;
+        }
+        function fmtWait(ms) {
+            const t = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
+            return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
+        }
+        let wheelTimer = null, wheelBusy = false, wheelRestRot = 0;
+        function startWheelTimer(next) {
+            clearInterval(wheelTimer);
+            wheelTimer = setInterval(() => {
+                const el = document.getElementById('wheel-wait');
+                if (!el) { clearInterval(wheelTimer); return; }
+                const left = next - Date.now();
+                if (left <= 0) { clearInterval(wheelTimer); walletCacheClear(); renderWalletModal(); return; }
+                el.textContent = fmtWait(left);
+            }, 1000);
+        }
+        function wheelBlockHtml(w) {
+            const can = !w.nextSpinAt || w.nextSpinAt <= Date.now();
+            return `<div class="mt-3 rounded-2xl p-3 bg-gradient-to-b from-amber-400/15 to-transparent border border-amber-400/40 space-y-2.5">
+                <p class="text-sm font-black text-amber-200 text-center">🎡 عجلة الحظ ديال اليوم</p>
+                <p class="text-[11px] text-zinc-300 text-center -mt-1">دور العجلة مرة وحدة كل 24 ساعة وربح عملات ELVON 🎁</p>
+                ${wheelSvg()}
+                ${can
+                    ? `<button onclick="spinWheel()" id="wheel-btn" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-sm animate-pulse">دور العجلة دابا 🎯</button>`
+                    : `<div class="text-center py-2 rounded-xl bg-elvon-black border border-elvon-border"><p class="text-[11px] text-zinc-400 font-bold">ترجع تدور العجلة من بعد</p><p id="wheel-wait" class="text-xl font-black text-amber-300 tabular-nums" dir="ltr">${fmtWait(w.nextSpinAt - Date.now())}</p></div>`}
+            </div>`;
+        }
+        function pickWheelIndex() {
+            const total = WHEEL.reduce((a, sg) => a + sg.w, 0);
+            const rnd = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 : Math.random();
+            let x = rnd * total;
+            for (let i = 0; i < WHEEL.length; i++) { x -= WHEEL[i].w; if (x < 0) return i; }
+            return 1;
+        }
+        async function spinWheel() {
+            if (wheelBusy) return;
+            const acc = currentAccount(); if (!acc) { renderWalletModal(); return; }
+            const btn = document.getElementById('wheel-btn'); if (btn) { btn.disabled = true; btn.classList.remove('animate-pulse'); btn.textContent = '...'; }
+            wheelBusy = true;
+            try {
+                walletCacheClear();
+                const w = await fetchWallet();
+                if (w.nextSpinAt && w.nextSpinAt > Date.now()) { wheelBusy = false; renderWalletModal('ديجا دورتي العجلة، رجع من بعد'); return; }
+                const idx = pickWheelIndex(), coins = WHEEL[idx].v, at = Date.now();
+                let ok = false;
+                if (window.ElvonCloud?.ready) ok = await window.ElvonCloud.setPath(WP.order(acc.uid, 'S_' + at), { kind: 'spin', coins, at, status: 'جديد' });
+                else { const all = loadState('elvon_redeems_v1', {}); (all[acc.uid] = all[acc.uid] || []).push({ _docId: 'S_' + at, kind: 'spin', coins, at }); saveState('elvon_redeems_v1', all); ok = true; }
+                if (!ok) { wheelBusy = false; renderWalletModal('ما قدرناش ندورو العجلة دابا، عاود من بعد شوية'); return; }
+                if (btn) btn.textContent = 'العجلة كدور... 🤞';
+                const disc = document.getElementById('wheel-disc');
+                const step = 360 / WHEEL.length, jitter = (Math.random() - 0.5) * step * 0.6;
+                const rot = 360 * 6 - (idx * step + step / 2) + jitter;
+                if (disc) { disc.style.transition = 'transform 4.6s cubic-bezier(.12,.75,.12,1)'; requestAnimationFrame(() => { disc.style.transform = `rotate(${rot}deg)`; }); }
+                await new Promise(r => setTimeout(r, disc ? 4900 : 0));
+                wheelBusy = false;
+                wheelRestRot = ((rot % 360) + 360) % 360;
+                walletCacheClear();
+                await renderWalletModal(coins ? `✓ 🎉 مبروك! ربحتي ${coins} ${coins === 1 ? 'عملة' : 'عملات'} وتزادو ف الرصيد ديالك` : 'حظ آخر هاد المرة 😅 رجع غدا وجرب عاوتاني!');
+                refreshCoinBadge();
+            } catch (e) { wheelBusy = false; renderWalletModal('وقع مشكل، عاود جرب'); }
         }
 
         // ===== عملات ELVON (حساب برقم الهاتف + كلمة السر) =====
@@ -2707,7 +2802,8 @@
                 const { games, ords } = await cloudWalletItems(uid);
                 return { balance: Math.floor(Number(main && main.balance) || 0), games, ords };
             }
-            return { balance: Math.floor(Number(localStoreGet('elvon_wallets_v2', {})[uid]) || 0), games: (localStoreGet('elvon_redeems_v1', {})[uid] || []), ords: (localStoreGet('elvon_wallet_orders_v1', {})[uid] || []) };
+            const lg = localStoreGet('elvon_redeems_v1', {})[uid] || [];
+            return { balance: Math.floor(Number(localStoreGet('elvon_wallets_v2', {})[uid]) || 0), games: lg.filter(g => g.kind !== 'spin').concat(validSpins(lg.filter(g => g.kind === 'spin'))), ords: (localStoreGet('elvon_wallet_orders_v1', {})[uid] || []) };
         }
         async function fetchWallet() {
             const acc = currentAccount();
@@ -2720,7 +2816,8 @@
             const live = raw.ords.filter(o => o.status !== 'ملغي');
             const reserved = live.filter(o => o.coinsUsed > 0 && !o.coinsSpentApplied).reduce((sum, o) => sum + Math.floor(o.coinsUsed), 0);
             const pending = live.filter(o => o.coinsEarn > 0 && !o.coinsEarnedApplied).reduce((sum, o) => sum + Math.floor(o.coinsEarn), 0);
-            walletCache = { uid: acc.uid, name: acc.name, balance: total, reserved, pending, available: Math.max(0, total - reserved), triesLeft: Math.max(0, 2 - triesToday) };
+            const lastSpin = raw.games.filter(g => g.kind === 'spin').reduce((m, g) => Math.max(m, Number(g.at) || 0), 0);
+            walletCache = { nextSpinAt: lastSpin ? lastSpin + WHEEL_GAP : 0, uid: acc.uid, name: acc.name, balance: total, reserved, pending, available: Math.max(0, total - reserved), triesLeft: Math.max(0, 2 - triesToday) };
             return walletCache;
         }
         function setCoinBadge(w) {
@@ -2764,6 +2861,7 @@
                 const tab = (m, label) => `<button onclick="walletMode='${m}'; renderWalletModal()" class="py-2 rounded-xl text-xs font-black ${walletMode === m ? 'bg-amber-400 text-black' : 'text-zinc-300 hover:text-white'}">${label}</button>`;
                 const last = loadState('elvon_last_phone', '');
                 box.innerHTML = `<div class="space-y-2.5">
+                    <div class="rounded-2xl p-2.5 bg-amber-400/10 border border-amber-400/40 text-center"><p class="text-xs font-black text-amber-200">🎡 دخل لحسابك ودور عجلة الحظ كل نهار</p><p class="text-[10px] text-zinc-300 mt-0.5">ربح عملات ELVON وبدلهم بمنتجات مجانا 🎁</p></div>
                     <div class="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-elvon-black border border-elvon-border">${tab('login', 'دخول لحسابي')}${tab('signup', 'حساب جديد')}</div>
                     ${isNew ? `<div><label class="block text-[11px] font-bold text-zinc-300 mb-1">الاسم</label><input id="acc-name" name="elvon-acc-name" type="text" maxlength="30" autocomplete="off" placeholder="مثال: يوسف" class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"></div>` : ''}
                     <div><label class="block text-[11px] font-bold text-zinc-300 mb-1">رقم الهاتف</label>
@@ -2785,6 +2883,8 @@
                     ${w.reserved ? `<p class="text-[11px] text-zinc-500">${w.reserved} عملة محجوزين ف طلب مازال ما تسلمش</p>` : ''}
                     ${w.pending ? `<p class="text-[11px] text-emerald-400 font-bold">+${w.pending} عملة غادي يتزادو ملي يتسلم الطلب ديالك</p>` : ''}
                 </div>
+                ${note}
+                ${wheelBlockHtml(w)}
                 <div class="mt-3 rounded-2xl p-3 bg-amber-400/10 border border-amber-400/40 space-y-2">
                     <p class="text-xs font-black text-amber-200 text-center">عندك كود ديال العملات؟</p>
                     <div class="flex gap-2">
@@ -2793,7 +2893,8 @@
                     </div>
                 </div>
                 <button onclick="closeModalById('wallet-modal'); selectCategory('coins'); scrollToId('store-products-grid')" class="w-full mt-2 py-2.5 rounded-xl bg-elvon-black border border-amber-400/40 text-amber-200 text-xs font-black hover:border-amber-300">تسوق ف متجر العملات</button>
-                <button onclick="accountSignOut()" class="w-full mt-1 text-[11px] text-zinc-500 font-bold hover:text-white">خروج من الحساب</button>${note}`;
+                <button onclick="accountSignOut()" class="w-full mt-1 text-[11px] text-zinc-500 font-bold hover:text-white">خروج من الحساب</button>`;
+            if (w.nextSpinAt > Date.now()) startWheelTimer(w.nextSpinAt);
         }
         function cleanCoinCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24); }
         async function redeemCoinCode() {
@@ -4698,7 +4799,7 @@
                     const main = (await window.ElvonCloud.getPath(WP.main(a.uid))) || {};
                     const { games } = await cloudWalletItems(a.uid);
                     adminPhones[a.phone] = (await window.ElvonCloud.getPath(await WP.phone(a.phone))) || {};
-                    return { uid: a.uid, name: a.name, phone: a.phone || '', closed: !!main.closed, createdAt: a.createdAt || 0, base: Math.floor(Number(main.balance) || 0), redeemed: games.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: games.length };
+                    return { uid: a.uid, name: a.name, phone: a.phone || '', closed: !!main.closed, createdAt: a.createdAt || 0, base: Math.floor(Number(main.balance) || 0), redeemed: games.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: games.filter(g => g.kind !== 'spin').length };
                 }));
             } else {
                 const info = loadState('elvon_local_walletinfo', {}), bal = loadState('elvon_wallets_v2', {}), red = loadState('elvon_redeems_v1', {});
