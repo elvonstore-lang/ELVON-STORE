@@ -2853,7 +2853,16 @@
             if (w && w.available > 0) { b.textContent = w.available; b.classList.remove('hidden'); } else b.classList.add('hidden');
         }
         async function refreshCoinBadge() { setCoinBadge(currentAccount() ? await fetchWallet() : null); }
-        window.onElvonAuthChange = () => { walletCacheClear(); refreshCoinBadge(); refreshCoinBoxes(); const m = document.getElementById('wallet-modal'); if (m && !m.classList.contains('hidden')) renderWalletModal(); };
+        async function ensureAccountRecord() {
+            const C = window.ElvonCloud, acc = currentAccount();
+            if (!C?.ready || !acc || !C.auth?.currentUser) return;
+            const flag = 'elvon_acct_rec_' + acc.uid;
+            if (loadState(flag, false)) return;
+            // كنكتبو السجل غير إلا ما كانش (إلا كان، السيرفر كيرفض التعديل وهادشي عادي)
+            try { await C._ensureWallet(C.auth.currentUser, acc.name, acc.phone); } catch (e) {}
+            saveState(flag, true);
+        }
+        window.onElvonAuthChange = () => { setTimeout(ensureAccountRecord, 1500); walletCacheClear(); refreshCoinBadge(); refreshCoinBoxes(); const m = document.getElementById('wallet-modal'); if (m && !m.classList.contains('hidden')) renderWalletModal(); };
         function coinsToUse() { return 0; } // الخلاص بالعملات ولا غير ف متجر العملات
         function earnPreview(which) {
             if (which === 'cart') return cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coins) || 0) * it.qty, 0);
@@ -4837,12 +4846,22 @@
             const cloud = window.ElvonCloud?.ready && adminOrders;
             let list = [];
             if (cloud) {
-                const accts = (adminAccountDocs || []);
+                const accts = (adminAccountDocs || []).slice();
+                // حسابات ما عندهاش سجل (السجل ما تكتبش ملي تصاوب الحساب): كنلقاوهم من الطلبات ومن أكواد العملات
+                const known = new Set(accts.map(a => a.uid)), extra = new Map();
+                const okUid = (u) => /^[A-Za-z0-9_-]{6,64}$/.test(String(u || ''));
+                (adminOrders || []).forEach(o => { if (okUid(o.uid) && !known.has(o.uid) && !extra.has(o.uid)) extra.set(o.uid, { uid: o.uid, name: o.accountName || o.customer || 'زبون ELVON', phone: normPhone(o.phone || ''), createdAt: o.createdAt || 0 }); });
+                try {
+                    if (!coinCodes.length) await loadCoinCodes();
+                    const uses = await Promise.all(coinCodes.map(c => window.ElvonCloud.listPath(usesPath(c.code))));
+                    uses.flat().forEach(u => { const id = u._docId; if (okUid(id) && !known.has(id) && !extra.has(id)) extra.set(id, { uid: id, name: 'زبون ELVON', phone: '', createdAt: Number(u.at) || 0 }); });
+                } catch (e) {}
+                accts.push(...extra.values());
                 adminPhones = {};
                 list = await Promise.all(accts.map(async a => {
                     const main = (await window.ElvonCloud.getPath(WP.main(a.uid))) || {};
                     const { games } = await cloudWalletItems(a.uid);
-                    adminPhones[a.phone] = (await window.ElvonCloud.getPath(await WP.phone(a.phone))) || {};
+                    if (a.phone) adminPhones[a.phone] = (await window.ElvonCloud.getPath(await WP.phone(a.phone))) || {};
                     return { uid: a.uid, name: a.name, phone: a.phone || '', closed: !!main.closed, createdAt: a.createdAt || 0, base: Math.floor(Number(main.balance) || 0), redeemed: games.reduce((sum, r) => sum + (Number(r.coins) || 0), 0), codes: games.filter(g => g.kind !== 'spin').length };
                 }));
             } else {
