@@ -50,9 +50,23 @@
 
     <!-- Firebase: مزامنة سحابية حقيقية (Firestore) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Firebase كيتحمل ف الخلفية (الموقع ما كيتسناهش باش يبان)، وإلا فشل التحميل كنعاودو أوتوماتيكيا
+        let initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged;
+        let getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, getDocs;
+        const FB_BASE = 'https://www.gstatic.com/firebasejs/11.6.1/';
+        const fbTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+        async function loadFirebaseSdk() {
+            for (let attempt = 0; attempt < 4; attempt++) {
+                try {
+                    const [A, Au, F] = await Promise.race([Promise.all([import(FB_BASE + 'firebase-app.js'), import(FB_BASE + 'firebase-auth.js'), import(FB_BASE + 'firebase-firestore.js')]), fbTimeout(25000)]);
+                    ({ initializeApp } = A);
+                    ({ getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged } = Au);
+                    ({ getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, getDocs } = F);
+                    return true;
+                } catch (e) { await new Promise(r => setTimeout(r, 1200 * (attempt + 1))); }
+            }
+            return false;
+        }
 
         // ===== الصق هنا إعدادات مشروع Firebase الخاص بك (انظر ملف التعليمات) =====
         const  ELVON_FIREBASE_CONFIG = {apiKey:"AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64",
@@ -71,19 +85,33 @@
             db: null,
             auth: null,
             adminEmail: ELVON_ADMIN_EMAIL,
-            async init() {
+            authReady: false,
+            _initP: null,
+            init() { return this._initP || (this._initP = this._init()); },
+            async _init() {
                 try {
                     if (!ELVON_FIREBASE_CONFIG.apiKey || !ELVON_FIREBASE_CONFIG.projectId) return false;
+                    if (!(await loadFirebaseSdk())) return false;
                     const app = initializeApp(ELVON_FIREBASE_CONFIG);
                     this.auth = getAuth(app);
                     this.auth.languageCode = 'ar';
                     this.db = getFirestore(app);
                     this.ready = true;
-                    onAuthStateChanged(this.auth, () => { if (typeof window.onElvonAuthChange === 'function') window.onElvonAuthChange(); });
+                    // الحساب ديال الزبون كيترجع من الذاكرة ديال التيليفون: كنتسناو حتى يتعرف عليه
+                    this._authP = new Promise(res => {
+                        setTimeout(res, 6000);
+                        onAuthStateChanged(this.auth, () => { const first = !this.authReady; this.authReady = true; res(); if (typeof window.onElvonAuthChange === 'function') window.onElvonAuthChange(); });
+                    });
                     return true;
                 } catch (err) {
                     return false;
                 }
+            },
+            // كنتسناو السحابة + الحساب (بلا ما يحتاج الزبون يحدث الصفحة)
+            async whenReady(ms = 30000) {
+                const ok = await Promise.race([this.init(), new Promise(r => setTimeout(() => r(false), ms))]);
+                if (ok && this._authP) await this._authP;
+                return !!(ok && this.ready);
             },
             isAdmin() {
                 const u = this.auth && this.auth.currentUser;
@@ -2066,7 +2094,7 @@
             products = loadState('elvon_acc_products_v2', INITIAL_PRODUCTS);
             // المنتجات ديال المثال ما كيبانوش ف الموقع الحقيقي: كنتسناو المنتجات الحقيقية
             if (!loadState('elvon_cloud_seen', false) && products.length && products.every(p => INITIAL_PRODUCTS.some(i => i.id === p.id))) products = [];
-            setTimeout(ensureProductsLoaded, window.ElvonCloud ? 6000 : 0);
+            setTimeout(ensureProductsLoaded, window.ElvonCloud ? 1500 : 0);
             orders = loadState('elvon_acc_orders_v2', INITIAL_ORDERS);
             cart = loadState('elvon_acc_cart_v2', []);
             wishlist = loadState('elvon_acc_wishlist_v1', []);
@@ -2076,11 +2104,7 @@
             settings = Object.assign({}, DEFAULT_SETTINGS, loadState('elvon_acc_settings_v2', DEFAULT_SETTINGS));
 
             const syncBadge = document.getElementById('cloud-sync-badge');
-            let cloudConnected = false;
-            if (window.ElvonCloud) {
-                cloudConnected = await window.ElvonCloud.init();
-            }
-
+            const onCloud = (cloudConnected) => {
             if (cloudConnected) {
                 if (syncBadge) {
                     syncBadge.textContent = '☁️ متصل بالسحابة — يظهر لجميع الزبناء';
@@ -2097,6 +2121,7 @@
                     if (warn) warn.classList.remove('hidden');
                 }
             }
+            };
 
             document.getElementById('setting-wa-phone').value = settings.waPhone || DEFAULT_WA_PHONE;
             document.getElementById('setting-shipping-fee').value = settings.shippingFee;
@@ -2112,6 +2137,8 @@
             updateCartUI();
             renderAdminTables();
             initAiChatWelcome();
+            // السحابة كتتصل ف الخلفية، والموقع كيبان دغيا
+            if (window.ElvonCloud) window.ElvonCloud.init().then(onCloud); else onCloud(false);
 
             document.addEventListener('click', (e) => {
                 const wrap = document.getElementById('search-wrap');
@@ -2211,6 +2238,7 @@
             const val = document.getElementById('admin-passcode-input').value.trim();
             const err = document.getElementById('admin-auth-error');
             let ok = false;
+            if (window.ElvonCloud && !window.ElvonCloud.ready) await window.ElvonCloud.whenReady(30000);
             if (window.ElvonCloud?.ready) {
                 // مع السحابة: التحقق الحقيقي عبر Firebase Authentication
                 ok = await window.ElvonCloud.adminSignIn(val);
@@ -2793,13 +2821,12 @@
         const todayKey = () => Math.floor(Date.now() / 86400000);
         function localStoreGet(k, d) { return loadState(k, d); }
         function currentAccount() {
-            if (window.ElvonCloud?.ready) { try { return window.ElvonCloud.account ? window.ElvonCloud.account() : null; } catch (e) { return null; } }
+            if (window.ElvonCloud) { if (!window.ElvonCloud.ready) return null; try { return window.ElvonCloud.account ? window.ElvonCloud.account() : null; } catch (e) { return null; } }
             return loadState('elvon_local_account', null);
         }
         async function readWalletRaw(uid) {
             if (window.ElvonCloud?.ready) {
-                const main = await window.ElvonCloud.getPath(WP.main(uid));
-                const { games, ords } = await cloudWalletItems(uid);
+                const [main, { games, ords }] = await Promise.all([window.ElvonCloud.getPath(WP.main(uid)), cloudWalletItems(uid)]);
                 return { balance: Math.floor(Number(main && main.balance) || 0), games, ords };
             }
             const lg = localStoreGet('elvon_redeems_v1', {})[uid] || [];
@@ -2852,8 +2879,16 @@
             m.classList.remove('hidden'); m.classList.add('flex');
             renderWalletModal();
         }
+        let walletRenderSeq = 0;
         async function renderWalletModal(msg = '') {
             const box = document.getElementById('wallet-result');
+            const seq = ++walletRenderSeq;
+            if (window.ElvonCloud && !(window.ElvonCloud.ready && window.ElvonCloud.authReady)) {
+                box.innerHTML = '<div class="py-8 text-center space-y-3"><div class="mx-auto w-9 h-9 rounded-full border-4 border-amber-400/30 border-t-amber-400 animate-spin"></div><p class="text-xs text-zinc-300 font-bold">كنتاصلو بالحساب ديالك...</p></div>';
+                const ok = await window.ElvonCloud.whenReady(30000);
+                if (seq !== walletRenderSeq) return;
+                if (!ok) { box.innerHTML = `<div class="py-6 text-center space-y-3"><p class="text-xs text-red-300 font-bold">الإنترنت ضعيف شوية، ما قدرناش نتاصلو.</p><button onclick="renderWalletModal()" class="px-5 py-2.5 rounded-xl bg-amber-400 text-black text-xs font-black">عاود جرب</button></div>`; return; }
+            }
             const acc = currentAccount();
             const note = msg ? `<p class="text-xs font-bold text-center mt-2 ${msg.startsWith('✓') ? 'text-emerald-400' : 'text-red-300'}">${esc(msg)}</p>` : '';
             if (!acc) {
@@ -2873,8 +2908,11 @@
                     <p class="text-[10px] text-zinc-500 text-center">${isNew ? 'حفظ كلمة السر، غادي تحتاجها باش تدخل من أي تيليفون.' : 'نسيتي كلمة السر؟ تواصل معنا ف واتساب. ما عندكش حساب؟ ضغط على "حساب جديد".'}</p>${note}</div>`;
                 return;
             }
-            box.innerHTML = '<p class="text-xs text-zinc-400 text-center py-4">كنحملو الرصيد...</p>';
-            const w = await fetchWallet();
+            box.innerHTML = '<div class="py-8 text-center space-y-3"><div class="mx-auto w-9 h-9 rounded-full border-4 border-amber-400/30 border-t-amber-400 animate-spin"></div><p class="text-xs text-zinc-300 font-bold">كنحملو الرصيد...</p></div>';
+            let w = null;
+            for (let k = 0; k < 2 && !w; k++) { try { w = await Promise.race([fetchWallet(), new Promise(r => setTimeout(() => r(null), 15000))]); } catch (e) { w = null; } }
+            if (seq !== walletRenderSeq) return;
+            if (!w) { box.innerHTML = `<div class="py-6 text-center space-y-3"><p class="text-xs text-red-300 font-bold">ما قدرناش نحملو الرصيد دابا.</p><button onclick="renderWalletModal()" class="px-5 py-2.5 rounded-xl bg-amber-400 text-black text-xs font-black">عاود جرب</button></div>`; return; }
             setCoinBadge(w);
             box.innerHTML = `
                 <div class="bg-elvon-black border border-elvon-border rounded-2xl p-4 text-center space-y-1">
@@ -2997,7 +3035,7 @@
             const btn = document.getElementById('acc-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
             saveState('elvon_last_phone', '0' + n);
             // نتسناو شوية إلا Firebase مازال كيتحمل
-            for (let i = 0; i < 16 && window.ElvonCloud && !window.ElvonCloud.ready; i++) await new Promise(r => setTimeout(r, 250));
+            if (window.ElvonCloud && !window.ElvonCloud.ready) { if (btn) btn.textContent = 'كنتاصلو بالسيرفر...'; await window.ElvonCloud.whenReady(30000); }
             const localAll = loadState('elvon_local_accounts2', {});
             if (window.ElvonCloud?.ready) {
                 let r = isNew ? await window.ElvonCloud.signUpAccount(name, n, pass) : await window.ElvonCloud.signInAccount(n, pass);
@@ -3098,6 +3136,7 @@
             const waLink = document.getElementById('os-wa');
             if (waLink) waLink.href = getWhatsappBaseUrl(`مرحباً، عندي سؤال على الطلب ديالي ${newOrder.id}`);
             let saved = false;
+            if (window.ElvonCloud && !window.ElvonCloud.ready) await window.ElvonCloud.whenReady(20000);
             if (window.ElvonCloud?.ready) {
                 try { saved = await window.ElvonCloud.saveItem('orders', newOrder.id, newOrder); } catch (err) { saved = false; }
             }
@@ -4340,6 +4379,7 @@
         async function lookupOrdersByPhone(phone, limit = 5) {
             const n = normPhone(phone);
             if (n.length < 9) return [];
+            if (window.ElvonCloud && !window.ElvonCloud.ready) await window.ElvonCloud.whenReady(20000);
             const found = new Map();
             orders.filter(o => normPhone(o.phone) === n).forEach(o => found.set(o.id, { id: o.id, status: o.status, total: o.total, city: o.city, date: o.date, createdAt: o.createdAt, items: o.items, coinsUsed: o.coinsUsed || 0, coinsEarn: o.coinsEarn || 0, coinsSpentApplied: !!o.coinsSpentApplied, coinsEarnedApplied: !!o.coinsEarnedApplied }));
             if (window.ElvonCloud?.ready) {
