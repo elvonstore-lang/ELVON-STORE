@@ -3445,6 +3445,8 @@
                 .normalize('NFD').replace(/[̀-ͯ]/g, '');
         }
         function aiFmt(text) {
+            // جداول Markdown (| a | b |) كنبدلوهم بلائحة باش يبانو مزيان ف الشات
+            text = String(text || '').split('\n').filter(l => !/^\s*\|?\s*:?-{2,}/.test(l)).map(l => /^\s*\|.*\|\s*$/.test(l) ? '- ' + l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()).filter(Boolean).join(' — ') : l).join('\n');
             return esc(String(text || '')
                     .replace(/^\s{0,3}#{1,6}\s+(.+)$/gm, '**$1**')
                     .replace(/^\s*[*•]\s+/gm, '- ')
@@ -3814,6 +3816,23 @@
             aiBusy = false;
         }
 
+        // Groq المجاني كيقبل شوية ديال الكلام ف كل سؤال: كنصيفطو غير المنتجات الأقرب للسؤال (حتى 22) بوصف قصير
+        function aiCatalogFor(text) {
+            const q = aiNorm(text + ' ' + aiChatHistory.slice(-4).map(h => h.text).join(' '));
+            const words = [...new Set(q.split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3))];
+            const cats = Object.entries(AI_CATS).filter(([, re]) => re.test(q)).map(([k]) => k);
+            return products.filter(p => p && p.name).map((p, i) => {
+                const hay = aiNorm(`${p.name} ${p.brand || ''} ${CATEGORY_LABELS[p.category] || ''} ${p.category || ''}`);
+                let sc = 0;
+                for (const w of words) if (hay.includes(w)) sc += 2;
+                if (cats.includes(p.category)) sc += 3;
+                if (Number(p.stock) > 0) sc += .5;
+                return [sc - i * .001, p];
+            }).sort((a, b) => b[0] - a[0]).slice(0, 22).map(([, p]) => ({
+                id: p.id, name: String(p.name).slice(0, 90), brand: p.brand || '', category: CATEGORY_LABELS[p.category] || '',
+                price_mad: p.price, old_price_mad: p.oldPrice || null, stock: p.stock, specs: String(p.desc || '').slice(0, 140)
+            }));
+        }
         async function aiProcessOne(userText) {
             appendAiBubble('user', userText);
             aiChatHistory.push({ role: 'user', text: userText });
@@ -3844,7 +3863,7 @@
                         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
                         body: JSON.stringify({
                             message: userText, history: aiChatHistory.slice(-16),
-                            catalog: products.map(p => ({ id: p.id, name: p.name, brand: p.brand, category: CATEGORY_LABELS[p.category], price_mad: p.price, old_price_mad: p.oldPrice || null, stock: p.stock, specs: p.desc })),
+                            catalog: aiCatalogFor(userText), catalogTotal: products.length,
                             store: { address: settings.address, maps: settings.mapsUrl, hours: settings.hours, phone: settings.phoneDisplay, about: settings.about, faq: settings.faq || [] },
                             policy: { cod: true, free_shipping_from: settings.freeShippingThreshold, tanger_fee: settings.shippingFee, other_fee: settings.otherCitiesFee, exchange_hours: 48 }
                         })
