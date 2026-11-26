@@ -128,9 +128,9 @@ function allowedOrigins() {
   return extra.includes('*') ? ['*'] : DEFAULT_ORIGINS.concat(extra);
 }
 // حد ديال الطلبات لكل زبون (باش حتى واحد ما يستهلك المفتاح ديالك)
-const RATE = new Map();
-function rateLimited(ip) {
-  const now = Date.now(), win = 60 * 1000, max = 12;
+const RATE = new Map(), HEALTH = { at: 0, out: null };
+function rateLimited(ip, max = 12) {
+  const now = Date.now(), win = 60 * 1000;
   const list = (RATE.get(ip) || []).filter(t => now - t < win);
   list.push(now); RATE.set(ip, list);
   if (RATE.size > 5000) for (const [k, v] of RATE) { if (!v.some(t => now - t < win)) RATE.delete(k); }
@@ -147,7 +147,8 @@ function cleanCatalog(list) {
 module.exports = async (req, res) => {
   const origins = allowedOrigins();
   const origin = String(req.headers.origin || '').replace(/\/+$/, '');
-  const okOrigin = origins.includes('*') || !origin || origins.includes(origin);
+  // المتصفح ديما كيصيفط Origin ف POST: بلا Origin (curl، سكريبتات) ما كنقبلوش
+  const okOrigin = origins.includes('*') || (!!origin && origins.includes(origin));
   res.setHeader('Access-Control-Allow-Origin', origins.includes('*') ? '*' : (okOrigin && origin ? origin : origins[0]));
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -160,8 +161,12 @@ module.exports = async (req, res) => {
   const groqKey = process.env.GROQ_API_KEY || '';
   const geminiKey = process.env.GEMINI_API_KEY || '';
 
+  const ip = String(req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim() || 'x';
   // GET /api/ai : quick health check (open it in the browser to see if the keys work)
+  // النتيجة كتتحفظ 10 دقايق، باش حتى واحد ما يستهلك المفتاح بالتحديث
   if (req.method === 'GET') {
+    if (rateLimited('get:' + ip, 4)) return res.status(429).json({ ok: false, error: 'too many requests' });
+    if (HEALTH.at && Date.now() - HEALTH.at < 10 * 60 * 1000) return res.status(200).json({ ...HEALTH.out, cached: true });
     if (!groqKey && !geminiKey) return res.status(200).json({ ok: false, problem: 'Add GROQ_API_KEY (free) or GEMINI_API_KEY in Vercel, then Redeploy.' });
     const out = { ok: false };
     const ping = [{ role: 'user', parts: [{ text: 'Say OK' }] }];
@@ -185,11 +190,11 @@ module.exports = async (req, res) => {
         } catch (e) { out.gemini[model] = 'error: ' + String(e.message).slice(0, 200); if (isKeyError(e)) break; }
       }
     }
+    HEALTH.at = Date.now(); HEALTH.out = out;
     return res.status(200).json(out);
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   if (!okOrigin) return res.status(403).json({ error: 'forbidden' });
-  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim() || 'x';
   if (rateLimited(ip)) return res.status(429).json({ reply: 'بزاف ديال الأسئلة ف دقيقة وحدة 🙏 تسنى شوية وعاود.' });
   if (Number(req.headers['content-length'] || 0) > 200000) return res.status(413).json({ error: 'too large' });
 
