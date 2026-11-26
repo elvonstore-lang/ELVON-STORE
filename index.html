@@ -718,9 +718,6 @@
                 </div>
                 <div class="pt-3 border-t border-elvon-border flex items-center justify-between text-[11px] text-zinc-500">
                     <span id="secret-tap">© 2026 ELVON STORE — طنجة، المغرب. جميع الحقوق محفوظة.</span>
-                    <button onclick="requestAdminAccess()" aria-label="دخول" class="p-1.5 rounded-lg text-zinc-700 opacity-30 hover:opacity-100 hover:text-white transition-all">
-                        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-                    </button>
                 </div>
             </div>
         </footer>
@@ -3914,26 +3911,21 @@
         }
 
         // ===== دخول سري للوحة التحكم (لا يظهر أي زر للزبناء) =====
+        // الدخول للوحة التحكم: غير من الرابط السري (#k=...). الرابط ماشي مكتوب ف الكود، غير البصمة ديالو (SHA-256)
+        const ADMIN_LINK_DIGEST = 'ec69f82ae2409e865a407f8283a456a5e2d0a86ff8ab6198c26f8a9b7b6b28bb';
         function setupSecretAdminEntry() {
-            const checkHash = () => {
-                if (/^#\/?admin$/i.test(location.hash)) {
-                    history.replaceState(null, '', location.pathname + location.search);
-                    requestAdminAccess();
-                }
+            const checkHash = async () => {
+                const m = location.hash.match(/^#k=([A-Za-z0-9_-]{8,64})$/);
+                if (!m) return;
+                history.replaceState(null, '', location.pathname + location.search);
+                try {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m[1]));
+                    const hex = [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+                    if (hex === ADMIN_LINK_DIGEST) requestAdminAccess();
+                } catch (e) {}
             };
             window.addEventListener('hashchange', checkHash);
             checkHash();
-            document.addEventListener('keydown', (e) => {
-                if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); requestAdminAccess(); }
-            });
-            const tap = document.getElementById('secret-tap');
-            let taps = 0, timer = null;
-            if (tap) tap.addEventListener('click', () => {
-                taps++;
-                clearTimeout(timer);
-                timer = setTimeout(() => { taps = 0; }, 3500);
-                if (taps >= 7) { taps = 0; requestAdminAccess(); }
-            });
         }
 
         function runTechDiagnostics() {
