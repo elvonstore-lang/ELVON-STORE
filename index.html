@@ -230,8 +230,9 @@
                     const snap = await getDocs(collection(this.db, ...pathArr));
                     const out = [];
                     snap.forEach(d => out.push({ ...d.data(), _docId: d.id }));
+                    this.lastError = null;
                     return out;
-                } catch (err) { return []; }
+                } catch (err) { this.lastError = (err && err.code) || 'unknown'; return []; }
             },
             async deleteItem(colName, docId) {
                 if (!this.ready) return false;
@@ -2763,9 +2764,16 @@
             const k = ref.id + '|' + (uid || '');
             if (k in coinValueCache) return coinValueCache[k];
             const d = await window.ElvonCloud.getPath(ref.doc);
+            let failed = !d && !!window.ElvonCloud.lastError;
             let v = d && d.type === 'coin' ? Math.floor(Number(d.coins) || 0) : 0;
-            if (v && Number(d.maxUses) > 0 && uid) { const users = await codeUsers(ref); const i = users.indexOf(uid); if (i < 0 || i >= Number(d.maxUses)) v = 0; }
-            return (coinValueCache[k] = v);
+            if (v && Number(d.maxUses) > 0 && uid) {
+                const users = await codeUsers(ref);
+                if (!users.length && window.ElvonCloud.lastError) failed = true;
+                const i = users.indexOf(uid); if (i < 0 || i >= Number(d.maxUses)) v = 0;
+            }
+            // قراية فشلات (شبكة ولا صلاحيات): ما نحفظوش 0 باش ما يبقاش الرصيد غالط
+            if (!failed) coinValueCache[k] = v;
+            return v;
         }
         async function cloudWalletItems(uid) {
             const items = await window.ElvonCloud.listPath(WP.items(uid));
@@ -4896,6 +4904,7 @@
         // ===== حسابات العملات (المدير) =====
         let adminAccounts = [], adminPhones = {};
         async function loadAccounts() {
+            for (const k in coinValueCache) delete coinValueCache[k];
             const wrap = document.getElementById('admin-accounts-list');
             if (wrap) wrap.innerHTML = '<p class="text-xs text-zinc-400 py-4 text-center">كنحملو الحسابات...</p>';
             const cloud = window.ElvonCloud?.ready && adminOrders;
