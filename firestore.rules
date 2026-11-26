@@ -10,14 +10,14 @@ service cloud.firestore {
 
     // المنتجات والإعدادات: الكل يقرا، المدير وحده يكتب
     match /products/{id} { allow read: if true; allow write: if isAdmin(); }
-    // promos: فيها أكواد العملات (COIN_...) — الزبون كيقرا غير الكود لي عارف
+    // promos: أكواد العملات (CH_<البصمة>) — الزبون كيقرا غير الكود لي عارف، ما يقدرش يشوف اللائحة
     match /promos/{id}   { allow get: if true; allow list: if isAdmin(); allow write: if isAdmin(); }
-    // settings: فيها الرصيد (wal_...) ونسخة الرقم (phone_...) — المدير وحده يكتب
-    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
+    // settings: الإعدادات (main)، الرصيد (wal_...) ونسخة الرقم (phone_...) — اللائحة والكتابة غير للمدير
+    match /settings/{id} { allow get: if true; allow list: if isAdmin(); allow write: if isAdmin(); }
 
     // الطلبات: الزبون كيصيفط طلب جديد فقط، والمدير وحده يقرا ويبدل
     match /orders/{id} {
-      allow create: if smallDoc() && (
+      allow create: if isAdmin() || smallDoc() && (
         // طلب عادي
         (request.resource.data.status == 'جديد' && request.resource.data.total is number && request.resource.data.total >= 0
           && (!('coinsSpentApplied' in request.resource.data) || request.resource.data.coinsSpentApplied == false)

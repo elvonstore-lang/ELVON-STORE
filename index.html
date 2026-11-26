@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html{touch-action:manipulation}input,select,textarea{font-size:16px!important}</style> <link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#050505"> <title>ELVON STORE | متجر إلفون للإكسسوارات - طنجة، المغرب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html{touch-action:manipulation}input,select,textarea{font-size:16px!important}</style> <link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#050505"> <title>ELVON STORE | متجر إلفون للإكسسوارات - طنجة، المغرب</title>
     <meta name="description" content="متجر ELVON STORE في طنجة للإكسسوارات والملحقات الذكية: شواحن سريعة، سماعات لاسلكية، كفرات حماية، حوامل، ساعات ذكية وبطاريات متنقلة. الدفع عند الاستلام وتوصيل مجاني فوق 300 درهم.">
     <meta name="keywords" content="ELVON STORE, إكسسوارات هواتف طنجة, شواحن سريعة, سماعات لاسلكية, كفرات حماية, الدفع عند الاستلام المغرب, accessoires téléphone Tanger">
     <meta name="robots" content="index, follow">
@@ -12,8 +11,13 @@
     <meta property="og:description" content="الدفع عند الاستلام (COD) • توصيل مجاني فوق 300 درهم • تأكيد سريع عبر واتساب">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="ELVON STORE">
-    <meta property="og:image" content="apple-touch-icon.png">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:url" content="https://elvonstore-lang.github.io/ELVON-STORE/">
+    <meta property="og:image" content="https://elvonstore-lang.github.io/ELVON-STORE/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="ar_MA">
+    <link rel="canonical" href="https://elvonstore-lang.github.io/ELVON-STORE/">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="application-name" content="ELVON STORE">
 
     <!-- بيانات منظمة Schema.org للمتجر -->
@@ -23,7 +27,10 @@
       "@type": "Store",
       "name": "ELVON STORE",
       "alternateName": ["ELVON", "Elvon Store", "إلفون ستور", "متجر إلفون"],
-      "logo": "apple-touch-icon.png",
+      "url": "https://elvonstore-lang.github.io/ELVON-STORE/",
+      "logo": "https://elvonstore-lang.github.io/ELVON-STORE/apple-touch-icon.png",
+      "image": "https://elvonstore-lang.github.io/ELVON-STORE/og-image.jpg",
+      "sameAs": ["https://www.instagram.com/elvon__store", "https://www.facebook.com/share/1E8MUe7q3p/"],
       "description": "متجر إلفون للإكسسوارات والملحقات التقنية في طنجة، المغرب",
       "address": {
         "@type": "PostalAddress",
@@ -42,9 +49,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js للرسوم البيانية -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
+    <link rel="stylesheet" href="tw.css?v=20261126">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -176,6 +182,10 @@
             async adminSignOut() {
                 try { if (this.auth) await signOut(this.auth); } catch (err) {}
             },
+            listenDoc(pathArr, onData) {
+                if (!this.ready) return null;
+                return onSnapshot(doc(this.db, ...pathArr), (snap) => { onData(snap.exists() ? { ...snap.data(), _docId: snap.id } : null); }, () => {});
+            },
             listenCollection(colName, onData) {
                 if (!this.ready) return null;
                 return onSnapshot(collection(this.db, colName), (snap) => {
@@ -186,12 +196,20 @@
                     if (typeof showToast === 'function') showToast('تعذر الاتصال بالمزامنة السحابية');
                 });
             },
+            // نسخة الكتالوج (settings/main.catalogV): ملي المدير كيبدل شي منتج كتتبدل، والزبناء كيعاودو يحملو المنتجات غير ملي تتبدل
+            _bumpT: null,
+            bumpCatalog() {
+                clearTimeout(this._bumpT);
+                this._bumpT = setTimeout(() => { setDoc(doc(this.db, 'settings', 'main'), { catalogV: Date.now() }, { merge: true }).catch(() => {}); }, 1200);
+            },
             async saveItem(colName, docId, payload) {
                 if (!this.ready) return false;
                 try {
                     const clean = JSON.parse(JSON.stringify(payload));
                     delete clean._docId;
                     await setDoc(doc(this.db, colName, String(docId)), clean, { merge: true });
+                    // تبديل المخزون بوحدو ما كيبدلش نسخة الكتالوج (المخزون كيتصيفط ف settings/stock)
+                    if (colName === 'products' && this.isAdmin() && Object.keys(clean).some(k => k !== 'stock' && k !== 'updatedAt')) this.bumpCatalog();
                     return true;
                 } catch (err) {
                     if (typeof showToast === 'function') showToast('تعذر الحفظ في السحابة (تحقق من الصلاحيات)');
@@ -219,6 +237,7 @@
                 if (!this.ready) return false;
                 try {
                     await deleteDoc(doc(this.db, colName, String(docId)));
+                    if (colName === 'products' && this.isAdmin()) this.bumpCatalog();
                     return true;
                 } catch (err) {
                     if (typeof showToast === 'function') showToast('تعذر الحذف من السحابة (تحقق من الصلاحيات)');
@@ -228,32 +247,6 @@
         };
     </script>
 
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Cairo', 'sans-serif'],
-                    },
-                    colors: {
-                        elvon: {
-                            black: '#050505',
-                            dark: '#0B0B0D',
-                            card: '#131316',
-                            cardHover: '#1A1A1F',
-                            border: '#242429',
-                            red: '#DC0A14',
-                            redHover: '#B90810',
-                            orange: '#DC0A14',
-                            orangeHover: '#B90810',
-                            whatsapp: '#25D366'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
 
     <style>
         body {
@@ -906,7 +899,7 @@
             <div class="space-y-3">
                 <div class="flex items-center gap-2"><svg class="w-7 h-7" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg><div><h3 class="text-base font-black text-white">أكواد عملات ELVON</h3><p class="text-[11px] text-zinc-400">صاوب كود، والزبون لي داخل لحسابو ودخلو كيربح العدد ديال العملات لي حطيتي (مرة وحدة لكل زبون).</p></div></div>
                 <form onsubmit="addCoinCode(event)" class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="new-coin-code" required maxlength="24" placeholder="الكود (مثال: ELVON50)" class="flex-1 min-w-[160px] bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-400" dir="ltr">
+                    <input type="text" id="new-coin-code" required maxlength="24" placeholder="الكود: 6 حروف ولا أكثر (مثال: ELVON28X)" class="flex-1 min-w-[160px] bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-400" dir="ltr">
                     <input type="number" id="new-coin-amount" required min="1" max="100000" placeholder="عدد العملات" class="w-32 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400">
                     <input type="number" id="new-coin-uses" min="1" max="100000" placeholder="شحال من مرة (خاوي = بلا حد)" class="w-52 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400">
                     <button type="submit" class="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black">إضافة</button>
@@ -1760,6 +1753,8 @@
         function esc(v) {
             return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
         }
+        // قيمة آمنة داخل onclick="fn(...)": نص JSON مشفر (ما يمكنش يخرج من الـ string حتى إلا فيه ' ولا ")
+        function jsa(v) { return esc(JSON.stringify(String(v == null ? '' : v))); }
 
         // قائمة طلبات المدير: من السحابة عند تسجيل دخول المدير، وإلا الطلبات المحلية
         let adminOrders = null;
@@ -1885,15 +1880,30 @@
             if (!p || typeof p.stock !== 'number' || isNaN(p.stock)) return Infinity;
             return Math.max(0, Math.floor(p.stock));
         }
+        // settings/stock: الكمية ديال كل منتج ف وثيقة وحدة صغيرة (قراءة وحدة ف البلاصة ديال 67)
+        let stockMap = null, stockMapT = null, lastPushedMap = '';
         function applyStock() {
             const admin = isAdminMode();
             (products || []).forEach(p => {
                 if (p && '_base' in p) { p.stock = p._base; delete p._base; }
-                if (p && !admin && typeof p.stock === 'number') {
-                    const r = reservedQty(p.id);
-                    if (r) { p._base = p.stock; p.stock = Math.max(0, p.stock - r); }
-                }
+                if (!p || admin) return;
+                const base = stockMap && typeof stockMap[p.id] === 'number' ? stockMap[p.id] : p.stock;
+                if (typeof base !== 'number') return;
+                const eff = Math.max(0, base - reservedQty(p.id));
+                if (eff !== p.stock) { p._base = p.stock; p.stock = eff; }
             });
+        }
+        // المدير: كل ما تبدل شي مخزون، كنحدثو settings/stock
+        function scheduleStockMap() {
+            if (!isAdminMode() || !window.ElvonCloud?.ready) return;
+            clearTimeout(stockMapT);
+            stockMapT = setTimeout(() => {
+                const m = {}; products.forEach(p => { if (p && typeof p.stock === 'number') m[p.id] = p.stock; });
+                const j = JSON.stringify(m);
+                if (j === lastPushedMap || j === JSON.stringify(stockMap || {})) return;
+                lastPushedMap = j;
+                window.ElvonCloud.saveItem('settings', 'stock', { map: m, at: Date.now() });
+            }, 1500);
         }
         function stockLineHtml(p) {
             const left = stockLeft(p);
@@ -1921,6 +1931,7 @@
         function startStockListener() {
             const C = window.ElvonCloud;
             if (!C?.ready) return;
+            C.listenDoc(['settings', 'stock'], (d) => { stockMap = d && d.map && typeof d.map === 'object' ? d.map : null; applyStock(); refreshStockViews(); });
             C.listenCollection(STOCK_COL, (list) => {
                 stockRes = list.filter(r => r && Array.isArray(r.items));
                 applyStock();
@@ -1991,25 +2002,51 @@
             setTimeout(() => showToast(cancel ? '↩️ رجعات الكمية ديال هاد الطلب للمخزون' : '📦 تنقصات الكمية من المخزون عاوتاني'), 1300);
         }
 
+        // ===== المنتجات: باش نقصو القراءات ف Firebase (الحد المجاني 50 ألف ف النهار) =====
+        // الزبون كيحمل المنتجات غير ملي تتبدل نسخة الكتالوج؛ إلا ما تبدلات كنستعملو اللي محفوظين ف التيليفون
+        let productsUnsub = null, catalogVLoaded = null;
+        function applyProductList(list, v) {
+            cloudProductsCount = list.length;
+            if (list.length) saveState('elvon_cloud_seen', true);
+            products = list.length
+                ? list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+                : JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+            saveState('elvon_acc_products_v2', products);
+            saveState('elvon_catalog_v', v || 0);
+            applyStock();
+            scheduleStockMap();
+            renderDealsRows();
+            renderStoreProducts();
+            renderAdminTables();
+        }
+        function subscribeProducts() {
+            if (productsUnsub || !window.ElvonCloud?.ready) return;
+            productsUnsub = window.ElvonCloud.listenCollection('products', (list) => applyProductList(list, Number(settings.catalogV) || 0));
+        }
+        async function syncCatalog(v) {
+            if (productsUnsub) return;
+            if (!v) { subscribeProducts(); return; }
+            if (v === catalogVLoaded) return;
+            catalogVLoaded = v;
+            const cached = loadState('elvon_acc_products_v2', null);
+            if (loadState('elvon_catalog_v', 0) === v && loadState('elvon_cloud_seen', false) && Array.isArray(cached) && cached.length) {
+                products = cached; cloudProductsCount = cached.length;
+                applyStock(); renderDealsRows(); renderStoreProducts(); renderAdminTables();
+                return;
+            }
+            const list = await window.ElvonCloud.listPath(['products']);
+            if (list.length) applyProductList(list, v); else subscribeProducts();
+        }
         function startCloudListeners() {
             const C = window.ElvonCloud;
             startStockListener();
-            C.listenCollection('products', (list) => {
-                cloudProductsCount = list.length;
-                if (list.length) saveState('elvon_cloud_seen', true);
-                products = list.length
-                    ? list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-                    : JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
-                saveState('elvon_acc_products_v2', products);
-                applyStock();
-                renderDealsRows();
-                renderStoreProducts();
-                renderAdminTables();
-            });
-            C.listenCollection('settings', (list) => {
-                const cfg = list.find(x => x._docId === 'main');
-                if (!cfg) return;
+            // إلا ما جاتش الإعدادات ف 5 ثواني، كنرجعو للطريقة العادية
+            setTimeout(() => { if (catalogVLoaded === null && !productsUnsub) subscribeProducts(); }, 5000);
+            // غير الإعدادات ديال المتجر (settings/main)، ماشي الدوسي كامل (فيه الأرصدة)
+            C.listenDoc(['settings', 'main'], (cfg) => {
+                if (!cfg) { subscribeProducts(); return; }
                 settings = Object.assign({}, DEFAULT_SETTINGS, cfg);
+                syncCatalog(Number(cfg.catalogV) || 0);
                 document.getElementById('setting-wa-phone').value = settings.waPhone || DEFAULT_WA_PHONE;
                 document.getElementById('setting-shipping-fee').value = settings.shippingFee;
                 document.getElementById('setting-other-fee').value = settings.otherCitiesFee;
@@ -2023,13 +2060,17 @@
         async function onAdminCloudLogin() {
             const C = window.ElvonCloud;
             if (!C?.ready) return;
+            subscribeProducts(); // المدير ديما كيشوف المنتجات مباشرة
+            if (!settings.catalogV) C.bumpCatalog();
             if (!ordersUnsub) {
                 ordersUnsub = C.listenCollection('orders', (list) => {
                     adminAccountDocs = list.filter(o => o.type === 'account' && /^[A-Za-z0-9_-]{6,64}$/.test(String(o.uid || '')) && o._docId === 'ACCT_' + o.uid);
-                    adminOrders = list.filter(o => o.type !== 'account').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    adminCodeDocs = list.filter(o => o.type === 'coincode' && /^CODE_[0-9a-f]{24}$/.test(String(o._docId)) && o._docId === 'CODE_' + o.ck);
+                    adminOrders = list.filter(o => o.type !== 'account' && o.type !== 'coincode').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     applyStock();
                     renderAdminTables();
                     foldStock();
+                    scheduleStockMap();
                 });
             }
             if (!apptUnsub) {
@@ -2388,7 +2429,7 @@
                 const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
                 const discount = p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0;
                 return `
-                    <div onclick="openProductDetail('${p.id}')" class="group cursor-pointer bg-elvon-black border border-elvon-border hover:border-elvon-red rounded-xl p-2 transition-all">
+                    <div onclick="openProductDetail(${jsa(p.id)})" class="group cursor-pointer bg-elvon-black border border-elvon-border hover:border-elvon-red rounded-xl p-2 transition-all">
                         <div class="relative aspect-square rounded-lg overflow-hidden bg-zinc-900 mb-1.5">
                             <img src="${esc(img)}" alt="${esc(p.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                             ${discount > 0 ? `<span class="absolute top-1 right-1 ${badgeColor} text-white text-[10px] font-black px-1.5 py-0.5 rounded">-${discount}%</span>` : ''}
@@ -2438,7 +2479,7 @@
             suggest.innerHTML = matches.map(p => {
                 const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
                 return `
-                    <div onclick="document.getElementById('search-suggest').classList.add('hidden'); openProductDetail('${p.id}')"
+                    <div onclick="document.getElementById('search-suggest').classList.add('hidden'); openProductDetail(${jsa(p.id)})"
                          class="flex items-center gap-3 p-2.5 hover:bg-elvon-cardHover cursor-pointer border-b border-elvon-border last:border-none">
                         <img src="${esc(img)}" alt="${esc(p.name)}" class="w-10 h-10 rounded-lg object-cover shrink-0">
                         <div class="flex-1 min-w-0">
@@ -2544,9 +2585,9 @@
                 const isFav = wishlist.includes(p.id);
 
                 return `
-                    <article onclick="openProductDetail('${p.id}')" class="product-card bg-elvon-card border border-elvon-border hover:border-[#DC0A14]/60 rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-colors">
+                    <article onclick="openProductDetail(${jsa(p.id)})" class="product-card bg-elvon-card border border-elvon-border hover:border-[#DC0A14]/60 rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-colors">
                         <div>
-                            <div onclick="openProductDetail('${p.id}')" class="relative aspect-square bg-zinc-900 overflow-hidden cursor-pointer group">
+                            <div onclick="openProductDetail(${jsa(p.id)})" class="relative aspect-square bg-zinc-900 overflow-hidden cursor-pointer group">
                                 <img src="${esc(img)}" alt="${esc(p.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                                 <div class="absolute top-2 right-2 flex flex-col gap-1">
                                     ${dealBadge}
@@ -2559,7 +2600,7 @@
                                     <span class="text-[10px] font-bold text-zinc-400">${CATEGORY_LABELS[p.category] || 'إكسسوار'}</span>
                                     ${p.brand ? `<span class="text-[10px] font-extrabold text-zinc-500">${esc(p.brand)}</span>` : ''}
                                 </div>
-                                <h3 onclick="openProductDetail('${p.id}')" class="text-xs sm:text-sm font-extrabold text-white line-clamp-2 cursor-pointer hover:text-[#DC0A14] transition-colors min-h-[2.4rem]">
+                                <h3 onclick="openProductDetail(${jsa(p.id)})" class="text-xs sm:text-sm font-extrabold text-white line-clamp-2 cursor-pointer hover:text-[#DC0A14] transition-colors min-h-[2.4rem]">
                                     ${esc(p.name)}
                                 </h3>
                                 <div class="flex items-baseline gap-1.5 pt-1">
@@ -2609,13 +2650,13 @@
                             <div class="flex items-center gap-2.5 min-w-0">
                                 <img src="${esc(img)}" alt="${esc(p.name)}" class="w-12 h-12 rounded-xl object-cover shrink-0">
                                 <div class="min-w-0">
-                                    <p class="text-xs font-black text-white truncate cursor-pointer hover:text-[#DC0A14]" onclick="closeModalById('wishlist-modal'); openProductDetail('${p.id}')">${esc(p.name)}</p>
+                                    <p class="text-xs font-black text-white truncate cursor-pointer hover:text-[#DC0A14]" onclick="closeModalById('wishlist-modal'); openProductDetail(${jsa(p.id)})">${esc(p.name)}</p>
                                     <p class="text-xs font-black text-[#DC0A14]">${p.price} MAD</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
-                                <button onclick="addToCart('${p.id}', 1); closeModalById('wishlist-modal')" class="px-2.5 py-1.5 rounded-lg bg-[#DC0A14] text-white text-xs font-black">للسلة</button>
-                                <button onclick="toggleWishlist('${p.id}'); openWishlistModal()" class="p-1.5 text-zinc-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <button onclick="addToCart(${jsa(p.id)}, 1); closeModalById('wishlist-modal')" class="px-2.5 py-1.5 rounded-lg bg-[#DC0A14] text-white text-xs font-black">للسلة</button>
+                                <button onclick="toggleWishlist(${jsa(p.id)}); openWishlistModal()" class="p-1.5 text-zinc-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             </div>
                         </div>
                     `;
@@ -2700,22 +2741,36 @@
         const coinValueCache = {};
         // استعمالات الكود: track/c_<الكود>/orders/<uid> (الأوائل حتى العدد لي حط المدير هوما لي كيتحسبو)
         const usesPath = (code) => ['track', 'c_' + code, 'orders'];
-        async function codeUsers(code) {
-            const list = await window.ElvonCloud.listPath(usesPath(code));
+        // ===== أكواد العملات المحمية =====
+        // الكود ما كيتسجلش ف حتى بلاصة عامة: كنخدمو غير بالبصمة ديالو (PBKDF2، بطيئة بالقصد باش ما يتخمنش).
+        // promos/CH_<البصمة> = عدد العملات والاستعمالات • orders/CODE_<البصمة> = الكود بالكتابة (المدير وحده كيقراه)
+        const COIN_CODE_SALT = 'elvon-coin-v1', codeKeyCache = {};
+        async function codeKey(code) {
+            if (codeKeyCache[code]) return codeKeyCache[code];
+            const enc = new TextEncoder();
+            const base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveBits']);
+            const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode(COIN_CODE_SALT), iterations: 120000, hash: 'SHA-256' }, base, 96);
+            return (codeKeyCache[code] = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join(''));
+        }
+        const refHashed = (ck) => ({ id: 'h' + ck, doc: ['promos', 'CH_' + ck], uses: ['track', 'c_h' + ck, 'orders'], redeemId: 'R_h' + ck, ck });
+        const refLegacy = (code) => ({ id: code, doc: WP.code(code), uses: usesPath(code), redeemId: 'R_' + code, code });
+        const refOf = (r) => (r && r.ck ? refHashed(String(r.ck)) : refLegacy(String(r && r.code || '')));
+        async function codeUsers(ref) {
+            const list = await window.ElvonCloud.listPath(ref.uses);
             return list.sort((a, b) => (a.at || 0) - (b.at || 0) || String(a._docId).localeCompare(String(b._docId))).map(x => x._docId);
         }
-        async function coinValue(code, uid) {
-            const k = code + '|' + (uid || '');
+        async function coinValue(ref, uid) {
+            const k = ref.id + '|' + (uid || '');
             if (k in coinValueCache) return coinValueCache[k];
-            const d = await window.ElvonCloud.getPath(WP.code(code));
+            const d = await window.ElvonCloud.getPath(ref.doc);
             let v = d && d.type === 'coin' ? Math.floor(Number(d.coins) || 0) : 0;
-            if (v && Number(d.maxUses) > 0 && uid) { const users = await codeUsers(code); const i = users.indexOf(uid); if (i < 0 || i >= Number(d.maxUses)) v = 0; }
+            if (v && Number(d.maxUses) > 0 && uid) { const users = await codeUsers(ref); const i = users.indexOf(uid); if (i < 0 || i >= Number(d.maxUses)) v = 0; }
             return (coinValueCache[k] = v);
         }
         async function cloudWalletItems(uid) {
             const items = await window.ElvonCloud.listPath(WP.items(uid));
             const red = items.filter(x => x.kind === 'redeem');
-            const games = await Promise.all(red.map(async r => ({ ...r, coins: await coinValue(r.code, uid) })));
+            const games = await Promise.all(red.map(async r => ({ ...r, coins: await coinValue(refOf(r), uid) })));
             return { games: games.concat(validSpins(items.filter(x => x.kind === 'spin'))), ords: items.filter(x => x.kind === 'order') };
         }
 
@@ -2901,7 +2956,7 @@
             const note = msg ? `<p class="text-xs font-bold text-center mt-2 ${msg.startsWith('✓') ? 'text-emerald-400' : 'text-red-300'}">${esc(msg)}</p>` : '';
             if (!acc) {
                 const isNew = walletMode === 'signup';
-                const tab = (m, label) => `<button onclick="walletMode='${m}'; renderWalletModal()" class="py-2 rounded-xl text-xs font-black ${walletMode === m ? 'bg-amber-400 text-black' : 'text-zinc-300 hover:text-white'}">${label}</button>`;
+                const tab = (m, label) => `<button onclick="walletMode=${jsa(m)}; renderWalletModal()" class="py-2 rounded-xl text-xs font-black ${walletMode === m ? 'bg-amber-400 text-black' : 'text-zinc-300 hover:text-white'}">${label}</button>`;
                 const last = loadState('elvon_last_phone', '');
                 box.innerHTML = `<div class="space-y-2.5">
                     <div class="rounded-2xl p-2.5 bg-amber-400/10 border border-amber-400/40 text-center"><p class="text-xs font-black text-amber-200">🎡 دخل لحسابك ودور عجلة الحظ كل نهار</p><p class="text-[10px] text-zinc-300 mt-0.5">ربح عملات ELVON وبدلهم بمنتجات مجانا 🎁</p></div>
@@ -2950,20 +3005,25 @@
             const btn = document.getElementById('redeem-btn'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
             let cc, already, ok = false;
             if (window.ElvonCloud?.ready) {
-                cc = await window.ElvonCloud.getPath(WP.code(code)); if (cc && cc.type !== 'coin') cc = null;
+                let ref = refHashed(await codeKey(code));
+                cc = await window.ElvonCloud.getPath(ref.doc); if (cc && cc.type !== 'coin') cc = null;
+                if (!cc && !window.ElvonCloud.lastError) { // كود قديم (قبل الحماية)
+                    const old = await window.ElvonCloud.getPath(WP.code(code));
+                    if (old && old.type === 'coin') { cc = old; ref = refLegacy(code); }
+                }
                 if (!cc && window.ElvonCloud.lastError) { renderWalletModal(window.ElvonCloud.lastError === 'permission-denied' ? 'ما قدرناش نتحققو من الكود دابا (إعدادات المتجر ناقصة). عاود من بعد ولا تواصل معنا.' : 'مشكل ف الاتصال، عاود من بعد شوية.'); return; }
-                already = await window.ElvonCloud.getPath(WP.redeem(acc.uid, code));
+                already = await window.ElvonCloud.getPath(WP.order(acc.uid, ref.redeemId)) || (ref.ck ? await window.ElvonCloud.getPath(WP.order(acc.uid, 'R_' + code)) : null);
                 if (cc && cc.active && !already && Number(cc.maxUses) > 0) {
-                    const users = await codeUsers(code);
+                    const users = await codeUsers(ref);
                     if (users.length >= Number(cc.maxUses)) { renderWalletModal('هاد الكود تستعمل ديجا العدد ديالو كامل'); return; }
                 }
                 if (cc && cc.active && !already) {
                     const now = Date.now();
-                    if (Number(cc.maxUses) > 0) await window.ElvonCloud.setPath([...usesPath(code), acc.uid], { status: 'جديد', at: now });
-                    ok = await window.ElvonCloud.setPath(WP.redeem(acc.uid, code), { kind: 'redeem', code, status: 'جديد', at: now });
+                    if (Number(cc.maxUses) > 0) await window.ElvonCloud.setPath([...ref.uses, acc.uid], { status: 'جديد', at: now });
+                    ok = await window.ElvonCloud.setPath(WP.order(acc.uid, ref.redeemId), ref.ck ? { kind: 'redeem', ck: ref.ck, status: 'جديد', at: now } : { kind: 'redeem', code, status: 'جديد', at: now });
                     if (ok && Number(cc.maxUses) > 0) {
-                        delete coinValueCache[code + '|' + acc.uid];
-                        if (!(await coinValue(code, acc.uid))) { walletCacheClear(); renderWalletModal('هاد الكود تستعمل ديجا العدد ديالو كامل'); return; }
+                        delete coinValueCache[ref.id + '|' + acc.uid];
+                        if (!(await coinValue(ref, acc.uid))) { walletCacheClear(); renderWalletModal('هاد الكود تستعمل ديجا العدد ديالو كامل'); return; }
                     }
                 }
             } else {
@@ -2990,11 +3050,11 @@
                 const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
                 const out = typeof p.stock === 'number' && p.stock <= 0;
                 return `<div class="bg-elvon-black/70 border border-amber-400/25 rounded-2xl overflow-hidden flex flex-col">
-                    <img src="${esc(img)}" alt="${esc(p.name)}" class="w-full aspect-square object-cover cursor-pointer" onclick="openProductDetail('${p.id}')">
+                    <img src="${esc(img)}" alt="${esc(p.name)}" class="w-full aspect-square object-cover cursor-pointer" onclick="openProductDetail(${jsa(p.id)})">
                     <div class="p-2.5 flex-1 flex flex-col gap-1.5">
                         <p class="text-[11px] sm:text-xs font-black text-white line-clamp-2 leading-snug">${esc(p.name)}</p>
                         <p class="flex items-center gap-1 text-amber-300 font-black text-sm"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>${Math.floor(p.coins)} عملة</p>
-                        <button onclick="buyWithCoins('${p.id}')" ${out ? 'disabled' : ''} class="mt-auto py-2 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-black text-[11px] font-black">${out ? 'نفد المخزون' : 'بدل بالعملات'}</button>
+                        <button onclick="buyWithCoins(${jsa(p.id)})" ${out ? 'disabled' : ''} class="mt-auto py-2 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-black text-[11px] font-black">${out ? 'نفد المخزون' : 'بدل بالعملات'}</button>
                     </div></div>`;
             }).join('');
         }
@@ -3707,7 +3767,7 @@
                     <div class="w-full max-w-[95%] grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                         ${matchedProducts.map(p => {
                             const img = (p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON');
-                            const pid = esc(p.id);
+                            const pid = p.id;
                             return `
                             <div class="bg-elvon-card border border-elvon-border hover:border-[#DC0A14] rounded-2xl p-2.5 flex flex-col gap-2 transition-all ai-in">
                                 <div class="flex items-center gap-2.5">
@@ -3719,9 +3779,9 @@
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-1.5">
-                                    <button onclick="closeModalById('elvon-ai-modal'); openProductDetail('${pid}')" class="py-1.5 rounded-lg bg-elvon-black border border-elvon-border hover:border-[#DC0A14] text-white text-[11px] font-bold">عرض</button>
-                                    <button onclick="addToCart('${pid}', 1)" class="py-1.5 rounded-lg bg-elvon-black border border-elvon-border hover:border-[#DC0A14] text-white text-[11px] font-bold">للسلة</button>
-                                    <button onclick="closeModalById('elvon-ai-modal'); openWhatsappOrderModal('${pid}', 1)" class="py-1.5 rounded-lg bg-[#25D366] text-black text-[11px] font-black">اطلب</button>
+                                    <button onclick="closeModalById('elvon-ai-modal'); openProductDetail(${jsa(pid)})" class="py-1.5 rounded-lg bg-elvon-black border border-elvon-border hover:border-[#DC0A14] text-white text-[11px] font-bold">عرض</button>
+                                    <button onclick="addToCart(${jsa(pid)}, 1)" class="py-1.5 rounded-lg bg-elvon-black border border-elvon-border hover:border-[#DC0A14] text-white text-[11px] font-bold">للسلة</button>
+                                    <button onclick="closeModalById('elvon-ai-modal'); openWhatsappOrderModal(${jsa(pid)}, 1)" class="py-1.5 rounded-lg bg-[#25D366] text-black text-[11px] font-black">اطلب</button>
                                 </div>
                             </div>`;
                         }).join('')}
@@ -3795,6 +3855,7 @@
                             reply = { text: t, products: [...new Set(named)].slice(0, 4), chips: [], action: reply.action };
                         }
                     } else if (r.status === 404) aiServerOff = true;
+                    else if (r.status === 429) { const d = await r.json().catch(() => ({})); if (d && d.reply) reply = { text: String(d.reply), products: [], chips: [], action: null }; }
                 } catch (e) { /* نبقى على الجواب المحلي */ }
             } else {
                 await aiSleep(220);
@@ -4085,7 +4146,7 @@
                         <p class="text-xs text-zinc-200 mt-1 break-words">${esc(r.comment)}</p>
                         <p class="text-[10px] text-zinc-500 mt-1 truncate">على: ${esc(r.productName)}</p>
                     </div>
-                    <button onclick="deleteReview('${esc(r.productId)}', '${esc(r.id)}')" class="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black hover:bg-red-500/30">مسح</button>
+                    <button onclick="deleteReview(${jsa(r.productId)}, ${jsa(r.id)})" class="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black hover:bg-red-500/30">مسح</button>
                 </div>`).join('') : '<p class="text-xs text-zinc-500 py-6 text-center">ما كاين حتى تقييم.</p>';
         }
         async function deleteReview(pid, id) {
@@ -4221,12 +4282,12 @@
                             <p class="text-xs font-extrabold text-white truncate">${esc(item.name)}</p>
                             <p class="text-xs font-black text-[#DC0A14] mt-0.5">${item.price * item.qty} MAD</p>
                             <div class="flex items-center gap-2 mt-1.5">
-                                <button onclick="updateCartItemQty('${item.id}', -1)" class="w-6 h-6 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-black">-</button>
+                                <button onclick="updateCartItemQty(${jsa(item.id)}, -1)" class="w-6 h-6 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-black">-</button>
                                 <span class="text-xs font-black text-white">${item.qty}</span>
-                                <button onclick="updateCartItemQty('${item.id}', 1)" class="w-6 h-6 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-black">+</button>
+                                <button onclick="updateCartItemQty(${jsa(item.id)}, 1)" class="w-6 h-6 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-black">+</button>
                             </div>
                         </div>
-                        <button onclick="updateCartItemQty('${item.id}', -999)" class="text-zinc-500 hover:text-red-400 p-1" title="حذف">
+                        <button onclick="updateCartItemQty(${jsa(item.id)}, -999)" class="text-zinc-500 hover:text-red-400 p-1" title="حذف">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -4847,7 +4908,7 @@
                 (adminOrders || []).forEach(o => { if (okUid(o.uid) && !known.has(o.uid) && !extra.has(o.uid)) extra.set(o.uid, { uid: o.uid, name: o.accountName || o.customer || 'زبون ELVON', phone: normPhone(o.phone || ''), createdAt: o.createdAt || 0 }); });
                 try {
                     if (!coinCodes.length) await loadCoinCodes();
-                    const uses = await Promise.all(coinCodes.map(c => window.ElvonCloud.listPath(usesPath(c.code))));
+                    const uses = await Promise.all(coinCodes.map(c => window.ElvonCloud.listPath(c.ref.uses)));
                     uses.flat().forEach(u => { const id = u._docId; if (okUid(id) && !known.has(id) && !extra.has(id)) extra.set(id, { uid: id, name: 'زبون ELVON', phone: '', createdAt: Number(u.at) || 0 }); });
                 } catch (e) {}
                 accts.push(...extra.values());
@@ -4886,10 +4947,10 @@
                     <div class="text-center px-2"><p class="text-xl font-black text-amber-300">${a.balance}</p><p class="text-[10px] text-zinc-500 font-bold">عملة</p>${a.reserved ? `<p class="text-[10px] text-sky-300 font-bold">+${a.reserved} محجوزة ف طلب</p>` : ''}</div>
                     ${a.closed ? '' : `<div class="flex flex-wrap items-center gap-1.5">
                         <input id="adj-${a.uid}" type="number" min="1" placeholder="العدد" class="w-20 bg-elvon-card border border-elvon-border rounded-lg px-2 py-1.5 text-xs text-white">
-                        <button onclick="adminAdjust('${a.uid}', 1)" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black">+ زيد</button>
-                        <button onclick="adminAdjust('${a.uid}', -1)" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black">− نقص</button>
-                        <button onclick="adminResetAccount('${a.uid}')" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-black">نسا كلمة السر</button>
-                        ${carry ? `<button onclick="adminCarry('${a.uid}')" class="px-2.5 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-black">نقل الرصيد القديم (${carry})</button>` : ''}
+                        <button onclick="adminAdjust(${jsa(a.uid)}, 1)" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black">+ زيد</button>
+                        <button onclick="adminAdjust(${jsa(a.uid)}, -1)" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs font-black">− نقص</button>
+                        <button onclick="adminResetAccount(${jsa(a.uid)})" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-black">نسا كلمة السر</button>
+                        ${carry ? `<button onclick="adminCarry(${jsa(a.uid)})" class="px-2.5 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-black">نقل الرصيد القديم (${carry})</button>` : ''}
                     </div>`}
                 </div>`;
             }).join('');
@@ -4934,26 +4995,52 @@
         }
 
         // ===== أكواد عملات ELVON (المدير) =====
-        let coinCodes = [];
+        let coinCodes = [], adminCodeDocs = [];
+        const adminCloud = () => !!(window.ElvonCloud?.ready && adminOrders);
         async function loadCoinCodes() {
-            if (window.ElvonCloud?.ready && adminOrders) coinCodes = (await window.ElvonCloud.listPath(['promos'])).filter(x => x.type === 'coin').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            else coinCodes = loadState('elvon_coincodes_v1', []);
+            if (adminCloud()) {
+                const C = window.ElvonCloud;
+                const promosList = await C.listPath(['promos']);
+                const pub = Object.fromEntries(promosList.filter(x => String(x._docId).startsWith('CH_')).map(x => [x._docId.slice(3), x]));
+                // الأكواد القديمة (COIN_الكود): كننقلوهم للنظام المحمي مرة وحدة
+                for (const old of promosList.filter(x => x.type === 'coin' && String(x._docId).startsWith('COIN_') && x.active && !x.migrated)) {
+                    const code = cleanCoinCode(old.code || String(old._docId).slice(5)); if (!code) continue;
+                    const ck = await codeKey(code);
+                    const usedOld = Number(old.maxUses) > 0 ? (await C.listPath(usesPath(code))).length : 0;
+                    const maxUses = Number(old.maxUses) > 0 ? Math.max(0, Number(old.maxUses) - usedOld) : 0;
+                    const rec = { type: 'coin', coins: Math.floor(Number(old.coins) || 0), maxUses: Number(old.maxUses) > 0 ? Math.max(1, maxUses) : 0, active: !(Number(old.maxUses) > 0 && maxUses === 0), createdAt: old.createdAt || Date.now() };
+                    if (!pub[ck] && await C.saveItem('promos', 'CH_' + ck, rec) && await C.saveItem('orders', 'CODE_' + ck, { ...rec, type: 'coincode', code, ck, status: 'جديد', total: 0 })) {
+                        pub[ck] = rec;
+                        if (!adminCodeDocs.some(d => d.ck === ck)) adminCodeDocs.push({ ...rec, type: 'coincode', code, ck, _docId: 'CODE_' + ck });
+                    }
+                    if (pub[ck]) await C.saveItem('promos', old._docId, { active: false, migrated: true });
+                }
+                coinCodes = adminCodeDocs.filter(d => pub[d.ck] && !pub[d.ck].deleted).map(d => ({ code: d.code, ck: d.ck, ref: refHashed(d.ck), coins: pub[d.ck].coins, maxUses: pub[d.ck].maxUses, active: !!pub[d.ck].active, createdAt: pub[d.ck].createdAt || d.createdAt || 0 }))
+                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            } else coinCodes = loadState('elvon_coincodes_v1', []).map(c => ({ ...c, ref: refLegacy(c.code) }));
             renderCoinCodes();
             await Promise.all(coinCodes.map(async c => {
-                if (window.ElvonCloud?.ready && adminOrders) c.used = (await window.ElvonCloud.listPath(usesPath(c.code))).length || (c.maxUses ? 0 : '—');
+                if (adminCloud()) c.used = (await window.ElvonCloud.listPath(c.ref.uses)).length || (c.maxUses ? 0 : '—');
                 else c.used = Object.values(loadState('elvon_redeems_v1', {})).filter(l => l.some(x => x._docId === c.code)).length;
             }));
             renderCoinCodes();
         }
-        function saveCoinCodesLocal() { if (!(window.ElvonCloud?.ready && adminOrders)) saveState('elvon_coincodes_v1', coinCodes); }
+        function saveCoinCodesLocal() { if (!adminCloud()) saveState('elvon_coincodes_v1', coinCodes.map(({ ref, ...c }) => c)); }
         async function addCoinCode(e) {
             e.preventDefault();
             const code = cleanCoinCode(document.getElementById('new-coin-code').value);
             const coins = Math.floor(Number(document.getElementById('new-coin-amount').value) || 0);
-            if (code.length < 3 || coins < 1) { showToast('دخل كود (3 حروف ولا أكثر) وعدد العملات'); return; }
+            if (code.length < 6 || coins < 1) { showToast('دخل كود فيه 6 حروف/أرقام ولا أكثر (مثلا ELVON28X)، وعدد العملات'); return; }
             const maxUses = Math.floor(Number(document.getElementById('new-coin-uses').value) || 0);
-            const obj = { type: 'coin', code, coins, maxUses, active: true, createdAt: Date.now() };
-            if (window.ElvonCloud?.ready && adminOrders) { const ok = await window.ElvonCloud.saveItem('promos', 'COIN_' + code, obj); if (!ok) return; }
+            const rec = { type: 'coin', coins, maxUses, active: true, createdAt: Date.now() };
+            let ck = '';
+            if (adminCloud()) {
+                ck = await codeKey(code);
+                if (!(await window.ElvonCloud.saveItem('promos', 'CH_' + ck, { ...rec, deleted: false }))) return;
+                if (!(await window.ElvonCloud.saveItem('orders', 'CODE_' + ck, { ...rec, type: 'coincode', code, ck, status: 'جديد', total: 0 }))) return;
+                adminCodeDocs = adminCodeDocs.filter(d => d.ck !== ck).concat([{ ...rec, type: 'coincode', code, ck, _docId: 'CODE_' + ck }]);
+            }
+            const obj = { ...rec, code, ck, ref: ck ? refHashed(ck) : refLegacy(code), used: 0 };
             coinCodes = [obj, ...coinCodes.filter(c => c.code !== code)];
             saveCoinCodesLocal(); renderCoinCodes();
             document.getElementById('new-coin-code').value = ''; document.getElementById('new-coin-amount').value = ''; document.getElementById('new-coin-uses').value = '';
@@ -4962,12 +5049,14 @@
         async function toggleCoinCode(code) {
             const c = coinCodes.find(x => x.code === code); if (!c) return;
             c.active = !c.active;
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.saveItem('promos', 'COIN_' + code, { active: c.active });
+            if (adminCloud() && c.ck) { await window.ElvonCloud.saveItem('promos', 'CH_' + c.ck, { active: c.active }); await window.ElvonCloud.saveItem('orders', 'CODE_' + c.ck, { active: c.active }); }
             saveCoinCodesLocal(); renderCoinCodes();
         }
         async function deleteCoinCode(code) {
-            if (!confirm(`حذف الكود ${code}؟`)) return;
-            if (window.ElvonCloud?.ready && adminOrders) await window.ElvonCloud.deleteItem('promos', 'COIN_' + code);
+            if (!confirm(`حذف الكود ${code}؟\n\nالزبناء لي استعملوه كيبقاو عندهم العملات ديالهم.`)) return;
+            const c = coinCodes.find(x => x.code === code);
+            // ما كنمسحوش البيانات العامة (باش الزبناء ما يخسروش العملات)، غير كنوقفو الكود وكنخبيوه
+            if (adminCloud() && c && c.ck) await window.ElvonCloud.saveItem('promos', 'CH_' + c.ck, { active: false, deleted: true });
             coinCodes = coinCodes.filter(x => x.code !== code);
             saveCoinCodesLocal(); renderCoinCodes();
         }
@@ -4978,8 +5067,8 @@
                 <div class="bg-elvon-black border border-amber-400/30 rounded-2xl p-3.5 flex items-center justify-between">
                     <div><p class="text-sm font-black text-white" dir="ltr">${esc(c.code)}</p><p class="text-xs text-amber-300 font-bold">${esc(c.coins)} عملة • ${c.maxUses ? `تستعمل ${c.used ?? '…'}/${esc(c.maxUses)}` : `تستعمل ${c.used ?? '…'} مرة (بلا حد)`} • ${c.active ? 'مفعل' : 'متوقف'}</p></div>
                     <div class="flex items-center gap-1.5">
-                        <button onclick="toggleCoinCode('${esc(c.code)}')" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs font-bold text-white">${c.active ? 'إيقاف' : 'تفعيل'}</button>
-                        <button onclick="deleteCoinCode('${esc(c.code)}')" class="px-2.5 py-1 rounded-lg bg-red-500/20 text-xs font-bold text-red-300">حذف</button>
+                        <button onclick="toggleCoinCode(${jsa(c.code)})" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs font-bold text-white">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+                        <button onclick="deleteCoinCode(${jsa(c.code)})" class="px-2.5 py-1 rounded-lg bg-red-500/20 text-xs font-bold text-red-300">حذف</button>
                     </div>
                 </div>`).join('') : '<p class="text-xs text-zinc-500">ما كاين حتى كود ديال العملات.</p>';
         }
@@ -5003,6 +5092,24 @@
             }
             renderAdminTables();
             showToast('تم حذف الكوبون');
+        }
+
+        // الثمن كيتحسب ف التيليفون ديال الزبون: كنقارنو مع الأثمنة الحقيقية باش نكشفو أي طلب مزور
+        function orderPriceWarnings(o) {
+            const w = [], items = Array.isArray(o.items) ? o.items : [];
+            let sum = 0;
+            for (const i of items) {
+                const qty = Math.max(1, Math.floor(Number(i.qty) || 1)), price = Number(i.price) || 0;
+                sum += price * qty;
+                const p = products.find(x => x.id === i.id);
+                if (!p) { if (i.id) w.push(`منتج ماشي موجود: ${String(i.name || i.id).slice(0, 40)}`); continue; }
+                if (o.paidWithCoins) { const need = Math.floor(Number(p.coins) || 0) * qty; if (need && Number(o.coinsUsed) < need) w.push(`خاصو ${need} عملة، خلص ${Number(o.coinsUsed) || 0}`); }
+                else if (Math.abs(price - Number(p.price)) > .5) w.push(`${String(p.name).slice(0, 30)}: ${price} MAD والثمن دابا ${p.price} MAD`);
+            }
+            const exp = sum - (Number(o.discount) || 0) + (Number(o.shipping) || 0);
+            if (items.length && !o.paidWithCoins && Math.abs(exp - Number(o.total)) > .5) w.push(`المجموع خاصو يكون ${exp} MAD`);
+            if (o.paidWithCoins && Number(o.total) !== (Number(o.shipping) || 0)) w.push(`التوصيل: ${o.total} MAD`);
+            return w;
         }
 
         function renderAdminTables() {
@@ -5037,8 +5144,8 @@
                             <td class="py-2.5 px-4 font-bold ${Number(p.stock) <= 10 ? 'text-amber-400' : 'text-zinc-300'}">${esc(p.stock)}</td>
                             <td class="py-2.5 px-4">
                                 <div class="flex items-center gap-1.5">
-                                    <button onclick="openProductModal('${esc(p.id)}')" class="px-2.5 py-1 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-bold hover:border-[#DC0A14]">تعديل</button>
-                                    <button onclick="if(confirm('حذف هذا المنتج نهائياً؟')) deleteProduct('${esc(p.id)}')" class="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold">حذف</button>
+                                    <button onclick="openProductModal(${jsa(p.id)})" class="px-2.5 py-1 rounded-lg bg-elvon-black border border-elvon-border text-white text-xs font-bold hover:border-[#DC0A14]">تعديل</button>
+                                    <button onclick="if(confirm('حذف هذا المنتج نهائياً؟')) deleteProduct(${jsa(p.id)})" class="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-bold">حذف</button>
                                 </div>
                             </td>
                         </tr>`;
@@ -5059,6 +5166,7 @@
             if (oTable) {
                 oTable.innerHTML = !shown.length ? `<tr><td colspan="5" class="py-10 text-center text-zinc-500 text-sm font-bold">${adminOrderFilter === 'wa' ? 'ما كاين حتى طلب عبر واتساب' : 'ما كاين حتى طلب من الموقع'}</td></tr>` : adminList.map((o, idx) => (orderChannel(o) === adminOrderFilter ? [o, idx] : null)).filter(Boolean).map(([o, idx]) => {
                     const itemsText = (o.items || []).map(i => `${i.name} (×${i.qty})`).join('، ');
+                    const warn = orderPriceWarnings(o);
                     const cleanPhone = String(o.phone || '').replace(/\D/g, '').replace(/^0/, '212');
                     const waFollowUrl = cleanPhone
                         ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`مرحباً ${o.customer}، معك فريق ELVON STORE بخصوص طلبك رقم ${o.id}`)}`
@@ -5071,7 +5179,7 @@
                                 <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
-                            <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD</td>
+                            <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD${warn.length ? `<p class="mt-1 text-[10px] font-black text-red-300 bg-red-500/15 border border-red-500/40 rounded-lg px-1.5 py-1 max-w-[180px]">⚠️ تأكد من الثمن:<br>${warn.map(esc).join('<br>')}</p>` : ''}</td>
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-2">
                                     <select onchange="updateOrderStatus(${idx}, this.value)" class="bg-elvon-black border border-elvon-border rounded-lg px-2 py-1 text-xs font-bold text-white">
@@ -5416,7 +5524,7 @@
                                 <span class="w-9 h-9 rounded-xl bg-elvon-black border border-elvon-border flex items-center justify-center text-zinc-300 transition-transform group-open:rotate-180"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
                             </summary>
                             <div class="px-4 sm:px-6 pb-5 space-y-4">
-                                <form onsubmit="submitProductReview(event, '${p.id}')" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                                <form onsubmit="submitProductReview(event, ${jsa(p.id)})" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                                     <input type="text" id="rev-author" required maxlength="30" placeholder="اسمك" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
                                     <select id="rev-rating" class="bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white">
                                                 <option value="5">★★★★★ (5/5)</option>
@@ -5447,10 +5555,10 @@
                                 <p id="detail-stock-line" class="text-[11px] font-black mt-1.5"></p>
                             </div>
                             <div id="detail-buy-btns" class="space-y-3">
-                            <button onclick="addToCart('${p.id}', currentDetailQty)" class="w-full py-3.5 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-zinc-600 hover:border-white text-white text-sm font-black">إضافة للسلة</button>
-                            <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'site')" class="w-full py-3.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-sm font-black">تأكيد الطلب من الموقع</button>
-                            <button onclick="openWhatsappOrderModal('${p.id}', currentDetailQty, false, 'wa')" class="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-sm font-black inline-flex items-center justify-center gap-2"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>اطلب عبر WhatsApp</button>
-                            ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins('${p.id}')" class="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
+                            <button onclick="addToCart(${jsa(p.id)}, currentDetailQty)" class="w-full py-3.5 rounded-xl bg-elvon-black hover:bg-zinc-900 border border-zinc-600 hover:border-white text-white text-sm font-black">إضافة للسلة</button>
+                            <button onclick="openWhatsappOrderModal(${jsa(p.id)}, currentDetailQty, false, 'site')" class="w-full py-3.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-sm font-black">تأكيد الطلب من الموقع</button>
+                            <button onclick="openWhatsappOrderModal(${jsa(p.id)}, currentDetailQty, false, 'wa')" class="w-full py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black text-sm font-black inline-flex items-center justify-center gap-2"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg>اطلب عبر WhatsApp</button>
+                            ${Number(p.coins) > 0 ? `<button onclick="buyWithCoins(${jsa(p.id)})" class="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-sm font-black inline-flex items-center justify-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 100 100" aria-hidden="true"><use href="#ECOIN"/></svg>بدل بـ ${Math.floor(p.coins)} عملة</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -5460,7 +5568,7 @@
                         <h3 class="text-base font-black text-white">منتجات مشابهة</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             ${related.map(rp => `
-                                <div onclick="openProductDetail('${rp.id}')" class="cursor-pointer bg-elvon-card border border-elvon-border hover:border-[#DC0A14] rounded-2xl p-2.5">
+                                <div onclick="openProductDetail(${jsa(rp.id)})" class="cursor-pointer bg-elvon-card border border-elvon-border hover:border-[#DC0A14] rounded-2xl p-2.5">
                                     <img src="${esc((rp.images && rp.images[0]) || createAccessoryVisual(rp.category, rp.name, 'ELVON'))}" alt="${esc(rp.name)}" class="aspect-square w-full object-cover rounded-xl mb-2">
                                     <p class="text-xs font-bold text-white truncate">${esc(rp.name)}</p>
                                     <p class="text-xs font-black text-[#DC0A14]">${rp.price} MAD</p>
@@ -5486,7 +5594,12 @@
 
             const catCtx = document.getElementById('categoryChart');
             const ordCtx = document.getElementById('ordersChart');
-            if (!catCtx || !ordCtx || typeof Chart === 'undefined') return;
+            if (!catCtx || !ordCtx) return;
+            // Chart.js كيتحمل غير ملي المدير كيحل التحليلات (الزبناء ما كيحتاجوهش)
+            if (typeof Chart === 'undefined') {
+                if (!window.__chartLoading) { window.__chartLoading = true; const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'; sc.onload = () => renderCharts(); document.head.appendChild(sc); }
+                return;
+            }
             if (categoryChartInstance) categoryChartInstance.destroy();
             if (ordersChartInstance) ordersChartInstance.destroy();
 
