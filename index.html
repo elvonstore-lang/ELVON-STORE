@@ -50,7 +50,7 @@
 
     <!-- Tailwind CSS -->
     <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
-    <link rel="stylesheet" href="tw.css?v=20261126">
+    <link rel="stylesheet" href="tw.css?v=20261127">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -309,6 +309,8 @@
             .ai-in{animation:aiIn .22s ease-out both}
         @keyframes aiIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
         #detail-buy-btns.stock-out button { opacity: .4; pointer-events: none; }
+        body.sticky-on #floating-btns { bottom: 84px; }
+        .compat-chip.on { background: #DC0A14; color: #fff; border-color: #DC0A14; }
     </style>
 <style>
     .coin-order h3, .coin-order label, .coin-order p, .coin-order #wa-modal-prod-name { color:#111 !important; }
@@ -389,7 +391,7 @@
     <div id="toast-container" class="fixed bottom-20 sm:bottom-6 left-4 z-[110] flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- أزرار عائمة سريعة: ELVON AI + واتساب -->
-    <div class="fixed bottom-4 left-4 z-40 flex items-center gap-2">
+    <div id="floating-btns" class="fixed bottom-4 left-4 z-40 flex items-center gap-2 transition-all">
         <button onclick="openElvonAiModal()" title="ELVON AI" aria-label="ELVON AI"
                 class="w-14 h-14 rounded-full bg-black border-2 border-[#DC0A14] flex items-center justify-center p-2 shadow-2xl shadow-[#DC0A14]/50 hover:border-[#ff2a33] transition-transform hover:scale-110 active:scale-95">
             <svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true">
@@ -571,6 +573,15 @@
             </div>
         </section>
 
+        <!-- شفتيهم مؤخرا -->
+        <section id="recent-viewed" class="hidden space-y-2.5">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm sm:text-base font-black text-white flex items-center gap-2">👀 شفتيهم مؤخرا</h2>
+                <button onclick="clearRecent()" class="text-[11px] font-bold text-zinc-500 hover:text-white">مسح</button>
+            </div>
+            <div id="recent-row" class="flex gap-2.5 overflow-x-auto no-scrollbar pb-1"></div>
+        </section>
+
         <!-- شريط فئات الهواتف والإكسسوارات والفرز حسب السعر والماركة -->
         <section class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -605,6 +616,14 @@
                 <button onclick="selectCategory('powerbanks')" data-cat="powerbanks" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🔋 بطاريات متنقلة</button>
                 <button onclick="selectCategory('car')" data-cat="car" class="cat-pill px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-elvon-card text-zinc-300 border border-elvon-border hover:border-[#DC0A14] shrink-0 transition-all">🚗 إكسسوارات السيارات</button>
 
+            </div>
+            <div id="compat-chips" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <span class="text-[11px] font-black text-zinc-400 shrink-0">📱 حسب التيليفون ديالك:</span>
+                <button onclick="selectCompat('iphone')" data-compat="iphone" class="compat-chip shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-elvon-card text-zinc-300 border border-elvon-border">🍎 آيفون</button>
+                <button onclick="selectCompat('samsung')" data-compat="samsung" class="compat-chip shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-elvon-card text-zinc-300 border border-elvon-border">سامسونج</button>
+                <button onclick="selectCompat('xiaomi')" data-compat="xiaomi" class="compat-chip shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-elvon-card text-zinc-300 border border-elvon-border">شاومي / ريدمي</button>
+                <button onclick="selectCompat('typec')" data-compat="typec" class="compat-chip shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-elvon-card text-zinc-300 border border-elvon-border" dir="ltr">Type-C</button>
+                <button onclick="selectCompat('wireless')" data-compat="wireless" class="compat-chip shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold bg-elvon-card text-zinc-300 border border-elvon-border">لاسلكي / بلوتوث</button>
             </div>
         </section>
 
@@ -992,6 +1011,10 @@
             <div id="cart-items-container" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
 
             <div class="p-4 border-t border-elvon-border bg-elvon-card space-y-3 overflow-y-auto max-h-[68vh]">
+                <div id="cart-free-ship" class="hidden rounded-xl bg-elvon-black/60 border border-elvon-border p-2.5 space-y-1.5">
+                    <p id="cart-free-ship-text" class="text-[11px] sm:text-xs font-black text-white"></p>
+                    <div class="h-2 rounded-full bg-zinc-800 overflow-hidden"><div id="cart-free-ship-bar" class="h-full rounded-full bg-gradient-to-l from-emerald-400 to-[#DC0A14] transition-all" style="width:0%"></div></div>
+                </div>
                 <!-- ملخص الأسعار والتوصيل -->
                 <div class="space-y-1 text-xs bg-elvon-black/60 border border-elvon-border rounded-xl p-3">
                     <div class="flex justify-between text-zinc-400">
@@ -1123,6 +1146,14 @@
     </div>
 
     <!-- نافذة تأكيد الطلب من الموقع -->
+    <div id="sticky-buy" class="sm:hidden fixed bottom-0 inset-x-0 z-[45] hidden px-3 pt-2 pb-3 bg-elvon-black/95 border-t border-elvon-border backdrop-blur">
+        <div class="flex items-center gap-2">
+            <div class="min-w-0 flex-1"><p id="sticky-name" class="text-[11px] font-bold text-zinc-400 truncate"></p><p id="sticky-price" class="text-base font-black text-[#DC0A14]"></p></div>
+            <button id="sticky-cart" class="shrink-0 w-11 h-11 rounded-xl bg-elvon-card border border-zinc-600 text-white text-lg" aria-label="إضافة للسلة">🛒</button>
+            <button id="sticky-order" class="shrink-0 px-4 h-11 rounded-xl bg-[#DC0A14] text-white text-sm font-black">اطلب دابا</button>
+        </div>
+    </div>
+
     <div id="order-success-modal" class="fixed inset-0 z-[80] hidden items-center justify-center p-3 sm:p-4">
         <div onclick="closeModalById('order-success-modal')" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div class="relative bg-elvon-card border border-elvon-border rounded-3xl w-full max-w-md p-6 z-10 text-center space-y-3">
@@ -1140,7 +1171,8 @@
                 <button onclick="closeModalById('order-success-modal'); openTrackOrderModal()" class="py-2.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs">تتبع الطلب</button>
                 <button onclick="closeModalById('order-success-modal')" class="py-2.5 rounded-xl bg-elvon-black border border-elvon-border text-white font-black text-xs">متابعة التسوق</button>
             </div>
-            <a id="os-wa" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] font-bold text-[#25D366] hover:underline">عندك سؤال؟ تواصل معنا ف واتساب</a>
+            <a id="os-wa" href="#" target="_blank" rel="noopener noreferrer" class="block w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-black font-black text-sm">✅ أكد الطلب ف واتساب</a>
+            <p id="os-wa-hint" class="text-[10px] text-zinc-500">التأكيد ف واتساب كيخلي الطلب ديالك يتصيفط أسرع</p>
         </div>
     </div>
 
@@ -2349,6 +2381,8 @@
             storeView.classList.add('hidden');
             productView.classList.add('hidden');
             adminView.classList.add('hidden');
+            if (view !== 'product') hideStickyBuy();
+            if (view === 'store') setTimeout(renderRecent, 0);
 
             if (view === 'store') {
                 storeView.classList.remove('hidden');
@@ -2558,7 +2592,8 @@
                     || (priceFilter === 'over-300' && p.price > 300);
                 const q = searchQuery.toLowerCase();
                 const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q) || (CATEGORY_LABELS[p.category] || '').includes(q);
-                return matchCat && matchDeal && matchBrand && matchPrice && matchSearch;
+                const matchCompat = compatFilter === 'all' || COMPAT[compatFilter].test(`${p.name || ''} ${p.brand || ''} ${p.desc || ''}`);
+                return matchCat && matchDeal && matchBrand && matchPrice && matchSearch && matchCompat;
             });
 
             if (sortBy === 'price-asc') {
@@ -2724,7 +2759,9 @@
                 return;
             }
             if (previewEl) {
-                previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)`;
+                const thr = Number(settings.freeShippingThreshold) || 0, gap = thr - subtotal;
+                previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)\n🚚 ${deliveryEta(city)}${shipping > 0 && gap > 0 && gap <= 150 ? `\n💡 زيد ${gap} MAD ف الطلب وتولي التوصيل مجاني` : ''}`;
+                previewEl.style.whiteSpace = 'pre-line';
             }
         }
 
@@ -3224,7 +3261,15 @@
                 ? 'فريق ELVON غادي يتاصل بيك ف أقرب وقت باش يأكد معاك الطلب. الدفع عند الاستلام.'
                 : 'وقع مشكل ف الاتصال. ضغط على الزر الأخضر لتحت باش تصيفط الطلب ف واتساب، ولا عاود من بعد شوية.';
             document.getElementById('os-icon').className = 'mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg ' + (ok ? 'bg-gradient-to-br from-emerald-600 to-emerald-400 shadow-emerald-500/30' : 'bg-gradient-to-br from-amber-600 to-amber-400 shadow-amber-500/30');
-            if (!ok && waLink) { waLink.href = getWhatsappBaseUrl(waText); waLink.textContent = 'صيفط الطلب ف واتساب'; } else if (waLink) waLink.textContent = 'عندك سؤال؟ تواصل معنا ف واتساب';
+            const hint = document.getElementById('os-wa-hint');
+            if (!ok && waLink) { waLink.href = getWhatsappBaseUrl(waText); waLink.textContent = 'صيفط الطلب ف واتساب'; if (hint) hint.textContent = ''; }
+            else if (waLink) {
+                const items = (newOrder.items || []).map(i => `- ${i.name} ×${i.qty}`).join('\n');
+                waLink.href = getWhatsappBaseUrl(`سلام ELVON 👋 بغيت نأكد الطلب ديالي\nرقم الطلب: ${newOrder.id}\n${items}\nالمجموع: ${newOrder.total} MAD (الدفع عند الاستلام)\nالمدينة: ${newOrder.city || ''}`);
+                waLink.textContent = '✅ أكد الطلب ف واتساب';
+                if (hint) hint.textContent = 'التأكيد ف واتساب كيخلي الطلب ديالك يتصيفط أسرع';
+                recordOrderForGuard(newOrder);
+            }
             const m = document.getElementById('order-success-modal');
             m.classList.remove('hidden'); m.classList.add('flex');
         }
@@ -3248,6 +3293,8 @@
                 showToast('يرجى ملء جميع الحقول المطلوبة');
                 return;
             }
+            if (!validOrderPhone(phone)) { showToast('دخل رقم هاتف مغربي صحيح (06 / 07 / 05...) باش نقدرو نتاصلو بيك'); return; }
+            if (duplicateOrderGuard(phone, [p.id])) return;
             { const left = stockLeft(p); if (qty > left) { showToast(left <= 0 ? 'سمح لينا، هاد المنتج نفد من المخزون' : `سمح لينا، باقي غير ${left} ف المخزون`); return; } }
 
             const subtotal = p.price * qty;
@@ -4135,6 +4182,12 @@
             const box = document.getElementById('rev-list'), cnt = document.getElementById('rev-count');
             if (box) box.innerHTML = reviewsListHtml(list);
             if (cnt) cnt.textContent = list.length;
+            const sum = document.getElementById('rev-summary');
+            if (sum && currentDetailId === pid) {
+                const avg = list.length ? list.reduce((a, r) => a + Math.max(1, Math.min(5, Number(r.rating) || 5)), 0) / list.length : 0;
+                sum.classList.toggle('hidden', !list.length); sum.classList.toggle('inline-flex', !!list.length);
+                sum.innerHTML = list.length ? `<span>${'★'.repeat(Math.round(avg))}${'☆'.repeat(5 - Math.round(avg))}</span><span class="text-white">${avg.toFixed(1)}</span><span class="text-zinc-400 font-bold">(${list.length} تقييم)</span>` : '';
+            }
         }
         async function submitProductReview(e, productId) {
             e.preventDefault();
@@ -4202,6 +4255,7 @@
             const left = stockLeft(dp);
             if (delta > 0 && currentDetailQty + delta > left) { showToast(left <= 0 ? 'هاد المنتج نفد من المخزون' : `باقي غير ${left} ف المخزون`); return; }
             currentDetailQty = Math.max(1, currentDetailQty + delta);
+            setTimeout(() => { updateBundleTotal(); updateDetailEta(); }, 0);
             const el = document.getElementById('detail-qty-val');
             if (el) el.textContent = currentDetailQty;
         }
@@ -4338,6 +4392,7 @@
             shipEl.textContent = shipping === 0 ? 'مجاني 🎉' : `${shipping} MAD`;
             shipEl.className = shipping === 0 ? 'font-bold text-emerald-400' : 'font-bold text-white';
             totalEl.textContent = `${total} MAD`;
+            updateFreeShipBar(subtotal);
 
             if (window.lucide) lucide.createIcons();
         }
@@ -4355,6 +4410,8 @@
             const city = document.getElementById('customer-city').value.trim();
             const address = document.getElementById('customer-address').value.trim();
 
+            if (!validOrderPhone(document.getElementById('customer-phone').value)) { showToast('دخل رقم هاتف مغربي صحيح (06 / 07 / 05...) باش نقدرو نتاصلو بيك'); return; }
+            if (duplicateOrderGuard(document.getElementById('customer-phone').value, cart.map(i => i.id))) return;
             { const bad = cart.find(it => it.qty > stockLeft(products.find(x => x.id === it.id))); if (bad) { const left = stockLeft(products.find(x => x.id === bad.id)); showToast(left <= 0 ? `"${bad.name}" نفد من المخزون، حيدو من السلة` : `"${bad.name}": باقي غير ${left} ف المخزون`); return; } }
             const { subtotal, discount, shipping, total, coins } = computeCartTotals();
             const orderId = newOrderId();
@@ -5263,7 +5320,7 @@
             }
         }
 
-        function addToCart(productId, qty = 1) {
+        function addToCart(productId, qty = 1, silent = false) {
             const p = products.find(item => item.id === productId);
             if (!p) return;
 
@@ -5278,7 +5335,7 @@
 
             saveState('elvon_acc_cart_v2', cart);
             updateCartUI();
-            showToast(`تمت إضافة "${p.name}" إلى السلة`);
+            if (!silent) showToast(`تمت إضافة "${p.name}" إلى السلة`);
         }
 
         function updateCartItemQty(productId, delta) {
@@ -5496,11 +5553,136 @@
         }
 
         let currentDetailId = null;
+        // ===== تحسينات البيع (مستوحاة من أنجح المتاجر المغربية) =====
+        // 1) تقدير وقت التوصيل حسب المدينة (الأحد ما كاينش توصيل)
+        const AR_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        function addDeliveryDays(from, n) { const d = new Date(from); let k = 0; while (k < n) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0) k++; } return d; }
+        function deliveryEta(city) {
+            const now = new Date(), late = now.getHours() >= 18, local = /طنجة/.test(city || '');
+            const fmt = (d) => { const diff = Math.round((new Date(d.toDateString()) - new Date(now.toDateString())) / 864e5); return (diff === 1 ? 'غدا ' : '') + `${AR_DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`; };
+            if (local) return `كيوصلك ${fmt(addDeliveryDays(now, late ? 2 : 1))} (تقريبا)`;
+            return `كيوصلك بين ${fmt(addDeliveryDays(now, late ? 3 : 2))} و ${fmt(addDeliveryDays(now, late ? 5 : 4))}`;
+        }
+        function etaCity() { return loadState('elvon_eta_city', '') || 'طنجة'; }
+        function setEtaCity(c) { saveState('elvon_eta_city', c); updateDetailEta(); const w = document.getElementById('wa-modal-city'); if (w && [...w.options].some(o => o.value === c)) w.value = c; }
+        function updateDetailEta() {
+            const sel = document.getElementById('detail-eta-city'), src = document.getElementById('wa-modal-city'), out = document.getElementById('detail-eta');
+            if (!out) return;
+            if (sel && src && !sel.options.length) sel.innerHTML = src.innerHTML;
+            const c = etaCity(); if (sel) sel.value = c;
+            const p = products.find(x => x.id === currentDetailId);
+            const fee = p && p.price * Math.max(1, currentDetailQty) >= settings.freeShippingThreshold ? 'التوصيل مجاني' : `التوصيل ${shippingFeeFor(c)} MAD`;
+            out.textContent = `${deliveryEta(c)} • ${fee}`;
+        }
+        // 2) التوصيل المجاني: شريط كيبين شحال باقي
+        function updateFreeShipBar(subtotal) {
+            const box = document.getElementById('cart-free-ship'); if (!box) return;
+            const thr = Number(settings.freeShippingThreshold) || 0;
+            box.classList.toggle('hidden', !cart.length || !thr);
+            if (!cart.length || !thr) return;
+            const gap = thr - subtotal;
+            document.getElementById('cart-free-ship-text').textContent = gap > 0 ? `🚚 زيد ${gap} MAD وتولي التوصيل مجاني!` : '🎉 مبروك! التوصيل ديالك مجاني';
+            document.getElementById('cart-free-ship-bar').style.width = Math.min(100, Math.round(subtotal / thr * 100)) + '%';
+        }
+        // 3) رقم الهاتف خاصو يكون مغربي صحيح (كينقص الطلبات المزورة والمرجوعة)
+        function validOrderPhone(v) { const n = normPhone(v); return /^[5-7]\d{8}$/.test(n) && !/^(\d)\1{8}$/.test(n) && !/^[5-7](\d)\1{7}$/.test(n); }
+        // 4) نفس الطلب جوج مرات ف 10 دقايق: كنسولو الزبون قبل
+        let dupConfirmUntil = 0;
+        function orderKey(phone, ids) { return normPhone(phone) + '|' + [...ids].sort().join(','); }
+        function duplicateOrderGuard(phone, ids) {
+            const last = loadState('elvon_last_orders', []).find(o => o.k === orderKey(phone, ids) && Date.now() - o.at < 10 * 60000);
+            if (!last || Date.now() < dupConfirmUntil) return false;
+            dupConfirmUntil = Date.now() + 20000;
+            showToast(`ديجا صيفطتي نفس الطلب قبل ${Math.max(1, Math.round((Date.now() - last.at) / 60000))} دقيقة ✅ إلا بغيتي تطلبو مرة أخرى، ضغط عاوتاني`);
+            return true;
+        }
+        function recordOrderForGuard(o) {
+            const list = loadState('elvon_last_orders', []).filter(x => Date.now() - x.at < 10 * 60000);
+            list.push({ k: orderKey(o.phone, (o.items || []).map(i => i.id)), at: Date.now() });
+            saveState('elvon_last_orders', list.slice(-10)); dupConfirmUntil = 0;
+        }
+        // 5) شفتيهم مؤخرا
+        function trackRecent(id) { const l = loadState('elvon_recent', []).filter(x => x !== id); l.unshift(id); saveState('elvon_recent', l.slice(0, 12)); }
+        function clearRecent() { saveState('elvon_recent', []); renderRecent(); }
+        function renderRecent() {
+            const sec = document.getElementById('recent-viewed'), row = document.getElementById('recent-row'); if (!sec || !row) return;
+            const list = loadState('elvon_recent', []).map(id => products.find(p => p.id === id)).filter(Boolean);
+            sec.classList.toggle('hidden', list.length < 2);
+            row.innerHTML = list.map(p => `<button onclick="openProductDetail(${jsa(p.id)})" class="shrink-0 w-28 text-right bg-elvon-card border border-elvon-border hover:border-[#DC0A14] rounded-2xl p-2">
+                <img src="${esc((p.images && p.images[0]) || createAccessoryVisual(p.category, p.name, 'ELVON'))}" alt="${esc(p.name)}" loading="lazy" class="w-full aspect-square object-cover rounded-xl mb-1.5">
+                <p class="text-[10px] font-bold text-white truncate">${esc(p.name)}</p><p class="text-[11px] font-black text-[#DC0A14]">${esc(p.price)} MAD</p></button>`).join('');
+        }
+        // 6) فلتر حسب التيليفون
+        const COMPAT = {
+            iphone: /iphone|ايفون|آيفون|أيفون|lightning|magsafe|apple/i,
+            samsung: /samsung|galaxy|سامسونج|سامسونغ/i,
+            xiaomi: /xiaomi|redmi|poco|شاومي|ريدمي/i,
+            typec: /type[\s-]?c|usb[\s-]?c|تايب ?سي/i,
+            wireless: /wireless|sans fil|لاسلكي|بلوتوث|bluetooth|magsafe|tws/i
+        };
+        let compatFilter = 'all';
+        function selectCompat(k) {
+            compatFilter = compatFilter === k ? 'all' : k;
+            document.querySelectorAll('.compat-chip').forEach(b => b.classList.toggle('on', b.dataset.compat === compatFilter));
+            renderStoreProducts();
+        }
+        // 7) كيتشراو مع بعض
+        function bundleFor(p) {
+            const nm = `${p.name} ${p.desc || ''}`, isCable = /كابل|cable|câble|سلك/i.test(p.name), isCharger = /شاحن|charger|chargeur|adaptateur/i.test(p.name);
+            const want = isCharger ? [/كابل|cable|câble/i] : isCable ? [/شاحن|charger|chargeur/i] : [];
+            const comp = { audio: ['protection', 'chargers'], protection: ['chargers', 'audio'], watches: ['chargers', 'audio'], powerbanks: ['chargers'], holders: ['chargers', 'powerbanks'], chargers: ['powerbanks', 'holders'] }[p.category] || ['chargers'];
+            const pool = products.filter(x => x.id !== p.id && stockLeft(x) > 0 && Number(x.price) > 0 && Number(x.price) <= 250);
+            const pick = [];
+            for (const re of want) { const m = pool.filter(x => re.test(x.name)).sort((a, b) => a.price - b.price)[0]; if (m) pick.push(m); }
+            for (const c of comp) { if (pick.length >= 2) break; const m = pool.filter(x => x.category === c && !pick.includes(x)).sort((a, b) => (b.oldPrice ? 1 : 0) - (a.oldPrice ? 1 : 0) || a.price - b.price)[0]; if (m) pick.push(m); }
+            return pick.slice(0, 2);
+        }
+        function bundleHtml(p) {
+            if (stockLeft(p) <= 0) return '';
+            const items = bundleFor(p); if (!items.length) return '';
+            const card = (x, main) => `<label class="flex items-center gap-2.5 bg-elvon-black border border-elvon-border rounded-2xl p-2 ${main ? '' : 'cursor-pointer'}">
+                ${main ? '<span class="w-5 text-center text-emerald-400 font-black">✓</span>' : `<input type="checkbox" checked data-bundle="${esc(x.id)}" onchange="updateBundleTotal()" class="w-5 h-5 accent-[#DC0A14]">`}
+                <img src="${esc((x.images && x.images[0]) || createAccessoryVisual(x.category, x.name, 'ELVON'))}" alt="" class="w-12 h-12 rounded-xl object-cover shrink-0">
+                <span class="min-w-0 flex-1"><span class="block text-[11px] font-bold text-white truncate">${main ? 'هاد المنتج: ' : ''}${esc(x.name)}</span><span class="block text-xs font-black text-[#DC0A14]">${esc(x.price)} MAD</span></span></label>`;
+            return `<div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
+                <h3 class="text-base font-black text-white">🔗 كيتشراو مع بعض</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">${card(p, true)}${items.map(x => card(x, false)).join('')}</div>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs font-bold text-zinc-300">المجموع: <span id="bundle-total" class="text-base font-black text-white"></span></p>
+                    <button onclick="addBundleToCart(${jsa(p.id)})" class="px-4 py-2.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-xs sm:text-sm font-black">زيدهم كاملين للسلة 🛒</button>
+                </div></div>`;
+        }
+        function bundleChecked() { return [...document.querySelectorAll('[data-bundle]')].filter(i => i.checked).map(i => products.find(x => x.id === i.dataset.bundle)).filter(Boolean); }
+        function updateBundleTotal() { const p = products.find(x => x.id === currentDetailId), el = document.getElementById('bundle-total'); if (p && el) el.textContent = (p.price * Math.max(1, currentDetailQty) + bundleChecked().reduce((s, x) => s + Number(x.price), 0)) + ' MAD'; }
+        function addBundleToCart(id) {
+            const extra = bundleChecked();
+            addToCart(id, Math.max(1, currentDetailQty), true);
+            extra.forEach(x => addToCart(x.id, 1, true));
+            showToast(`تزادو ${extra.length + 1} منتجات للسلة ✅`); toggleCartDrawer(true);
+        }
+        // 8) زر الطلب ثابت لتحت ف التيليفون
+        let stickyObs = null;
+        function hideStickyBuy() { const b = document.getElementById('sticky-buy'); if (b) b.classList.add('hidden'); document.body.classList.remove('sticky-on'); if (stickyObs) { stickyObs.disconnect(); stickyObs = null; } }
+        function setupStickyBuy(p) {
+            hideStickyBuy();
+            const bar = document.getElementById('sticky-buy'), target = document.getElementById('detail-buy-btns');
+            if (!bar || !target || !('IntersectionObserver' in window)) return;
+            document.getElementById('sticky-name').textContent = p.name;
+            document.getElementById('sticky-price').textContent = `${p.price} MAD`;
+            document.getElementById('sticky-cart').onclick = () => addToCart(p.id, Math.max(1, currentDetailQty));
+            document.getElementById('sticky-order').onclick = () => openWhatsappOrderModal(p.id, Math.max(1, currentDetailQty), false, 'site');
+            stickyObs = new IntersectionObserver(([e]) => {
+                const show = !e.isIntersecting && e.boundingClientRect.top < 0 && stockLeft(p) > 0 && !document.getElementById('product-view').classList.contains('hidden');
+                bar.classList.toggle('hidden', !show); document.body.classList.toggle('sticky-on', show);
+            });
+            stickyObs.observe(target);
+        }
+
         function openProductDetail(productId) {
             const p = products.find(item => item.id === productId);
             if (!p) return;
             currentDetailQty = 1;
-            if (p.hasGallery && !galleryCache[p.id]) { loadGallery(p).then(() => { if (document.getElementById('detail-main-img') && currentDetailId === p.id) { const y = scrollY; const q = currentDetailQty; openProductDetail(p.id); currentDetailQty = q; const el = document.getElementById('detail-qty-val'); if (el) el.textContent = q; window.scrollTo(0, y); } }); }
+            if (p.hasGallery && !galleryCache[p.id]) { loadGallery(p).then(() => { if (document.getElementById('detail-main-img') && currentDetailId === p.id && !document.getElementById('product-view').classList.contains('hidden')) { const y = scrollY; const q = currentDetailQty; openProductDetail(p.id); currentDetailQty = q; const el = document.getElementById('detail-qty-val'); if (el) el.textContent = q; window.scrollTo(0, y); } }); }
             currentDetailId = p.id;
             const gal = galleryCache[p.id] || p.images;
             const imgs = (gal && gal.length) ? gal : [createAccessoryVisual(p.category, p.name, 'ELVON')];
@@ -5535,6 +5717,7 @@
                         <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
                             <span class="inline-block px-3 py-1 rounded-full bg-[#DC0A14]/15 text-[#DC0A14] text-xs font-black">${CATEGORY_LABELS[p.category] || 'إكسسوار'}</span>
                             <h1 class="text-lg sm:text-xl font-black text-white leading-snug">${esc(p.name)}</h1>
+                            <button id="rev-summary" onclick="const b=document.getElementById('reviews-box'); b.open=true; b.scrollIntoView({behavior:'smooth',block:'start'})" class="hidden items-center gap-1.5 text-xs font-black text-amber-400"></button>
                             <div class="flex items-baseline gap-2.5 flex-wrap">
                                 <span class="text-3xl font-black text-[#DC0A14]">${p.price} <span class="text-base">MAD</span></span>
                                 ${p.oldPrice ? `<span class="text-sm text-zinc-500 line-through">${p.oldPrice} MAD</span>` : ''}
@@ -5573,6 +5756,12 @@
                     <div class="lg:col-span-3 lg:sticky lg:top-24 order-2 lg:order-none">
                         <div class="bg-elvon-card border border-elvon-border rounded-3xl p-4 sm:p-5 space-y-3">
                             <div class="grid grid-cols-2 gap-x-2 gap-y-2"><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>الدفع عند الاستلام</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>توصيل لجميع مدن المغرب</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>استبدال خلال 48 ساعة</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>ضمان جودة المنتوج</span></div><div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300"><span class="text-emerald-400">✓</span><span>توصيل سريع</span></div></div>
+                            <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5 space-y-1.5">
+                                <p class="text-[11px] sm:text-xs font-black text-emerald-300">🚚 <span id="detail-eta"></span></p>
+                                <label class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400">المدينة ديالك:
+                                    <select id="detail-eta-city" onchange="setEtaCity(this.value)" class="flex-1 min-w-0 bg-elvon-black border border-elvon-border rounded-lg px-2 py-1 text-[11px] text-white"></select>
+                                </label>
+                            </div>
                             <div class="border-t border-elvon-border pt-3">
                                 <p class="text-xs font-black text-white mb-2">الكمية</p>
                                 <div class="flex items-center justify-between bg-elvon-black border border-elvon-border rounded-xl px-2 py-1.5">
@@ -5591,6 +5780,7 @@
                         </div>
                     </div>
                 </div>
+                ${bundleHtml(p)}
                 ${related.length ? `
                     <div class="space-y-3">
                         <h3 class="text-base font-black text-white">منتجات مشابهة</h3>
@@ -5607,7 +5797,11 @@
                 ` : ''}
             `;
             updateDetailStock();
+            updateDetailEta();
+            updateBundleTotal();
+            trackRecent(p.id);
             switchView('product');
+            setupStickyBuy(p);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
