@@ -10,6 +10,7 @@ The whole storefront and admin panel live in a single static file, `index.html`
 |---|---|
 | `index.html` | The complete store (frontend, admin panel, ELVON AI). |
 | `api/ai.js` | Optional Vercel serverless function that hides the Gemini key. |
+| `api/mcp.js` | Hosted MCP server: read-only store data for Claude / MCP clients. |
 | `firestore.rules` | Firestore security rules (publish them in the Firebase console). |
 | `vercel.json` | Vercel config: security headers, function timeout. |
 | `.env.example` | Names of the environment variables (no values). |
@@ -67,6 +68,19 @@ Check that it works: open `https://YOUR-DOMAIN/api/ai` in the browser; `"ok": tr
 The site calls `/api/ai` on its own domain automatically (the admin AI server URL is only for a server on another domain).
 
 Order tracking by phone number and repair booking always stay local; every other message goes to the AI with the full catalog and store info.
+
+## 6. Hosted MCP server (`/api/mcp`)
+A Model Context Protocol server, deployed with the site on Vercel, so Claude (or any MCP client) can read the live store.
+It is **read-only**: it only reads `products` and `settings/main` (already public in `firestore.rules`) and never reads orders or customer data.
+
+Tools: `search_products`, `get_product`, `list_categories`, `get_store_info`, `get_delivery_quote`, `get_repair_prices`,
+`create_order_link` (builds a WhatsApp message link; the order is placed only when the customer sends it).
+
+1. Deploy (nothing to configure). Check: open `https://YOUR-DOMAIN/api/mcp` in the browser; `"ok": true` means it is live.
+2. In Claude: **Settings > Connectors > Add custom connector**, URL `https://YOUR-DOMAIN/api/mcp`.
+   Claude Code: `claude mcp add --transport http elvon-store https://YOUR-DOMAIN/api/mcp`
+3. Optional env vars in Vercel: `MCP_TOKEN` (requires `Authorization: Bearer <token>`; Claude's custom connectors
+   can't send a static token, so leave it empty for them), `SITE_URL`, `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`.
 
 ## Notes
 - `AI_FOCUS` in `index.html` is now `false` (all features on). Set it to `true` to limit the local engine to tracking and comparison.

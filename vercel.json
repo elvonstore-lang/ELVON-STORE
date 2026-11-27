@@ -3,6 +3,9 @@
   "functions": {
     "api/ai.js": {
       "maxDuration": 30
+    },
+    "api/mcp.js": {
+      "maxDuration": 15
     }
   },
   "headers": [
