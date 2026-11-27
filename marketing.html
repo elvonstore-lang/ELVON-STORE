@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tw.css?v=20261127b">
+<link rel="stylesheet" href="tw.css?v=20261127d">
 <style>
   body { font-family: 'Cairo', sans-serif; background: #050505; color: #fff; }
   .card { background: #131316; border: 1px solid #242429; border-radius: 1.25rem; }
@@ -39,7 +39,10 @@
   <section id="login" class="card p-6 max-w-sm mx-auto space-y-3 text-center">
     <p class="text-lg font-black">🔐 دخول</p>
     <p class="text-xs text-zinc-400">نفس الكود ديال لوحة التحكم</p>
-    <input id="pass" type="password" class="inp text-center" placeholder="الكود" onkeydown="if(event.key==='Enter')login()">
+    <div class="relative">
+      <input id="pass" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" dir="ltr" class="inp text-center pl-10" placeholder="الكود" onkeydown="if(event.key==='Enter')login()">
+      <button type="button" onclick="const i=document.getElementById('pass'); i.type = i.type==='password' ? 'text' : 'password'" class="absolute left-2 top-1/2 -translate-y-1/2 text-lg" aria-label="بين الكود">👁️</button>
+    </div>
     <button id="login-btn" onclick="login()" class="btn w-full bg-[#DC0A14]">دخول</button>
     <p id="login-msg" class="text-xs text-red-300 font-bold"></p>
   </section>
@@ -134,8 +137,16 @@ let products = [], customers = [], picked = [], drafts = [];
 
 window.login = async () => {
   $('login-btn').disabled = true; $('login-msg').textContent = '';
-  try { await signInWithEmailAndPassword(auth, ADMIN, $('pass').value); }
-  catch (e) { $('login-msg').textContent = 'الكود غالط'; }
+  const pw = $('pass').value.trim();
+  if (/[\u0600-\u06FF]/.test(pw)) { $('login-msg').textContent = 'الكود فيه حروف عربية: بدل لغة الكلافي للفرنسية/الإنجليزية وعاود'; $('login-btn').disabled = false; return; }
+  try { await signInWithEmailAndPassword(auth, ADMIN, pw); }
+  catch (e) {
+    const c = (e && e.code) || '';
+    $('login-msg').textContent = /invalid-credential|wrong-password|invalid-login/.test(c) ? 'الكود غالط. رد البال للحروف الكبار والصغار (A / a)، وضغط 👁️ باش تشوف شنو كتبتي'
+      : /too-many-requests/.test(c) ? 'حاولتي بزاف ديال المرات. Firebase وقف المحاولات شوية، تسنى 10 دقايق وعاود'
+      : /network/.test(c) ? 'مشكل ف الإنترنت، عاود'
+      : 'وقع مشكل (' + c + ')';
+  }
   $('login-btn').disabled = false;
 };
 window.logout = () => signOut(auth);

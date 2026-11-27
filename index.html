@@ -50,7 +50,7 @@
 
     <!-- Tailwind CSS -->
     <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
-    <link rel="stylesheet" href="tw.css?v=20261127b">
+    <link rel="stylesheet" href="tw.css?v=20261127d">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -126,8 +126,10 @@
             async adminSignIn(password) {
                 try {
                     await signInWithEmailAndPassword(this.auth, this.adminEmail, password);
+                    this.lastAuthError = null;
                     return true;
                 } catch (err) {
+                    this.lastAuthError = (err && err.code) || 'unknown';
                     return false;
                 }
             },
@@ -1230,8 +1232,11 @@
             </div>
             <p class="text-xs text-zinc-400">أدخل رمز الوصول الخاص بلوحة تحكم ELVON STORE.</p>
             <form onsubmit="verifyAdminPasscode(event)" class="space-y-3">
-                <input type="password" id="admin-passcode-input" required placeholder="رمز الدخول"
-                       class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]">
+                <div class="relative">
+                <input type="password" id="admin-passcode-input" required placeholder="رمز الدخول" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" dir="ltr"
+                       class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3.5 pl-10 py-2.5 text-sm text-white focus:outline-none focus:border-[#DC0A14]">
+                <button type="button" onclick="const i=document.getElementById('admin-passcode-input'); i.type = i.type==='password' ? 'text' : 'password'" class="absolute left-2 top-1/2 -translate-y-1/2 text-base" aria-label="بين الكود">👁️</button>
+                </div>
                 <p id="admin-auth-error" class="text-xs text-red-400 font-bold hidden">رمز الدخول غير صحيح، حاول مرة أخرى.</p>
                 <button type="submit" class="w-full py-2.5 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white text-xs sm:text-sm font-black">دخول</button>
             </form>
@@ -2313,6 +2318,7 @@
             const val = document.getElementById('admin-passcode-input').value.trim();
             const err = document.getElementById('admin-auth-error');
             let ok = false;
+            if (/[\u0600-\u06FF]/.test(val)) { if (err) { err.textContent = 'الكود فيه حروف عربية: بدل لغة الكلافي (Alt + Shift) وعاود'; err.classList.remove('hidden'); } return; }
             if (window.ElvonCloud && !window.ElvonCloud.ready) await window.ElvonCloud.whenReady(30000);
             if (window.ElvonCloud?.ready) {
                 // مع السحابة: التحقق الحقيقي عبر Firebase Authentication
@@ -2328,6 +2334,10 @@
                 switchView('admin');
                 showToast('تم فتح لوحة تحكم ELVON STORE');
             } else if (err) {
+                const c = window.ElvonCloud?.lastAuthError || '';
+                err.textContent = /too-many-requests/.test(c) ? 'حاولتي بزاف ديال المرات. Firebase وقف المحاولات شوية، تسنى 10 دقايق وعاود.'
+                    : /network/.test(c) ? 'مشكل ف الإنترنت، عاود.'
+                    : 'رمز الدخول غير صحيح. ضغط 👁️ باش تشوف شنو مكتوب (رد البال للحروف الكبار والصغار).';
                 err.classList.remove('hidden');
             }
         }
