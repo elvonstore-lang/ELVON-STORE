@@ -50,7 +50,7 @@
 
     <!-- Tailwind CSS -->
     <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
-    <link rel="stylesheet" href="tw.css?v=20261127">
+    <link rel="stylesheet" href="tw.css?v=20261127b">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -1051,6 +1051,7 @@
 
                     <input type="text" id="customer-address" required placeholder="العنوان التفصيلي / الحي"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
+                    <label class="flex items-start gap-2 text-[11px] text-zinc-300 font-bold cursor-pointer leading-relaxed"><input type="checkbox" id="customer-optin" class="mt-0.5 w-4 h-4 shrink-0 accent-[#DC0A14]"><span>بغيت توصلني العروض والتخفيضات ديال ELVON ف واتساب (تقدر توقفها ف أي وقت)</span></label>
                     <p class="text-[10px] text-zinc-400 leading-relaxed" data-i18n="topTrustBar">الدفع عند الاستلام (COD) • توصيل مجاني فوق 300 درهم • تأكيد سريع عبر واتساب</p>
                     <button type="submit" data-via="site" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg><span data-i18n="confirmSiteBtn">تأكيد الطلب من الموقع (الدفع عند الاستلام)</span>
@@ -1128,6 +1129,7 @@
                     <input type="text" id="wa-modal-address" required placeholder="الحي، الشارع، رقم المنزل..."
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                 </div>
+                <label class="flex items-start gap-2 text-[11px] text-zinc-300 font-bold cursor-pointer leading-relaxed"><input type="checkbox" id="wa-modal-optin" class="mt-0.5 w-4 h-4 shrink-0 accent-[#DC0A14]"><span>بغيت توصلني العروض والتخفيضات ديال ELVON ف واتساب (تقدر توقفها ف أي وقت)</span></label>
 
                 <div>
                     <label class="block text-[11px] font-bold text-zinc-300 mb-1">اللون أو النسخة (اختياري)</label>
@@ -2099,7 +2101,7 @@
                 ordersUnsub = C.listenCollection('orders', (list) => {
                     adminAccountDocs = list.filter(o => o.type === 'account' && /^[A-Za-z0-9_-]{6,64}$/.test(String(o.uid || '')) && o._docId === 'ACCT_' + o.uid);
                     adminCodeDocs = list.filter(o => o.type === 'coincode' && /^CODE_[0-9a-f]{24}$/.test(String(o._docId)) && o._docId === 'CODE_' + o.ck);
-                    adminOrders = list.filter(o => o.type !== 'account' && o.type !== 'coincode').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    adminOrders = list.filter(o => o.type !== 'account' && o.type !== 'coincode' && o.type !== 'mkt').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     applyStock();
                     renderAdminTables();
                     foldStock();
@@ -3330,6 +3332,7 @@
                 coinsUsed,
                 coinsEarn: (currentAccount() && !coinMode) ? Math.floor(Number(p.coinsEarn) || 0) * qty : 0,
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
+                marketingOptIn: !!document.getElementById('wa-modal-optin')?.checked,
                 channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
                 date: new Date().toLocaleDateString('ar-MA'),
@@ -4439,6 +4442,7 @@
                 discount,
                 shipping,
                 total,
+                marketingOptIn: !!document.getElementById('customer-optin')?.checked,
                 channel: via === 'site' ? 'الموقع' : 'واتساب',
                 status: 'جديد',
                 date: new Date().toLocaleDateString('ar-MA'),
@@ -5261,7 +5265,7 @@
                             <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${o.marketingOptIn ? '<p class="text-[11px] text-sky-300 font-bold">📣 بغا يوصلوه العروض</p>' : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD${warn.length ? `<p class="mt-1 text-[10px] font-black text-red-300 bg-red-500/15 border border-red-500/40 rounded-lg px-1.5 py-1 max-w-[180px]">⚠️ تأكد من الثمن:<br>${warn.map(esc).join('<br>')}</p>` : ''}</td>

@@ -147,6 +147,39 @@ function cleanCatalog(list) {
   }));
 }
 
+// ===== ELVON Marketing: رسائل شخصية للزبناء القدام (المدير كيصيفطهم بيدو ف واتساب) =====
+function marketingPrompt(body) {
+  const customers = (Array.isArray(body.customers) ? body.customers : []).slice(0, 10).map(c => ({
+    id: cleanStr(c && c.id, 40), name: cleanStr(c && c.name, 40), city: cleanStr(c && c.city, 40),
+    bought: (Array.isArray(c && c.bought) ? c.bought : []).slice(0, 5).map(x => cleanStr(x, 80)), days_since_last_order: Number(c && c.days) || 0
+  }));
+  const products = (Array.isArray(body.products) ? body.products : []).slice(0, 12).map(p => ({ id: cleanStr(p && p.id, 60), name: cleanStr(p && p.name, 100), price_mad: Number(p && p.price) || 0, old_price_mad: Number(p && p.oldPrice) || null, category: cleanStr(p && p.category, 40) }));
+  return {
+    customers,
+    system: [
+      'أنت خبير تسويق ديال ELVON STORE (إكسسوارات الهواتف، طنجة). كتكتب رسائل واتساب شخصية للزبناء اللي شراو عندنا وتسلمو الطلب ديالهم.',
+      'القواعد:',
+      '- كتب بالدارجة المغربية بالحروف العربية، دافية وطبيعية بحال صاحب المحل كيهضر مع زبون كيعرفو. ماشي إشهار بارد.',
+      '- كل رسالة قصيرة: بين 2 و 4 جمل (أقل من 380 حرف). ابدا بالسمية ديال الزبون.',
+      '- ذكر بشكل طبيعي شنو شرا قبل (bought) واربطو بالعرض: اقترح منتج كيكمل اللي عندو إلا كان مناسب (مثلا شاحن ← كابل، سماعات ← كفر).',
+      '- استعمل غير المنتجات والأثمنة اللي فالقائمة. ما تخترعش أثمنة ولا تخفيضات ماشي فالعرض.',
+      '- زيد رابط الموقع ف سطر: ' + cleanStr(body.siteUrl || 'https://elvonstore-lang.github.io/ELVON-STORE/', 120),
+      '- سالي ديما بسطر: (إلا ما بغيتيش توصلك العروض، صيفط STOP)',
+      '- إيموجي وحدة ولا جوج برك.',
+      '- رجع غير JSON صحيح بهاد الشكل بالضبط، بلا حتى كلمة أخرى: {"messages":[{"id":"...","text":"..."}]}',
+      '',
+      'العرض ديال المدير: ' + cleanStr(body.offer, 600),
+      'منتجات العرض: ' + JSON.stringify(products),
+    ].join('\n'),
+    user: 'الزبناء: ' + JSON.stringify(customers),
+  };
+}
+function parseMessages(text) {
+  const t = String(text || '').replace(/^```(?:json)?|```$/gm, '').trim();
+  const m = t.match(/\{[\s\S]*\}/);
+  try { const j = JSON.parse(m ? m[0] : t); return Array.isArray(j.messages) ? j.messages.filter(x => x && x.id && x.text).map(x => ({ id: String(x.id).slice(0, 40), text: String(x.text).slice(0, 700) })) : []; } catch { return []; }
+}
+
 module.exports = async (req, res) => {
   const origins = allowedOrigins();
   const origin = String(req.headers.origin || '').replace(/\/+$/, '');
@@ -206,6 +239,26 @@ module.exports = async (req, res) => {
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = null; } }
   if (!body || typeof body !== 'object') return res.status(400).json({ error: 'bad request' });
+
+  if (body.mode === 'marketing') {
+    const mk = marketingPrompt(body);
+    if (!mk.customers.length || !String(body.offer || '').trim()) return res.status(400).json({ error: 'offer and customers required' });
+    const contents = [{ role: 'user', parts: [{ text: mk.user }] }];
+    let err = '';
+    if (groqKey) {
+      for (const model of GROQ_MODELS) {
+        try {
+          let out;
+          try { out = await callGroq(groqKey, model, mk.system, contents); }
+          catch (e) { const wait = Number((String(e.message).match(/try again in ([\d.]+)s/i) || [])[1]); if (e.status === 429 && wait && wait <= 6) { await sleep(wait * 1000 + 200); out = await callGroq(groqKey, model, mk.system, contents); } else throw e; }
+          const messages = parseMessages(out);
+          if (messages.length) return res.status(200).json({ messages, model });
+          err = 'bad format from ' + model;
+        } catch (e) { err = 'groq: ' + String(e.message || e).slice(0, 200); if (isKeyError(e)) break; }
+      }
+    }
+    return res.status(200).json({ messages: [], error: err || 'no AI key' });
+  }
 
   const message = clip(body.message, MAX_MSG).trim();
   if (!message) return res.status(200).json({ reply: '' });
