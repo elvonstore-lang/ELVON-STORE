@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>ELVON Marketing AI</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tw.css?v=20261127b">
+<style>
+  body { font-family: 'Cairo', sans-serif; background: #050505; color: #fff; }
+  .card { background: #131316; border: 1px solid #242429; border-radius: 1.25rem; }
+  .inp { width: 100%; background: #050505; border: 1px solid #242429; border-radius: .75rem; padding: .55rem .75rem; font-size: .8rem; color: #fff; }
+  .inp:focus { outline: none; border-color: #DC0A14; }
+  .btn { border-radius: .75rem; font-weight: 900; font-size: .8rem; padding: .6rem 1rem; }
+  .tab.on { background: #DC0A14; color: #fff; border-color: #DC0A14; }
+  textarea.inp { resize: vertical; }
+</style>
+</head>
+<body class="min-h-screen">
+<!-- ELVON Marketing AI: صفحة منفاصلة على الموقع وعلى لوحة التحكم.
+     كتجمع الزبناء اللي تسلمو الطلب ديالهم، والذكاء الاصطناعي كيكتب ليهم رسائل شخصية، والمدير كيصيفطهم بيدو ف واتساب. -->
+<header class="sticky top-0 z-20 bg-black/90 backdrop-blur border-b border-[#242429]">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <svg width="34" height="34" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#DC0A14" stroke-width="7"/><path d="M64 25 H38 C32 25 28 29 28 35 V65 C28 71 32 75 38 75 H62 C70 75 76 68 77 51" fill="none" stroke="#DC0A14" stroke-width="9" stroke-linecap="round"/><path d="M56 32 L38 55 H50 L42 74 L66 49 H53 Z" fill="#DC0A14"/></svg>
+      <div><p class="font-black text-sm" dir="ltr">ELVON <span class="text-[#DC0A14]">Marketing AI</span></p><p class="text-[10px] text-zinc-400 font-bold">العروض للزبناء ديالك ف واتساب</p></div>
+    </div>
+    <button id="logout" onclick="logout()" class="hidden text-[11px] text-zinc-400 font-bold hover:text-white">خروج</button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-5 space-y-5">
+  <!-- الدخول -->
+  <section id="login" class="card p-6 max-w-sm mx-auto space-y-3 text-center">
+    <p class="text-lg font-black">🔐 دخول</p>
+    <p class="text-xs text-zinc-400">نفس الكود ديال لوحة التحكم</p>
+    <input id="pass" type="password" class="inp text-center" placeholder="الكود" onkeydown="if(event.key==='Enter')login()">
+    <button id="login-btn" onclick="login()" class="btn w-full bg-[#DC0A14]">دخول</button>
+    <p id="login-msg" class="text-xs text-red-300 font-bold"></p>
+  </section>
+
+  <div id="app" class="hidden space-y-5">
+    <!-- أرقام -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="card p-3"><p class="text-[11px] text-zinc-400 font-bold">زبناء تسلمو</p><p id="st-all" class="text-2xl font-black">0</p></div>
+      <div class="card p-3"><p class="text-[11px] text-zinc-400 font-bold">وافقو على العروض</p><p id="st-opt" class="text-2xl font-black text-emerald-400">0</p></div>
+      <div class="card p-3"><p class="text-[11px] text-zinc-400 font-bold">رسائل تصيفطو</p><p id="st-sent" class="text-2xl font-black text-amber-300">0</p></div>
+      <div class="card p-3"><p class="text-[11px] text-zinc-400 font-bold">حبسو العروض (STOP)</p><p id="st-out" class="text-2xl font-black text-red-300">0</p></div>
+    </section>
+
+    <div class="flex gap-2">
+      <button onclick="tab('campaign')" data-tab="campaign" class="tab btn border border-[#242429] on">📣 حملة جديدة</button>
+      <button onclick="tab('customers')" data-tab="customers" class="tab btn border border-[#242429]">👥 الزبناء</button>
+    </div>
+
+    <!-- الحملة -->
+    <section id="t-campaign" class="space-y-4">
+      <div class="card p-4 space-y-3">
+        <p class="font-black">1) شنو هو العرض ديالك؟</p>
+        <textarea id="offer" rows="3" class="inp" placeholder="مثال: تخفيض 20% على جميع الكابلات حتى نهار الأحد، والتوصيل مجاني ف طنجة"></textarea>
+        <div class="flex flex-wrap gap-2 text-[11px]">
+          <button onclick="preset('-15% على كلشي هاد الويكاند غير للزبناء ديالنا القدام 🎁')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">🎁 -15% للزبناء القدام</button>
+          <button onclick="preset('وصلو منتجات جداد للمحل، دوز تشوفهم ف الموقع')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">✨ منتجات جداد</button>
+          <button onclick="preset('التوصيل مجاني على أي طلب هاد الأسبوع')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">🚚 توصيل مجاني</button>
+        </div>
+        <label class="block text-xs font-bold text-zinc-300">منتجات العرض (اختياري، الذكاء الاصطناعي كيختار منهم اللي كيناسب كل زبون):</label>
+        <input id="prod-search" class="inp" placeholder="قلب على منتج..." oninput="renderProductPicker()">
+        <div id="prod-picker" class="flex gap-2 overflow-x-auto pb-1"></div>
+        <div id="prod-picked" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <div class="card p-4 space-y-3">
+        <p class="font-black">2) لمن؟</p>
+        <div class="grid sm:grid-cols-3 gap-2">
+          <select id="f-who" class="inp" onchange="renderAudience()">
+            <option value="opt">غير اللي وافقو على العروض ✅</option>
+            <option value="all">كاع الزبناء (حتى اللي ما جاوبوش)</option>
+          </select>
+          <select id="f-cat" class="inp" onchange="renderAudience()"><option value="">أي منتج شراو</option></select>
+          <select id="f-days" class="inp" onchange="renderAudience()">
+            <option value="0">أي وقت</option><option value="14">ما شراوش من 14 يوم</option><option value="30">ما شراوش من 30 يوم</option><option value="60">ما شراوش من 60 يوم</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2 text-xs text-zinc-300 font-bold"><input id="f-recent" type="checkbox" checked onchange="renderAudience()" class="w-4 h-4 accent-[#DC0A14]"> ما نعاودش للي صيفطت ليهم ف آخر 7 أيام</label>
+        <p id="aud-count" class="text-sm font-black text-amber-300"></p>
+        <button id="gen-btn" onclick="generate()" class="btn w-full bg-gradient-to-l from-[#DC0A14] to-[#ff5a60] text-base py-3">✨ كتب الرسائل بالذكاء الاصطناعي</button>
+        <p class="text-[10px] text-zinc-500">الذكاء الاصطناعي كيكتب رسالة شخصية لكل زبون بالسمية ديالو وشنو شرا. كتقدر تبدلها قبل ما تصيفطها.</p>
+      </div>
+
+      <div id="msgs" class="space-y-3"></div>
+    </section>
+
+    <!-- الزبناء -->
+    <section id="t-customers" class="hidden space-y-3">
+      <div class="card p-4 space-y-2">
+        <p class="font-black">➕ زيد زبون بيدك</p>
+        <div class="grid sm:grid-cols-4 gap-2">
+          <input id="m-name" class="inp" placeholder="السمية">
+          <input id="m-phone" class="inp" placeholder="06XXXXXXXX" dir="ltr">
+          <input id="m-city" class="inp" placeholder="المدينة">
+          <input id="m-note" class="inp" placeholder="شنو شرا (اختياري)">
+        </div>
+        <label class="flex items-center gap-2 text-xs text-zinc-300 font-bold"><input id="m-opt" type="checkbox" class="w-4 h-4 accent-[#DC0A14]"> الزبون وافق يوصلوه العروض</label>
+        <button onclick="addManual()" class="btn bg-[#DC0A14]">زيد</button>
+      </div>
+      <input id="c-search" class="inp" placeholder="قلب بالسمية ولا الرقم..." oninput="renderCustomers()">
+      <div id="c-list" class="space-y-2"></div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-[#131316] border border-[#DC0A14] text-xs font-black"></div>
+
+<script type="module">
+const FB = 'https://www.gstatic.com/firebasejs/11.6.1/';
+const { initializeApp } = await import(FB + 'firebase-app.js');
+const { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } = await import(FB + 'firebase-auth.js');
+const { getFirestore, collection, getDocs, doc, setDoc } = await import(FB + 'firebase-firestore.js');
+const app = initializeApp({ apiKey: 'AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64', authDomain: 'elvon-store.firebaseapp.com', projectId: 'elvon-store', storageBucket: 'elvon-store.firebasestorage.app', messagingSenderId: '78681211845', appId: '1:78681211845:web:3be30581fcd2db8d1141ac' });
+const ADMIN = 'elvonstore1@gmail.com', SITE = 'https://elvonstore-lang.github.io/ELVON-STORE/', AI = 'https://elvon-store.vercel.app/api/ai';
+const auth = getAuth(app), db = getFirestore(app);
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('212')) d = d.slice(3); return d.replace(/^0+/, '').slice(-9); };
+const okPhone = (n) => /^[5-7]\d{8}$/.test(n);
+const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add('hidden'), 3200); };
+const CAT = { chargers: 'شواحن وكابلات', audio: 'سماعات', protection: 'كفرات وحماية', watches: 'ساعات', powerbanks: 'باور بانك', holders: 'حوامل وستاندات' };
+let products = [], customers = [], picked = [], drafts = [];
+
+window.login = async () => {
+  $('login-btn').disabled = true; $('login-msg').textContent = '';
+  try { await signInWithEmailAndPassword(auth, ADMIN, $('pass').value); }
+  catch (e) { $('login-msg').textContent = 'الكود غالط'; }
+  $('login-btn').disabled = false;
+};
+window.logout = () => signOut(auth);
+onAuthStateChanged(auth, (u) => {
+  const ok = !!(u && u.email === ADMIN);
+  $('login').classList.toggle('hidden', ok); $('app').classList.toggle('hidden', !ok); $('logout').classList.toggle('hidden', !ok);
+  if (u && !ok) signOut(auth);
+  if (ok) load();
+});
+
+// ===== البيانات: الزبناء من الطلبات اللي تسلمو + اللي تزادو باليد (orders/MKT_<الرقم>) =====
+async function load() {
+  const [ordSnap, prodSnap] = await Promise.all([getDocs(collection(db, 'orders')), getDocs(collection(db, 'products'))]);
+  products = []; prodSnap.forEach(d => products.push({ ...d.data(), id: d.id }));
+  const orders = [], mkt = {};
+  ordSnap.forEach(d => { const o = { ...d.data(), _id: d.id }; if (o.type === 'mkt') mkt[o.phone] = o; else if (!o.type) orders.push(o); });
+  const map = {};
+  for (const o of orders) {
+    if (o.status !== 'تم التسليم') continue;
+    const n = normPhone(o.phone); if (!okPhone(n)) continue;
+    const c = map[n] || (map[n] = { phone: n, name: o.customer || '', city: o.city || '', bought: [], cats: new Set(), spent: 0, orders: 0, last: 0, optIn: false });
+    c.orders++; c.spent += Number(o.total) || 0;
+    if ((o.createdAt || 0) > c.last) { c.last = o.createdAt || 0; c.name = o.customer || c.name; c.city = o.city || c.city; }
+    if (o.marketingOptIn) c.optIn = true;
+    for (const it of (o.items || [])) { c.bought.push(String(it.name || '').slice(0, 80)); const p = products.find(x => x.id === it.id); if (p) c.cats.add(p.category); }
+  }
+  for (const [n, m] of Object.entries(mkt)) {
+    const c = map[n] || (map[n] = { phone: n, name: m.name || '', city: m.city || '', bought: m.note ? [m.note] : [], cats: new Set(), spent: 0, orders: 0, last: m.createdAt || 0, optIn: false, manual: true });
+    if (m.optIn) c.optIn = true; c.optOut = !!m.optOut; c.lastMsg = m.lastMsgAt || 0; c.sent = m.sentCount || 0;
+  }
+  customers = Object.values(map).sort((a, b) => b.last - a.last);
+  $('f-cat').innerHTML = '<option value="">أي منتج شراو</option>' + Object.entries(CAT).map(([k, v]) => `<option value="${k}">شراو ${v}</option>`).join('');
+  stats(); renderAudience(); renderCustomers(); renderProductPicker();
+}
+function stats() {
+  $('st-all').textContent = customers.length;
+  $('st-opt').textContent = customers.filter(c => c.optIn && !c.optOut).length;
+  $('st-sent').textContent = customers.reduce((s, c) => s + (c.sent || 0), 0);
+  $('st-out').textContent = customers.filter(c => c.optOut).length;
+}
+async function saveMkt(c, patch) {
+  Object.assign(c, patch);
+  await setDoc(doc(db, 'orders', 'MKT_' + c.phone), { type: 'mkt', status: 'جديد', total: 0, phone: c.phone, name: c.name || '', city: c.city || '', ...patch }, { merge: true });
+}
+
+// ===== الجمهور =====
+function audience() {
+  const who = $('f-who').value, cat = $('f-cat').value, days = Number($('f-days').value), recent = $('f-recent').checked, now = Date.now();
+  return customers.filter(c => !c.optOut && (who === 'all' || c.optIn) && (!cat || c.cats.has(cat)) && (!days || (c.last && now - c.last >= days * 864e5)) && (!recent || !c.lastMsg || now - c.lastMsg > 7 * 864e5));
+}
+window.renderAudience = () => {
+  const a = audience(), notOpt = a.filter(c => !c.optIn).length;
+  $('aud-count').textContent = `👥 ${a.length} زبون غادي توصلهم الرسالة` + (notOpt ? ` (${notOpt} منهم ما وافقوش بعدا ⚠️)` : '');
+};
+
+// ===== المنتجات =====
+window.renderProductPicker = () => {
+  const q = $('prod-search').value.trim().toLowerCase();
+  const list = products.filter(p => Number(p.stock) !== 0 && (!q || String(p.name).toLowerCase().includes(q))).slice(0, 20);
+  $('prod-picker').innerHTML = list.map(p => `<button onclick="pick('${esc(p.id)}')" class="shrink-0 w-24 text-right bg-black border ${picked.includes(p.id) ? 'border-[#DC0A14]' : 'border-[#242429]'} rounded-xl p-1.5">
+    <img src="${esc((p.images && p.images[0]) || 'favicon.svg')}" class="w-full aspect-square object-cover rounded-lg mb-1" alt=""><p class="text-[10px] font-bold truncate">${esc(p.name)}</p><p class="text-[10px] font-black text-[#DC0A14]">${esc(p.price)} MAD</p></button>`).join('');
+  $('prod-picked').innerHTML = picked.map(id => products.find(p => p.id === id)).filter(Boolean).map(p => `<span class="px-2 py-1 rounded-full bg-[#DC0A14]/20 text-[11px] font-bold">${esc(p.name.slice(0, 30))} <button onclick="pick('${esc(p.id)}')">✕</button></span>`).join('');
+};
+window.pick = (id) => { picked = picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id].slice(0, 12); renderProductPicker(); };
+window.preset = (t) => { $('offer').value = t; };
+
+// ===== كتابة الرسائل =====
+const fallbackMsg = (c, offer) => `سلام ${c.name || ''} 👋\nمعاك ELVON STORE، شكرا على الثقة ديالك.\n${offer}\n${SITE}\n(إلا ما بغيتيش توصلك العروض، صيفط STOP)`;
+window.generate = async () => {
+  const offer = $('offer').value.trim(), list = audience();
+  if (!offer) return toast('كتب العرض ديالك اللول');
+  if (!list.length) return toast('ما كاين حتى زبون ف هاد الاختيار');
+  const btn = $('gen-btn'); btn.disabled = true;
+  const prods = picked.map(id => products.find(p => p.id === id)).filter(Boolean).map(p => ({ id: p.id, name: p.name, price: p.price, oldPrice: p.oldPrice || null, category: CAT[p.category] || '' }));
+  drafts = list.map(c => ({ c, text: '' }));
+  renderDrafts();
+  for (let i = 0; i < list.length; i += 8) {
+    btn.textContent = `✨ كنكتب الرسائل... ${Math.min(i + 8, list.length)}/${list.length}`;
+    const batch = list.slice(i, i + 8);
+    let got = [];
+    try {
+      const r = await fetch(AI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'marketing', offer, siteUrl: SITE, products: prods, customers: batch.map(c => ({ id: c.phone, name: c.name, city: c.city, bought: c.bought.slice(-5), days: c.last ? Math.round((Date.now() - c.last) / 864e5) : 0 })) }) });
+      const d = await r.json(); got = d.messages || [];
+    } catch (e) { got = []; }
+    for (const c of batch) { const m = got.find(x => x.id === c.phone); const dr = drafts.find(x => x.c === c); dr.text = m ? m.text : fallbackMsg(c, offer); dr.ai = !!m; }
+    renderDrafts();
+  }
+  btn.disabled = false; btn.textContent = '✨ كتب الرسائل بالذكاء الاصطناعي';
+  toast('الرسائل واجدين ✅ راجعهم وصيفطهم واحد بواحد');
+};
+function renderDrafts() {
+  $('msgs').innerHTML = drafts.length ? `<div class="flex items-center justify-between"><p class="font-black">3) راجع وصيفط (${drafts.filter(d => d.sent).length}/${drafts.length})</p><p class="text-[10px] text-zinc-500">كل ضغطة كتحل واتساب بالرسالة واجدة</p></div>` + drafts.map((d, i) => `
+    <div class="card p-3 space-y-2 ${d.sent ? 'opacity-60' : ''}">
+      <div class="flex items-center justify-between gap-2"><p class="text-sm font-black">${esc(d.c.name || 'زبون')} <span class="text-[11px] text-zinc-400 font-bold" dir="ltr">0${esc(d.c.phone)}</span></p>
+        <span class="text-[10px] font-bold ${d.c.optIn ? 'text-emerald-400' : 'text-amber-300'}">${d.c.optIn ? '✅ وافق' : '⚠️ ما وافقش بعدا'}</span></div>
+      ${d.text ? `<textarea id="d-${i}" rows="5" class="inp text-[13px] leading-relaxed">${esc(d.text)}</textarea>
+      <div class="flex gap-2"><button onclick="sendOne(${i})" class="btn flex-1 bg-[#25D366] text-black">${d.sent ? '✓ تصيفطات (عاود)' : '📤 صيفط ف واتساب'}</button>
+        <button onclick="optOut(${i})" class="btn bg-black border border-[#242429] text-zinc-400 text-[11px]">قال STOP</button></div>` : '<p class="text-xs text-zinc-500">كنكتب...</p>'}
+    </div>`).join('') : '';
+}
+window.sendOne = async (i) => {
+  const d = drafts[i]; d.text = $('d-' + i).value;
+  window.open(`https://wa.me/212${d.c.phone}?text=${encodeURIComponent(d.text)}`, '_blank', 'noopener');
+  d.sent = true; renderDrafts();
+  await saveMkt(d.c, { lastMsgAt: Date.now(), sentCount: (d.c.sent || 0) + 1 }); d.c.sent = (d.c.sent || 0) + 1; d.c.lastMsg = Date.now(); stats();
+};
+window.optOut = async (i) => { const d = drafts[i]; if (!confirm(`${d.c.name || 'الزبون'} ما بغاش العروض؟ ما غاديش يبان ف الحملات الجاية.`)) return; await saveMkt(d.c, { optOut: true }); drafts.splice(i, 1); renderDrafts(); stats(); renderAudience(); };
+
+// ===== الزبناء =====
+window.renderCustomers = () => {
+  const q = $('c-search').value.trim().toLowerCase();
+  const list = customers.filter(c => !q || String(c.name).toLowerCase().includes(q) || ('0' + c.phone).includes(q.replace(/\D/g, '') || '§'));
+  $('c-list').innerHTML = list.map(c => `<div class="card p-3 flex flex-wrap items-center gap-3 ${c.optOut ? 'opacity-50' : ''}">
+    <div class="flex-1 min-w-[160px]"><p class="text-sm font-black">${esc(c.name || 'زبون')} ${c.manual ? '<span class="text-[10px] text-sky-300">(باليد)</span>' : ''}</p>
+      <p class="text-[11px] text-zinc-400" dir="ltr">0${esc(c.phone)} • ${esc(c.city)}</p>
+      <p class="text-[10px] text-zinc-500">${c.orders} طلب • ${c.spent} MAD${c.sent ? ` • ${c.sent} رسالة` : ''}</p></div>
+    <span class="text-[11px] font-black ${c.optOut ? 'text-red-300' : c.optIn ? 'text-emerald-400' : 'text-amber-300'}">${c.optOut ? '⛔ STOP' : c.optIn ? '✅ وافق' : '⚠️ ما وافقش'}</span>
+    ${c.optOut ? '' : `<button onclick="toggleOpt('${c.phone}')" class="btn bg-black border border-[#242429] text-[11px]">${c.optIn ? 'حيد الموافقة' : 'وافق (قاليها ليا)'}</button>`}
+  </div>`).join('') || '<p class="text-xs text-zinc-500 text-center py-6">ما كاين حتى زبون. الزبناء كيتزادو بوحدهم ملي تبدل الطلب ل "تم التسليم".</p>';
+};
+window.toggleOpt = async (phone) => { const c = customers.find(x => x.phone === phone); await saveMkt(c, { optIn: !c.optIn }); stats(); renderCustomers(); renderAudience(); };
+window.addManual = async () => {
+  const n = normPhone($('m-phone').value), name = $('m-name').value.trim();
+  if (!okPhone(n) || !name) return toast('دخل السمية ورقم مغربي صحيح');
+  let c = customers.find(x => x.phone === n);
+  if (!c) { c = { phone: n, name, city: $('m-city').value.trim(), bought: [], cats: new Set(), spent: 0, orders: 0, last: Date.now(), optIn: false, manual: true }; customers.unshift(c); }
+  if ($('m-note').value.trim()) c.bought.push($('m-note').value.trim());
+  await saveMkt(c, { name, city: $('m-city').value.trim(), note: $('m-note').value.trim(), optIn: $('m-opt').checked, createdAt: Date.now() });
+  ['m-name', 'm-phone', 'm-city', 'm-note'].forEach(id => $(id).value = ''); $('m-opt').checked = false;
+  toast('تزاد ✅'); stats(); renderCustomers(); renderAudience();
+};
+window.tab = (t) => { document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); $('t-campaign').classList.toggle('hidden', t !== 'campaign'); $('t-customers').classList.toggle('hidden', t !== 'customers'); };
+</script>
+</body>
+</html>
