@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tw.css?v=20261128d">
+<link rel="stylesheet" href="tw.css?v=20261128e">
 <style>
   body { font-family: 'Cairo', sans-serif; background: #050505; color: #fff; }
   .card { background: #131316; border: 1px solid #242429; border-radius: 1.25rem; }
@@ -58,10 +58,12 @@
 
     <div class="flex gap-2 overflow-x-auto pb-1">
       <button onclick="tab('campaign')" data-tab="campaign" class="tab btn border border-[#242429] on shrink-0">📣 حملة جديدة</button>
+      <button onclick="tab('confirm')" data-tab="confirm" class="tab btn border border-[#242429] shrink-0">✅ التأكيد <span id="confirm-badge" class="hidden ml-1 px-1.5 rounded-full bg-[#DC0A14] text-[10px]"></span></button>
       <button onclick="tab('team')" data-tab="team" class="tab btn border border-[#242429] shrink-0">🤖 فريق ELVON AI</button>
       <button onclick="tab('thanks')" data-tab="thanks" class="tab btn border border-[#242429]">🙏 الشكر <span id="thanks-badge" class="hidden ml-1 px-1.5 rounded-full bg-[#DC0A14] text-[10px]"></span></button>
       <button onclick="tab('history')" data-tab="history" class="tab btn border border-[#242429]">📊 الحملات</button>
-      <button onclick="tab('customers')" data-tab="customers" class="tab btn border border-[#242429]">👥 الزبناء</button>
+      <button onclick="tab('customers')" data-tab="customers" class="tab btn border border-[#242429] shrink-0">👥 الزبناء</button>
+      <button onclick="tab('settings')" data-tab="settings" class="tab btn border border-[#242429] shrink-0">⚙️ معطيات الشركة</button>
     </div>
 
     <!-- الحملة -->
@@ -111,6 +113,40 @@
       <div id="msgs" class="space-y-3"></div>
     </section>
 
+    <!-- تأكيد الطلبات -->
+    <section id="t-confirm" class="hidden space-y-3">
+      <div class="card p-4 space-y-2"><p class="font-black">✅ مركز تأكيد الطلبات</p>
+        <p class="text-[11px] text-zinc-400">ف المغرب، أكبر خسارة هي الطلبات اللي كيترفضو ف الباب. أكد كل طلب ف أقل من ساعة (بالتيليفون ولا واتساب)، وصيفط تذكير قبل التوصيل. الطلبات القدام هوما اللولين.</p>
+        <div id="confirm-kpis" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+        <label class="flex items-center gap-2 text-[11px] text-zinc-400 font-bold"><input id="show-tests" type="checkbox" onchange="renderConfirm()" class="w-4 h-4 accent-[#DC0A14]"> بين حتى طلبات التجربة</label>
+      </div>
+      <p class="text-sm font-black">🆕 كيتسناو التأكيد</p><div id="confirm-list" class="space-y-2"></div>
+      <p class="text-sm font-black mt-3">🚚 خرجو مع التوصيل (صيفط تذكير)</p><div id="ship-list" class="space-y-2"></div>
+    </section>
+
+    <!-- معطيات الشركة -->
+    <section id="t-settings" class="hidden space-y-3">
+      <div class="card p-4 space-y-3"><p class="font-black">⚙️ معطيات الشركة (كيقراهم فريق ELVON AI ف كل اجتماع)</p>
+        <p class="text-[11px] text-zinc-400">هاد المعلومات كتبقى خاصة بيك (ما كيشوفهاش الزبناء). كلما عمرتيهم مزيان، كلما الاقتراحات ديال الفريق كانو دقاق.</p>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <label class="text-[11px] font-bold text-zinc-300">شركة التوصيل<input id="cf-courier" class="inp mt-1" placeholder="مثال: Amana / Sendit / موزع خاص"></label>
+          <label class="text-[11px] font-bold text-zinc-300">ثمن التوصيل اللي كتخلص نتا (درهم)<input id="cf-delivery" type="number" class="inp mt-1" placeholder="مثال: 25"></label>
+          <label class="text-[11px] font-bold text-zinc-300">ثمن رجوع طلب مرفوض (درهم)<input id="cf-return" type="number" class="inp mt-1" placeholder="مثال: 15"></label>
+          <label class="text-[11px] font-bold text-zinc-300">ميزانية الإشهار ف الشهر (درهم)<input id="cf-ads" type="number" class="inp mt-1" placeholder="مثال: 1000"></label>
+          <label class="text-[11px] font-bold text-zinc-300">متابعين Instagram<input id="cf-ig" type="number" class="inp mt-1"></label>
+          <label class="text-[11px] font-bold text-zinc-300">متابعين TikTok<input id="cf-tt" type="number" class="inp mt-1"></label>
+        </div>
+        <label class="block text-[11px] font-bold text-zinc-300">📝 ملاحظات للفريق (أي حاجة بغيتيهم يعرفوها)<textarea id="cf-notes" rows="4" class="inp mt-1" placeholder="مثال: أغلب الزبناء ديالي من طنجة. المحل ف حي ... كنحل من 10 حتى 22. بغيت نركز على الشواحن والسماعات. ما عنديش ميزانية كبيرة للإشهار."></textarea></label>
+        <button onclick="saveCfg()" class="btn bg-[#DC0A14]">💾 حفظ</button>
+      </div>
+      <div class="card p-4 space-y-2"><p class="font-black">💰 ثمن الشرا ديال المنتجات</p>
+        <p class="text-[11px] text-zinc-400">بشحال كتشري كل منتج. الفريق كيحسب بيه الربح الحقيقي، وما كيقترحش تخفيض كيخسرك.</p>
+        <input id="cost-search" class="inp" placeholder="قلب على منتج..." oninput="renderCosts()">
+        <div id="cost-list" class="space-y-1.5 max-h-[60vh] overflow-y-auto"></div>
+        <button onclick="saveCfg()" class="btn bg-[#DC0A14]">💾 حفظ الأثمنة</button>
+      </div>
+    </section>
+
     <!-- شركة ELVON AI -->
     <section id="t-team" class="hidden space-y-4">
       <div class="card p-4 space-y-3">
@@ -124,6 +160,7 @@
         <button id="team-btn" onclick="runMeeting(false)" class="btn w-full bg-gradient-to-l from-[#DC0A14] to-[#ff5a60] text-base py-3">🎙️ اجتماع دابا</button>
         <p id="team-status" class="text-[11px] text-zinc-500 text-center"></p>
       </div>
+      <div id="calendar-box"></div>
       <div id="team-report"></div>
       <details id="team-live-box" class="card p-3"><summary class="cursor-pointer text-sm font-black">📝 المحضر الكامل ديال الاجتماع</summary><div id="team-chat" class="space-y-2 mt-3"></div></details>
       <div id="team-history" class="space-y-2"></div>
@@ -175,7 +212,7 @@ const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.sta
 const okPhone = (n) => /^[5-7]\d{8}$/.test(n);
 const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add('hidden'), 3200); };
 const CAT = { chargers: 'شواحن وكابلات', audio: 'سماعات', protection: 'كفرات وحماية', watches: 'ساعات', powerbanks: 'باور بانك', holders: 'حوامل وستاندات' };
-let products = [], customers = [], picked = [], drafts = [], campaigns = [], allOrders = [], currentCampaign = null, meetings = [];
+let products = [], customers = [], picked = [], drafts = [], campaigns = [], allOrders = [], currentCampaign = null, meetings = [], cfg = { costs: {} }, reviewsSum = null;
 const DAY = 864e5;
 const fmtDate = (t) => { const d = new Date(t); return `${d.getDate()}/${d.getMonth() + 1}`; };
 
@@ -208,7 +245,7 @@ async function load() {
   const orders = [], mkt = {};
   campaigns = [];
   meetings = [];
-  ordSnap.forEach(d => { const o = { ...d.data(), _id: d.id }; if (o.type === 'mkt' && o.kind === 'campaign') campaigns.push(o); else if (o.type === 'mkt' && o.kind === 'meeting') meetings.push(o); else if (o.type === 'mkt') mkt[o.phone] = o; else if (!o.type) orders.push(o); });
+  ordSnap.forEach(d => { const o = { ...d.data(), _id: d.id }; if (o.type === 'mkt' && o.kind === 'config') cfg = { costs: {}, ...o }; else if (o.type === 'mkt' && o.kind === 'campaign') campaigns.push(o); else if (o.type === 'mkt' && o.kind === 'meeting') meetings.push(o); else if (o.type === 'mkt') mkt[o.phone] = o; else if (!o.type) orders.push(o); });
   meetings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   allOrders = orders; campaigns.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const map = {};
@@ -228,7 +265,9 @@ async function load() {
   customers = Object.values(map).sort((a, b) => b.last - a.last);
   $('f-cat').innerHTML = '<option value="">أي منتج شراو</option>' + Object.entries(CAT).map(([k, v]) => `<option value="${k}">شراو ${v}</option>`).join('');
   if (!$('dc-code').value) newCode();
-  stats(); renderAudience(); renderCustomers(); renderProductPicker(); renderSuggest(); renderThanks(); renderHistory(); renderTeam(); renderMeetings();
+  fillCfg();
+  await loadReviews();
+  stats(); renderAudience(); renderCustomers(); renderProductPicker(); renderSuggest(); renderThanks(); renderHistory(); renderConfirm(); renderCosts(); renderCalendar(); renderTeam(); renderMeetings();
 }
 function stats() {
   $('st-all').textContent = customers.length;
@@ -327,6 +366,8 @@ const CABLE = /كابل|cable|câble|سلك/i;
 function suggestions() {
   const now = Date.now(), fresh = (c) => !c.optOut && (!c.lastMsg || now - c.lastMsg > 14 * DAY);
   const out = [];
+  const wait = allOrders.filter(o => o.status === 'جديد' && !isTest(o)).length;
+  if (wait) out.push({ icon: '✅', text: `${wait} طلب كيتسناو التأكيد`, sub: 'أكدهم ف أقل من ساعة باش ما يترفضوش ف الباب', btn: 'أكد دابا', act: "tab('confirm')" });
   const th = thanksList().length;
   if (th) out.push({ icon: '🙏', text: `${th} زبون توصلو مؤخرا وما شكرتيهمش`, sub: 'رسالة شكر + طلب تقييم + سؤال على العروض', btn: 'صيفط الشكر', act: "tab('thanks')" });
   const old = customers.filter(c => fresh(c) && c.last && now - c.last >= 30 * DAY);
@@ -437,7 +478,13 @@ function storeContext() {
     `الأكثر مبيعا: ${top || 'مازال ما كاين'}.`,
     `الزبناء اللي تسلمو: ${customers.length}، وافقو على العروض: ${customers.filter(c => c.optIn && !c.optOut).length}. الحملات: ${campaigns.length}${campaigns[0] ? ' (آخرها: ' + String(campaigns[0].offer || '').slice(0, 60) + ')' : ''}.`,
     `الخدمات: موقع + طلب ف واتساب، الدفع عند الاستلام، التوصيل طنجة نهار والمدن 2-4 أيام، استبدال 48 ساعة، عملات ELVON + عجلة الحظ، ELVON AI، ورشة الإصلاح. الإطلاق الرسمي كان 28/11/2026.`,
-  ].join('\n');
+    kpiText(),
+    marginText(last30),
+    reviewsSum ? `التقييمات: ${reviewsSum.count} تقييم، المعدل ${reviewsSum.avg}/5.${reviewsSum.low.length ? ' تقييمات ضعيفة: ' + reviewsSum.low.join(' | ') : ''}` : 'التقييمات: مازال ما كاين.',
+    `التقويم (الأحداث الجاية): ${upcomingEvents(75).map(e => `${e.name} ${fmtDate(e.from)}${e.approx ? ' (تقريبا)' : ''} من دابا ب ${Math.max(0, Math.round((e.from - now) / DAY))} يوم`).join(' • ') || 'حتى حاجة كبيرة ف 75 يوم الجاية'}.`,
+    `معطيات مول الشركة: التوصيل ${cfg.courier || '؟'} ب ${cfg.deliveryCost || '؟'} درهم، الرجوع ${cfg.returnCost || '؟'} درهم، ميزانية الإشهار ${cfg.adBudget || '؟'} درهم/شهر، Instagram ${cfg.igFollowers || '؟'} متابع، TikTok ${cfg.tiktokFollowers || '؟'}.`,
+    cfg.notes ? `ملاحظات مول الشركة: ${String(cfg.notes).slice(0, 600)}` : '',
+  ].filter(Boolean).join('\n');
 }
 function memoryText() {
   return meetings.slice(0, 3).map(m => {
@@ -510,6 +557,130 @@ window.renderMeetings = () => {
     <div class="space-y-2 mt-3">${reportHtml(m, j + 1)}<details><summary class="cursor-pointer text-xs text-zinc-400 font-bold">📝 المحضر</summary><div class="space-y-2 mt-2">${(m.messages || []).map(bubble).join('')}</div></details></div></details>`).join('') : '';
 };
 
+// ===== المؤشرات ديال التأكيد والتوصيل =====
+const isTest = (o) => /تجربة/.test(o.customer || '');
+function kpis() {
+  const now = Date.now(), base = allOrders.filter(o => !isTest(o) && now - (o.createdAt || 0) < 30 * DAY);
+  const settled = base.filter(o => o.status !== 'جديد' || now - (o.createdAt || 0) > DAY);
+  const confirmed = settled.filter(o => ['قيد التجهيز', 'تم الشحن', 'تم التسليم'].includes(o.status));
+  const cancelled = settled.filter(o => o.status === 'ملغي');
+  const shippedOrDone = base.filter(o => ['تم الشحن', 'تم التسليم'].includes(o.status) || (o.status === 'ملغي' && o.shippedAt));
+  const delivered = base.filter(o => o.status === 'تم التسليم');
+  const ct = base.filter(o => o.confirmedAt).map(o => (o.confirmedAt - o.createdAt) / 36e5);
+  const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const valid = base.filter(o => o.status !== 'ملغي');
+  return { confirm: pct(confirmed.length, settled.length), cancel: pct(cancelled.length, settled.length), delivered: pct(delivered.length, shippedOrDone.length || confirmed.length),
+    waiting: allOrders.filter(o => o.status === 'جديد' && !isTest(o)).length, avg: valid.length ? Math.round(valid.reduce((s, o) => s + (Number(o.total) || 0), 0) / valid.length) : 0,
+    confirmHours: ct.length ? (ct.reduce((a, b) => a + b, 0) / ct.length).toFixed(1) : '—' };
+}
+function kpiText() { const k = kpis(); return `مؤشرات آخر 30 يوم: نسبة التأكيد ${k.confirm} • نسبة الإلغاء ${k.cancel} • نسبة التسليم ${k.delivered} • متوسط الطلب ${k.avg} MAD • متوسط وقت التأكيد ${k.confirmHours} ساعة • طلبات كتسنى التأكيد دابا ${k.waiting}.`; }
+function marginText(list) {
+  const costs = cfg.costs || {}; if (!Object.keys(costs).length) return 'الربح: مول الشركة مازال ما دخلش أثمنة الشرا.';
+  let rev = 0, cost = 0, known = 0;
+  list.filter(o => o.status !== 'ملغي').forEach(o => (o.items || []).forEach(i => { const c = Number(costs[i.id]); if (c > 0) { known++; rev += (Number(i.price) || 0) * (Number(i.qty) || 1); cost += c * (Number(i.qty) || 1); } }));
+  const per = products.filter(p => Number(costs[p.id]) > 0 && Number(p.price) > 0).map(p => ({ n: String(p.name).slice(0, 30), m: Math.round((p.price - costs[p.id]) / p.price * 100), price: p.price, cost: costs[p.id] }));
+  per.sort((a, b) => b.m - a.m);
+  return `الربح: ${known ? `ف آخر 30 يوم المداخيل ديال المنتجات اللي معروف الثمن ديالهم ${rev} MAD والتكلفة ${cost} MAD (الربح قبل التوصيل والإشهار ${rev - cost} MAD).` : ''} أحسن هامش: ${per.slice(0, 3).map(x => `${x.n} ${x.m}% (${x.price}/${x.cost})`).join('، ')}. أضعف هامش: ${per.slice(-3).map(x => `${x.n} ${x.m}%`).join('، ')}.`;
+}
+
+// ===== التقييمات (track/rv_<id>/orders) =====
+async function loadReviews() {
+  try {
+    const all = [];
+    await Promise.all(products.map(async p => { const snap = await getDocs(collection(db, 'track', 'rv_' + p.id, 'orders')); snap.forEach(d => { const r = d.data(); if (!r.hidden) all.push({ ...r, product: p.name }); }); }));
+    if (!all.length) { reviewsSum = null; return; }
+    const avg = (all.reduce((s, r) => s + Math.max(1, Math.min(5, Number(r.rating) || 5)), 0) / all.length).toFixed(1);
+    const low = all.filter(r => Number(r.rating) <= 3).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 4).map(r => `${r.rating}★ ${String(r.product).slice(0, 25)}: "${String(r.comment || '').slice(0, 80)}"`);
+    reviewsSum = { count: all.length, avg, low };
+  } catch (e) { reviewsSum = null; }
+}
+
+// ===== التقويم التجاري المغربي =====
+const EVENTS = [
+  { name: 'Black Friday', from: '2026-11-27', to: '2026-11-30', tip: 'أكبر موسم ديال الإلكترونيات أونلاين' },
+  { name: 'Cyber Monday', from: '2026-11-30', to: '2026-11-30' },
+  { name: 'عطلة رأس السنة (المدارس الفرنسية)', from: '2026-12-19', to: '2027-01-04', tip: 'هدايا وأسفار' },
+  { name: 'رأس السنة 2027', from: '2026-12-25', to: '2027-01-01', tip: 'هدايا: سماعات، ساعات، باور بانك' },
+  { name: 'عيد الحب', from: '2027-02-07', to: '2027-02-14', tip: 'هدايا: ساعات، سماعات' },
+  { name: 'رمضان 2027', from: '2027-02-08', to: '2027-03-09', approx: true, tip: 'الشرا بزاف بين 12 و 18، الإشهار كيغلا 30-90%' },
+  { name: 'عطلة المدارس (الشتاء)', from: '2027-02-20', to: '2027-03-08' },
+  { name: 'عيد الفطر 2027', from: '2027-03-05', to: '2027-03-11', approx: true, tip: 'هدايا العيد، العواشر' },
+  { name: 'عطلة الربيع', from: '2027-04-24', to: '2027-05-10', tip: 'أسفار: باور بانك، حوامل الطوموبيل' },
+  { name: 'عيد الأضحى 2027', from: '2027-05-10', to: '2027-05-17', approx: true, tip: 'الناس كيصرفو على العيد، العروض الصغيرة' },
+  { name: 'الصيف + رجوع مغاربة العالم (مرحبا، طنجة المتوسط)', from: '2027-06-15', to: '2027-09-05', tip: 'طنجة عامرة: شواحن الطوموبيل، باور بانك، حوامل، كفرات الحماية' },
+  { name: 'الدخول المدرسي', from: '2027-08-25', to: '2027-09-15', tip: 'سماعات، كابلات، باور بانك للطلبة' },
+  { name: 'Black Friday 2027', from: '2027-11-26', to: '2027-11-29' },
+].map(e => ({ ...e, from: new Date(e.from + 'T00:00:00').getTime(), to: new Date(e.to + 'T23:59:59').getTime() }));
+function upcomingEvents(days) {
+  const now = Date.now(), list = EVENTS.filter(e => e.to >= now && e.from - now <= days * DAY);
+  const d = new Date(), payday = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime() - 3 * DAY;
+  if (payday - now <= days * DAY && payday + 8 * DAY >= now) list.push({ name: 'نهاية الشهر (الخلاص)', from: payday, to: payday + 8 * DAY, tip: 'الناس كيخلصو: وقت مزيان للعروض' });
+  return list.sort((a, b) => a.from - b.from);
+}
+window.renderCalendar = () => {
+  const ev = upcomingEvents(75), now = Date.now();
+  $('calendar-box').innerHTML = ev.length ? `<div class="card p-3 space-y-1.5"><p class="text-sm font-black">📅 المواسم الجاية</p>${ev.map(e => { const d = Math.round((e.from - now) / DAY); return `<div class="flex items-center gap-2 text-[12px]"><span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${d <= 0 ? 'bg-[#DC0A14]' : d <= 14 ? 'bg-amber-500/30 text-amber-200' : 'bg-zinc-800'}">${d <= 0 ? 'دابا' : 'ف ' + d + ' يوم'}</span><span class="font-bold">${esc(e.name)}${e.approx ? ' <span class="text-[10px] text-zinc-500">(تقريبا)</span>' : ''}</span><span class="text-[10px] text-zinc-400 truncate">${esc(e.tip || '')}</span></div>`; }).join('')}</div>` : '';
+};
+
+// ===== مركز التأكيد =====
+const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, '0')).join('');
+const ago = (t) => { const m = Math.round((Date.now() - t) / 6e4); return m < 60 ? `قبل ${m} دقيقة` : m < 1440 ? `قبل ${Math.round(m / 60)} ساعة` : `قبل ${Math.round(m / 1440)} يوم`; };
+const AR_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+function etaText(city) { const add = (n) => { const d = new Date(); let k = 0; while (k < n) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0) k++; } return `${AR_DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`; }; return /طنجة/.test(city || '') ? `غدا ولا ${add(1)}` : `بين ${add(2)} و ${add(4)}`; }
+const itemsTxt = (o) => (o.items || []).map(i => `- ${i.name} ×${i.qty || 1}`).join('\n');
+function confirmMsg(o) { return `سلام ${o.customer || ''} 👋\nمعاك ELVON STORE. توصلنا بالطلب ديالك رقم ${o.id || o._id}:\n${itemsTxt(o)}\nالمجموع: ${o.total} درهم (كتخلص ملي يوصلك)\nالعنوان: ${o.city || ''}، ${o.address || ''}\n🚚 كيوصلك ${etaText(o.city)} إن شاء الله\n\nواش نأكدو ليك الطلب؟ جاوبنا بـ "نعم" ✅`; }
+function shipMsg(o) { return `سلام ${o.customer || ''} 👋\nالطلب ديالك رقم ${o.id || o._id} خرج مع التوصيل 🚚 وغادي يوصلك ${etaText(o.city)}.\nوجد ${o.total} درهم عافاك، والموزع غادي يعيط ليك قبل ما يوصل.\nشكرا على الثقة ف ELVON STORE ❤️`; }
+async function setStatus(o, patch) {
+  Object.assign(o, patch);
+  await setDoc(doc(db, 'orders', o._id), patch, { merge: true });
+  const n = normPhone(o.phone);
+  if (patch.status && n.length === 9) { try { await setDoc(doc(db, 'track', await sha('elvon|' + n), 'orders', o._id), { status: patch.status, updatedAt: Date.now() }, { merge: true }); } catch (e) {} }
+  if (patch.status && o.uid) { try { await setDoc(doc(db, 'track', 'w_' + o.uid, 'orders', o._id), { status: patch.status, updatedAt: Date.now() }, { merge: true }); } catch (e) {} }
+}
+window.renderConfirm = () => {
+  const k = kpis(), tests = $('show-tests').checked;
+  $('confirm-kpis').innerHTML = [['نسبة التأكيد', k.confirm, 'الهدف 75%+'], ['نسبة الإلغاء', k.cancel, 'الهدف أقل من 20%'], ['نسبة التسليم', k.delivered, 'الهدف 85%+'], ['وقت التأكيد', k.confirmHours === '—' ? '—' : k.confirmHours + ' س', 'الهدف أقل من 1 ساعة']].map(([a, b, c]) => `<div class="rounded-xl bg-black p-2"><p class="text-[10px] text-zinc-400">${a}</p><p class="text-lg font-black">${b}</p><p class="text-[9px] text-zinc-500">${c}</p></div>`).join('');
+  const waiting = allOrders.filter(o => o.status === 'جديد' && (tests || !isTest(o))).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const badge = $('confirm-badge'); const nReal = allOrders.filter(o => o.status === 'جديد' && !isTest(o)).length; badge.textContent = nReal; badge.classList.toggle('hidden', !nReal);
+  const card = (o, ship) => { const age = Date.now() - (o.createdAt || 0), late = !ship && age > 36e5, okPh = okPhone(normPhone(o.phone));
+    return `<div class="card p-3 space-y-2 ${late ? 'border-[#DC0A14]' : ''}">
+      <div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="text-sm font-black">${esc(o.customer || 'زبون')} <span class="text-[11px] font-bold ${okPh ? 'text-zinc-400' : 'text-red-300'}" dir="ltr">${esc(o.phone || '')}${okPh ? '' : ' ⚠️ رقم غالط'}</span></p>
+        <p class="text-[11px] text-zinc-400">${esc(o.city || '')} • ${esc(o.address || '')}</p><p class="text-[11px] text-zinc-300 whitespace-pre-line">${esc(itemsTxt(o))}</p></div>
+        <div class="text-left shrink-0"><p class="text-base font-black text-[#DC0A14]">${esc(o.total)} MAD</p><p class="text-[10px] ${late ? 'text-red-300 font-black' : 'text-zinc-500'}">${ago(o.createdAt || Date.now())}</p>${o.attempts ? `<p class="text-[10px] text-amber-300">${o.attempts} محاولة</p>` : ''}${o.remindedAt ? '<p class="text-[10px] text-emerald-400">✓ تصيفط التذكير</p>' : ''}</div></div>
+      <div class="flex flex-wrap gap-1.5">
+        <a href="tel:${esc(o.phone || '')}" class="btn bg-black border border-[#242429] text-[11px] py-1.5">📞 عيط</a>
+        <button onclick="waOrder('${o._id}', ${ship ? 1 : 0})" class="btn bg-[#25D366] text-black text-[11px] py-1.5">${ship ? '💬 صيفط التذكير' : '💬 تأكيد ف واتساب'}</button>
+        ${ship ? '' : `<button onclick="confirmOrder('${o._id}')" class="btn bg-emerald-600 text-[11px] py-1.5">✅ تأكد</button>
+        <button onclick="noAnswer('${o._id}')" class="btn bg-black border border-[#242429] text-[11px] py-1.5">🔁 ما جاوبش</button>
+        <a href="${SITE}#k=" onclick="toast('للإلغاء: حل لوحة التحكم (الرابط السري) وبدل الحالة ل ملغي باش ترجع الكمية للمخزون');return false" class="btn bg-black border border-red-500/40 text-red-300 text-[11px] py-1.5">🛑 إلغاء</a>`}
+      </div></div>`; };
+  $('confirm-list').innerHTML = waiting.map(o => card(o, false)).join('') || '<p class="text-xs text-emerald-400 text-center py-4">✅ ما كاين حتى طلب كيتسنى التأكيد</p>';
+  const ship = allOrders.filter(o => o.status === 'تم الشحن' && (tests || !isTest(o))).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  $('ship-list').innerHTML = ship.map(o => card(o, true)).join('') || '<p class="text-xs text-zinc-500 text-center py-4">ما كاين حتى طلب ف الطريق</p>';
+};
+const findOrder = (id) => allOrders.find(o => o._id === id);
+window.waOrder = async (id, ship) => { const o = findOrder(id); const n = normPhone(o.phone); if (!okPhone(n)) return toast('الرقم ديال هاد الزبون غالط، عيط ليه ولا ألغي الطلب'); window.open(`https://wa.me/212${n}?text=${encodeURIComponent(ship ? shipMsg(o) : confirmMsg(o))}`, '_blank', 'noopener'); if (ship) { await setStatus(o, { remindedAt: Date.now() }); } else { await setStatus(o, { attempts: (o.attempts || 0) + 1, lastAttemptAt: Date.now() }); } renderConfirm(); };
+window.confirmOrder = async (id) => { const o = findOrder(id); await setStatus(o, { status: 'قيد التجهيز', confirmedAt: Date.now() }); renderConfirm(); toast('✅ تأكد الطلب، ولا "قيد التجهيز"'); };
+window.noAnswer = async (id) => { const o = findOrder(id); await setStatus(o, { attempts: (o.attempts || 0) + 1, lastAttemptAt: Date.now() }); renderConfirm(); toast(`تسجلات المحاولة ${o.attempts}. عاود من بعد ساعتين${o.attempts >= 3 ? '. من بعد 3 محاولات بلا جواب، الطلب غالبا غادي يترجع' : ''}`); };
+
+// ===== معطيات الشركة =====
+function fillCfg() { $('cf-courier').value = cfg.courier || ''; $('cf-delivery').value = cfg.deliveryCost || ''; $('cf-return').value = cfg.returnCost || ''; $('cf-ads').value = cfg.adBudget || ''; $('cf-ig').value = cfg.igFollowers || ''; $('cf-tt').value = cfg.tiktokFollowers || ''; $('cf-notes').value = cfg.notes || ''; }
+window.setCost = (id, v) => { cfg.costs = cfg.costs || {}; cfg.costs[id] = Number(v) || 0; };
+window.renderCosts = () => {
+  const q = $('cost-search').value.trim().toLowerCase(), c = cfg.costs || {};
+  $('cost-list').innerHTML = products.filter(p => !q || String(p.name).toLowerCase().includes(q)).map(p => { const v = Number(c[p.id]) || '', m = v ? Math.round((p.price - v) / p.price * 100) : null;
+    return `<div class="flex items-center gap-2 rounded-xl bg-black p-2"><p class="flex-1 min-w-0 text-[12px] font-bold truncate">${esc(p.name)}</p><span class="text-[11px] text-zinc-400 shrink-0">يتباع ${esc(p.price)}</span>
+      <input type="number" min="0" data-cost="${esc(p.id)}" value="${v}" placeholder="الشرا" class="inp w-20 text-center py-1" oninput="setCost(this.dataset.cost, this.value)">
+      ${m !== null ? `<span class="text-[10px] font-black w-10 text-center ${m < 20 ? 'text-red-300' : m < 40 ? 'text-amber-300' : 'text-emerald-400'}">${m}%</span>` : '<span class="w-10"></span>'}</div>`; }).join('');
+};
+window.saveCfg = async () => {
+  Object.assign(cfg, { courier: $('cf-courier').value.trim().slice(0, 60), deliveryCost: Number($('cf-delivery').value) || 0, returnCost: Number($('cf-return').value) || 0, adBudget: Number($('cf-ads').value) || 0, igFollowers: Number($('cf-ig').value) || 0, tiktokFollowers: Number($('cf-tt').value) || 0, notes: $('cf-notes').value.trim().slice(0, 1500) });
+  const costs = {}; Object.entries(cfg.costs || {}).forEach(([k, v]) => { if (Number(v) > 0) costs[k] = Number(v); }); cfg.costs = costs;
+  const { _id, ...rest } = cfg;
+  try { await setDoc(doc(db, 'orders', 'MKTCFG'), { ...rest, type: 'mkt', kind: 'config', status: 'جديد', total: 0, updatedAt: Date.now() }); toast('تحفظو ✅ الفريق غادي يستعملهم ف الاجتماع الجاي'); renderCosts(); }
+  catch (e) { toast('ما قدرناش نحفظو، عاود'); }
+};
+
 // ===== الزبناء =====
 window.renderCustomers = () => {
   const q = $('c-search').value.trim().toLowerCase();
@@ -533,7 +704,7 @@ window.addManual = async () => {
   ['m-name', 'm-phone', 'm-city', 'm-note'].forEach(id => $(id).value = ''); $('m-opt').checked = false;
   toast('تزاد ✅'); stats(); renderCustomers(); renderAudience();
 };
-window.tab = (t) => { document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); ['campaign', 'team', 'thanks', 'history', 'customers'].forEach(x => $('t-' + x).classList.toggle('hidden', t !== x)); window.scrollTo(0, 0); };
+window.tab = (t) => { document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); ['campaign', 'confirm', 'team', 'thanks', 'history', 'customers', 'settings'].forEach(x => $('t-' + x).classList.toggle('hidden', t !== x)); window.scrollTo(0, 0); };
 </script>
 </body>
 </html>
