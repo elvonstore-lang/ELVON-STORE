@@ -174,6 +174,46 @@ function marketingPrompt(body) {
     user: 'الزبناء: ' + JSON.stringify(customers),
   };
 }
+// ===== فريق ELVON AI: 20 خبير ف 4 ديال الأقسام كيتناقشو =====
+const TEAM = {
+  marketing: { label: 'التسويق', agents: [
+    ['سلمى', 'مديرة التسويق: الاستراتيجية والقرارات'], ['يوسف', 'محتوى إنستغرام وتيكتوك والفيديوهات'], ['نادية', 'الإشهار الممول (Meta Ads) والميزانية'],
+    ['حمزة', 'العروض والأثمنة والكودات'], ['ليلى', 'تحليل الزبناء ونتائج الحملات'] ] },
+  security: { label: 'حماية الموقع', agents: [
+    ['أمين', 'رئيس الأمن'], ['سارة', 'كشف الطلبات المزورة والأرقام الغالطة'], ['كريم', 'حماية الحسابات وعملات ELVON'],
+    ['هدى', 'الخصوصية والقانون المغربي 09-08 ورضا الزبون'], ['عمر', 'Firebase والقواعد والنسخ الاحتياطي'] ] },
+  dev: { label: 'تطوير الموقع والخدمات', agents: [
+    ['إلياس', 'مدير المنتج والأولويات'], ['مريم', 'تجربة المستخدم ف التيليفون'], ['رضا', 'سرعة الموقع وGoogle'],
+    ['خديجة', 'ELVON AI والمساعد الذكي'], ['أنس', 'خدمات جديدة: الورشة، التوصيل، المحل'] ] },
+  aftersales: { label: 'خدمات ما بعد البيع', agents: [
+    ['فاطمة', 'رئيسة خدمة الزبناء'], ['بلال', 'التوصيل وتتبع الطلبات'], ['زينب', 'الإرجاع والاستبدال والضمان'],
+    ['سفيان', 'التقييمات والشكايات'], ['هبة', 'وفاء الزبناء وعملات ELVON'] ] },
+};
+function teamPrompt(body) {
+  const ctx = cleanStr(body.context, 2500), topic = cleanStr(body.topic, 600), prev = cleanStr(body.transcript, 2200);
+  const base = [
+    'أنتم فريق ELVON STORE (متجر إكسسوارات الهواتف ف طنجة، المغرب، الدفع عند الاستلام، موقع + واتساب + عملات ELVON + عجلة الحظ + ELVON AI).',
+    'المعطيات الحقيقية ديال المتجر دابا: ' + ctx,
+    'الموضوع اللي طرحو المدير (مول المتجر): ' + topic,
+    '- هضرو بالدارجة المغربية بالحروف العربية، بحال فريق حقيقي ف اجتماع: كل واحد كيهضر من الاختصاص ديالو، كيجاوب على الآخرين بالسمية، كيتفق ولا كيخالف ويعطي السبب.',
+    '- اعتمدو على المعطيات الحقيقية. ما تخترعوش أرقام. إلا شي معلومة ناقصة قولوها.',
+    '- اقتراحات عملية وممكنة لمتجر صغير بميزانية صغيرة. ما تقولوش "درنا" شي حاجة: أنتم كتقترحو، والمدير هو اللي كيقرر وكينفذ.',
+  ];
+  if (body.dept === 'summary') return { system: base.concat([
+    'دورك: كاتب الاجتماع. لخص النقاش اللي تحت وعطي خطة عمل مرتبة بالأولوية.',
+    '- رجع غير JSON صحيح: {"summary":"3 حتى 5 جمل","actions":[{"owner":"السمية","dept":"القسم","task":"شنو يدار بالضبط","priority":"عالية|متوسطة|عادية"}]}',
+    '- بين 4 و 8 مهام، أهمهم اللولين.',
+  ]).join('\n'), user: 'النقاش:\n' + prev };
+  const d = TEAM[body.dept]; if (!d) return null;
+  return { system: base.concat([
+    'دابا كيهضر قسم: ' + d.label + '. الأعضاء: ' + d.agents.map(a => a[0] + ' (' + a[1] + ')').join('، ') + '.',
+    prev ? '- هادا شنو قالو الأقسام اللي قبلكم، علقو عليه وكملو عليه:\n' + prev : '- أنتم أول قسم كيهضر.',
+    '- بين 7 و 9 ديال الرسائل، كل عضو كيهضر مرة على الأقل، كل رسالة بين جملة و 3 جمل.',
+    '- رجع غير JSON صحيح: {"messages":[{"agent":"السمية","text":"..."}]}',
+  ]).join('\n'), user: 'بداو النقاش.' };
+}
+function parseJson(text) { const t = String(text || '').replace(/^```(?:json)?|```$/gm, '').trim(); const m = t.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : t); } catch { return null; } }
+
 function parseMessages(text) {
   const t = String(text || '').replace(/^```(?:json)?|```$/gm, '').trim();
   const m = t.match(/\{[\s\S]*\}/);
@@ -239,6 +279,28 @@ module.exports = async (req, res) => {
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = null; } }
   if (!body || typeof body !== 'object') return res.status(400).json({ error: 'bad request' });
+
+  if (body.mode === 'team') {
+    const tp = teamPrompt(body);
+    if (!tp || !String(body.topic || '').trim()) return res.status(400).json({ error: 'topic and dept required' });
+    const contents = [{ role: 'user', parts: [{ text: tp.user }] }];
+    let err = '';
+    for (const model of (groqKey ? GROQ_MODELS : [])) {
+      try {
+        let out;
+        try { out = await callGroq(groqKey, model, tp.system, contents); }
+        catch (e) { const wait = Number((String(e.message).match(/try again in ([\d.]+)s/i) || [])[1]); if (e.status === 429 && wait && wait <= 8) { await sleep(wait * 1000 + 300); out = await callGroq(groqKey, model, tp.system, contents); } else throw e; }
+        const j = parseJson(out);
+        if (body.dept === 'summary' && j && j.summary) return res.status(200).json({ summary: String(j.summary).slice(0, 1500), actions: (Array.isArray(j.actions) ? j.actions : []).slice(0, 10).map(a => ({ owner: cleanStr(a.owner, 30), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10) })), model });
+        if (j && Array.isArray(j.messages) && j.messages.length) {
+          const names = TEAM[body.dept].agents.map(a => a[0]);
+          return res.status(200).json({ messages: j.messages.filter(m => m && m.text).slice(0, 12).map(m => ({ agent: names.includes(String(m.agent).trim()) ? String(m.agent).trim() : names[0], text: String(m.text).slice(0, 600) })), model });
+        }
+        err = 'bad format from ' + model;
+      } catch (e) { err = 'groq: ' + String(e.message || e).slice(0, 200); if (isKeyError(e)) break; }
+    }
+    return res.status(200).json({ messages: [], error: err || 'no AI key' });
+  }
 
   if (body.mode === 'marketing') {
     const mk = marketingPrompt(body);
