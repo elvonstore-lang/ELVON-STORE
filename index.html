@@ -50,7 +50,7 @@
 
     <!-- Tailwind CSS -->
     <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
-    <link rel="stylesheet" href="tw.css?v=20261127d">
+    <link rel="stylesheet" href="tw.css?v=20261128b">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -311,7 +311,7 @@
             .ai-in{animation:aiIn .22s ease-out both}
         @keyframes aiIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
         #detail-buy-btns.stock-out button { opacity: .4; pointer-events: none; }
-        body.sticky-on #floating-btns { bottom: 84px; }
+        @media (max-width: 639px) { body.sticky-on #floating-btns { display: none; } }
         .compat-chip.on { background: #DC0A14; color: #fff; border-color: #DC0A14; }
     </style>
 <style>
@@ -1053,6 +1053,7 @@
 
                     <input type="text" id="customer-address" required placeholder="العنوان التفصيلي / الحي"
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
+                    <div class="flex gap-2"><input type="text" id="cart-promo" maxlength="20" autocomplete="off" dir="ltr" placeholder="عندك كود تخفيض؟" class="flex-1 min-w-0 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#DC0A14]"><button type="button" onclick="applyDiscountCode('cart')" class="shrink-0 px-3 rounded-xl bg-elvon-black border border-zinc-600 text-white text-xs font-black">طبق</button></div><p id="cart-promo-msg" class="hidden text-[11px] font-bold"></p>
                     <label class="flex items-start gap-2 text-[11px] text-zinc-300 font-bold cursor-pointer leading-relaxed"><input type="checkbox" id="customer-optin" class="mt-0.5 w-4 h-4 shrink-0 accent-[#DC0A14]"><span>بغيت توصلني العروض والتخفيضات ديال ELVON ف واتساب (تقدر توقفها ف أي وقت)</span></label>
                     <p class="text-[10px] text-zinc-400 leading-relaxed" data-i18n="topTrustBar">الدفع عند الاستلام (COD) • توصيل مجاني فوق 300 درهم • تأكيد سريع عبر واتساب</p>
                     <button type="submit" data-via="site" class="w-full py-3 rounded-xl bg-[#DC0A14] hover:bg-[#B90810] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95">
@@ -1131,6 +1132,7 @@
                     <input type="text" id="wa-modal-address" required placeholder="الحي، الشارع، رقم المنزل..."
                            class="w-full bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#DC0A14]">
                 </div>
+                <div class="flex gap-2"><input type="text" id="wa-promo" maxlength="20" autocomplete="off" dir="ltr" placeholder="عندك كود تخفيض؟" class="flex-1 min-w-0 bg-elvon-black border border-elvon-border rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#DC0A14]"><button type="button" onclick="applyDiscountCode('wa')" class="shrink-0 px-3 rounded-xl bg-elvon-black border border-zinc-600 text-white text-xs font-black">طبق</button></div><p id="wa-promo-msg" class="hidden text-[11px] font-bold"></p>
                 <label class="flex items-start gap-2 text-[11px] text-zinc-300 font-bold cursor-pointer leading-relaxed"><input type="checkbox" id="wa-modal-optin" class="mt-0.5 w-4 h-4 shrink-0 accent-[#DC0A14]"><span>بغيت توصلني العروض والتخفيضات ديال ELVON ف واتساب (تقدر توقفها ف أي وقت)</span></label>
 
                 <div>
@@ -1154,7 +1156,7 @@
         <div class="flex items-center gap-2">
             <div class="min-w-0 flex-1"><p id="sticky-name" class="text-[11px] font-bold text-zinc-400 truncate"></p><p id="sticky-price" class="text-base font-black text-[#DC0A14]"></p></div>
             <button id="sticky-cart" class="shrink-0 w-11 h-11 rounded-xl bg-elvon-card border border-zinc-600 text-white text-lg" aria-label="إضافة للسلة">🛒</button>
-            <button id="sticky-order" class="shrink-0 px-4 h-11 rounded-xl bg-[#DC0A14] text-white text-sm font-black">اطلب دابا</button>
+            <button id="sticky-order" class="shrink-0 px-5 h-12 rounded-xl bg-[#DC0A14] text-white text-base font-black shadow-lg shadow-red-900/40">اطلب دابا 🛒</button>
         </div>
     </div>
 
@@ -2761,9 +2763,10 @@
             const qty = Math.max(1, parseInt(document.getElementById('wa-modal-qty').value, 10) || 1);
             const city = document.getElementById('wa-modal-city').value || 'طنجة';
             const subtotal = p.price * qty;
-            const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
+            const disc = !waCoinMode && activePromo ? Math.round(subtotal * activePromo.percent / 100) : 0;
+            const shipping = subtotal - disc >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
             const coins = coinsToUse('wa', subtotal);
-            const total = subtotal - coins + shipping;
+            const total = subtotal - disc - coins + shipping;
             const previewEl = document.getElementById('wa-modal-prod-total-preview');
             if (previewEl && waCoinMode) {
                 const need = Math.floor(p.coins) * qty, have = walletCache ? walletCache.available : 0;
@@ -2772,7 +2775,7 @@
             }
             if (previewEl) {
                 const thr = Number(settings.freeShippingThreshold) || 0, gap = thr - subtotal;
-                previewEl.textContent = `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)\n🚚 ${deliveryEta(city)}${shipping > 0 && gap > 0 && gap <= 150 ? `\n💡 زيد ${gap} MAD ف الطلب وتولي التوصيل مجاني` : ''}`;
+                previewEl.textContent = `${disc ? `🎁 ${activePromo.code}: -${disc} MAD • ` : ''}التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}${coins ? ` • العملات: -${coins} MAD` : ''} • المجموع: ${total} MAD (COD)\n🚚 ${deliveryEta(city)}${shipping > 0 && gap > 0 && gap <= 150 ? `\n💡 زيد ${gap} MAD ف الطلب وتولي التوصيل مجاني` : ''}`;
                 previewEl.style.whiteSpace = 'pre-line';
             }
         }
@@ -3310,8 +3313,9 @@
             { const left = stockLeft(p); if (qty > left) { showToast(left <= 0 ? 'سمح لينا، هاد المنتج نفد من المخزون' : `سمح لينا، باقي غير ${left} ف المخزون`); return; } }
 
             const subtotal = p.price * qty;
-            const shipping = subtotal >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
             const coinMode = waCoinMode && Number(p.coins) > 0;
+            const discount = !coinMode && activePromo ? Math.round(subtotal * activePromo.percent / 100) : 0;
+            const shipping = subtotal - discount >= settings.freeShippingThreshold ? 0 : (shippingFeeFor(city));
             if (coinMode) {
                 if (!currentAccount()) { showToast('دخل لحسابك باش تشري بالعملات'); openWalletModal(); return; }
                 const need = Math.floor(p.coins) * qty;
@@ -3319,7 +3323,7 @@
                 if (!walletCache || walletCache.available < need) { showToast(`ما عندكش عملات كافية: خاصك ${need} وعندك ${walletCache ? walletCache.available : 0}`); return; }
             }
             const coinsUsed = coinMode ? Math.floor(p.coins) * qty : 0;
-            const total = coinMode ? shipping : subtotal + shipping;
+            const total = coinMode ? shipping : subtotal - discount + shipping;
             const orderId = newOrderId();
 
             if (typeof p.stock === 'number' && !window.ElvonCloud?.ready) {
@@ -3335,7 +3339,8 @@
                 address,
                 items: [{ id: p.id, name: (variant ? `${p.name} (${variant})` : p.name) + (coinMode ? ' (بالعملات)' : ''), qty, price: coinMode ? 0 : p.price }],
                 ...(coinMode ? { paidWithCoins: true } : {}),
-                discount: 0,
+                discount,
+                ...(discount ? { promoCode: activePromo.code, promoPercent: activePromo.percent, campaign: activePromo.campaign || '' } : {}),
                 shipping,
                 total,
                 notes: notes || '',
@@ -3350,6 +3355,7 @@
             };
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
+            if (discount) { activePromo = null; ['wa', 'cart'].forEach(x => { const i = document.getElementById(x + '-promo'), m = document.getElementById(x + '-promo-msg'); if (i) i.value = ''; if (m) m.classList.add('hidden'); }); }
             newOrder.stockReserved = reserveStock(newOrder);
             pushTracking(newOrder);
             renderStoreProducts();
@@ -3371,6 +3377,7 @@
                     `Prix : ${p.price} MAD`,
                     `Livraison : ${shipping === 0 ? 'Gratuite' : shipping + ' MAD'}`,
                     coinsUsed ? `Payé avec ${coinsUsed} pièces ELVON` : null,
+                    discount ? `Code ${newOrder.promoCode} : -${discount} MAD` : null,
                     `Total (COD) : ${total} MAD`,
                     notes ? `Notes : ${notes}` : null,
                     ``,
@@ -3390,6 +3397,7 @@
                     `السعر: ${p.price} MAD`,
                     `التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}`,
                     coinsUsed ? `الخلاص: ${coinsUsed} عملة ELVON (من الحساب: ${currentAccount() ? currentAccount().name : ''})` : null,
+                    discount ? `كود التخفيض ${newOrder.promoCode}: -${discount} MAD` : null,
                     `المجموع: ${total} MAD`,
                     notes ? `ملاحظات: ${notes}` : null,
                     ``,
@@ -4304,6 +4312,39 @@
         // =====================================================================
         // الكوبونات وحساب الشحن حسب المدينة + إرسال الطلب الكامل لواتساب
         // =====================================================================
+        // ===== أكواد التخفيض ديال الحملات (promos/DC_<الكود>، كيتصاوبو من ELVON Marketing) =====
+        async function applyDiscountCode(pre) {
+            const inp = document.getElementById(pre + '-promo'), msg = document.getElementById(pre + '-promo-msg');
+            const code = String(inp.value || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 20);
+            const say = (t, ok) => { msg.textContent = t; msg.className = 'text-[11px] font-bold ' + (ok ? 'text-emerald-400' : 'text-red-300'); };
+            if (!code) { activePromo = null; msg.classList.add('hidden'); updateCartUI(); refreshWaModalSummary(); return; }
+            if (window.ElvonCloud && !window.ElvonCloud.ready) await window.ElvonCloud.whenReady(15000);
+            const d = window.ElvonCloud?.ready ? await window.ElvonCloud.getPath(['promos', 'DC_' + code]) : null;
+            const pct = Math.floor(Number(d && d.percent) || 0);
+            if (!d || d.type !== 'discount' || !d.active || pct < 1 || pct > 90 || (d.expiresAt && Date.now() > d.expiresAt)) {
+                activePromo = null; say(d && d.expiresAt && Date.now() > d.expiresAt ? 'هاد الكود سالا الوقت ديالو' : 'هاد الكود ماشي صحيح', false);
+            } else {
+                activePromo = { code, percent: pct, campaign: d.campaign || '' };
+                say(`✓ تطبق الكود ${code}: تخفيض ${pct}%`, true);
+            }
+            ['wa', 'cart'].forEach(x => { const i = document.getElementById(x + '-promo'); if (i && x !== pre) i.value = activePromo ? code : ''; });
+            updateCartUI(); refreshWaModalSummary();
+        }
+        // رابط مباشر لمنتج (من رسائل الشكر): #p=<id> ولا #p=<id>&review
+        function openLinkedProduct() {
+            const m = location.hash.match(/^#p=([A-Za-z0-9_-]{2,80})(&review)?$/);
+            if (!m) return;
+            const tryOpen = (n) => {
+                if (products.some(p => p.id === m[1])) {
+                    openProductDetail(m[1]);
+                    if (m[2]) setTimeout(() => { const b = document.getElementById('reviews-box'); if (b) { b.open = true; b.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 600);
+                } else if (n > 0) setTimeout(() => tryOpen(n - 1), 700);
+            };
+            tryOpen(20);
+        }
+        window.addEventListener('hashchange', openLinkedProduct);
+        window.addEventListener('load', () => setTimeout(openLinkedProduct, 300));
+
         function applyPromoCode() {
             const input = document.getElementById('promo-code-input');
             const feedback = document.getElementById('promo-feedback');
@@ -4449,6 +4490,7 @@
                 ...(currentAccount() ? { uid: currentAccount().uid, accountName: currentAccount().name } : {}),
                 coinsEarn: !currentAccount() ? 0 : cart.reduce((sum, it) => sum + Math.floor(Number((products.find(pp => pp.id === it.id) || {}).coinsEarn) || 0) * it.qty, 0),
                 promoCode: activePromo ? activePromo.code : null,
+                ...(activePromo ? { promoPercent: activePromo.percent, campaign: activePromo.campaign || '' } : {}),
                 discount,
                 shipping,
                 total,
@@ -4461,6 +4503,7 @@
 
             orders.unshift(newOrder);
             saveState('elvon_acc_orders_v2', orders);
+            if (discount) { activePromo = null; ['wa', 'cart'].forEach(x => { const i = document.getElementById(x + '-promo'), m = document.getElementById(x + '-promo-msg'); if (i) i.value = ''; if (m) m.classList.add('hidden'); }); }
             newOrder.stockReserved = reserveStock(newOrder);
             pushTracking(newOrder);
 
@@ -4477,7 +4520,7 @@
                 lines,
                 `━━━━━━━━━━━━━━`,
                 `المجموع الفرعي: ${subtotal} MAD`,
-                discount > 0 ? `الخصم (${activePromo.code}): -${discount} MAD` : null,
+                discount > 0 ? `الخصم (${newOrder.promoCode}): -${discount} MAD` : null,
                 `مصاريف التوصيل: ${shipping === 0 ? 'مجاني' : shipping + ' MAD'}`,
                 coins ? `عملات ELVON: -${coins} MAD` : null,
                 `الإجمالي للدفع عند الاستلام (COD): ${total} MAD`
@@ -5205,6 +5248,7 @@
                 if (o.paidWithCoins) { const need = Math.floor(Number(p.coins) || 0) * qty; if (need && Number(o.coinsUsed) < need) w.push(`خاصو ${need} عملة، خلص ${Number(o.coinsUsed) || 0}`); }
                 else if (Math.abs(price - Number(p.price)) > .5) w.push(`${String(p.name).slice(0, 30)}: ${price} MAD والثمن دابا ${p.price} MAD`);
             }
+            if (Number(o.discount) > 0 && (!o.promoCode || !o.promoPercent || Number(o.discount) > Math.round(sum * Number(o.promoPercent) / 100) + 1)) w.push(`تخفيض ${o.discount} MAD: تأكد من الكود ${o.promoCode || '(بلا كود)'}`);
             const exp = sum - (Number(o.discount) || 0) + (Number(o.shipping) || 0);
             if (items.length && !o.paidWithCoins && Math.abs(exp - Number(o.total)) > .5) w.push(`المجموع خاصو يكون ${exp} MAD`);
             if (o.paidWithCoins && Number(o.total) !== (Number(o.shipping) || 0)) w.push(`التوصيل: ${o.total} MAD`);
@@ -5275,7 +5319,7 @@
                             <td class="py-3 px-4 font-black text-[#DC0A14]">${esc(o.id)}<span class="block text-[10px] text-zinc-500">${esc(o.date || '')}</span>${o.channel ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black ${o.channel === 'الموقع' ? 'bg-[#DC0A14]/20 text-[#ff6b72]' : 'bg-[#25D366]/20 text-[#25D366]'}">${esc(o.channel)}</span>` : ''}</td>
                             <td class="py-3 px-4">
                                 <p class="font-bold text-white">${esc(o.customer)}</p>
-                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${o.marketingOptIn ? '<p class="text-[11px] text-sky-300 font-bold">📣 بغا يوصلوه العروض</p>' : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
+                                <p class="text-[11px] text-zinc-400">${esc(o.city)} • ${esc(o.address || '')} • <span dir="ltr">${esc(o.phone)}</span></p>${o.notes ? `<p class="text-[11px] text-amber-300">ملاحظة: ${esc(o.notes)}</p>` : ''}${o.accountName ? `<p class="text-[11px] text-amber-200">حساب ELVON: ${esc(o.accountName)}</p>` : ''}${o.marketingOptIn ? '<p class="text-[11px] text-sky-300 font-bold">📣 بغا يوصلوه العروض</p>' : ''}${o.promoCode ? `<p class="text-[11px] text-emerald-300 font-bold">🎁 كود ${esc(o.promoCode)} (-${esc(o.discount)} MAD)</p>` : ''}${(o.coinsUsed || o.coinsEarn) ? `<p class="text-[11px] text-amber-300 font-bold">${o.paidWithCoins ? '🪙 متجر العملات: ' : 'عملات: '}${o.coinsUsed ? `خلص بـ ${esc(o.coinsUsed)} عملة ${o.coinsSpentApplied ? '✓' : '(كتنقص ملي يتسلم)'}` : ''}${o.coinsUsed && o.coinsEarn ? ' • ' : ''}${o.coinsEarn ? `غادي يربح ${esc(o.coinsEarn)} ${o.coinsEarnedApplied ? '✓' : '(ملي يتسلم)'}` : ''}</p>` : ''}
                             </td>
                             <td class="py-3 px-4 text-xs text-zinc-300 max-w-xs">${esc(itemsText)}</td>
                             <td class="py-3 px-4 font-black text-white">${esc(o.total)} MAD${warn.length ? `<p class="mt-1 text-[10px] font-black text-red-300 bg-red-500/15 border border-red-500/40 rounded-lg px-1.5 py-1 max-w-[180px]">⚠️ تأكد من الثمن:<br>${warn.map(esc).join('<br>')}</p>` : ''}</td>
@@ -5371,7 +5415,9 @@
             await applyOrderCoins(list[idx], newStatus);
             await applyOrderStock(list[idx], newStatus);
             if (window.ElvonCloud?.ready && adminOrders) {
-                window.ElvonCloud.saveItem('orders', list[idx].id, { status: newStatus });
+                const patch = { status: newStatus };
+                if (newStatus === 'تم التسليم' && !list[idx].deliveredAt) patch.deliveredAt = list[idx].deliveredAt = Date.now();
+                window.ElvonCloud.saveItem('orders', list[idx].id, patch);
                 pushTracking(list[idx], true);
             } else {
                 saveState('elvon_acc_orders_v2', orders);
@@ -5686,7 +5732,7 @@
             document.getElementById('sticky-cart').onclick = () => addToCart(p.id, Math.max(1, currentDetailQty));
             document.getElementById('sticky-order').onclick = () => openWhatsappOrderModal(p.id, Math.max(1, currentDetailQty), false, 'site');
             stickyObs = new IntersectionObserver(([e]) => {
-                const show = !e.isIntersecting && e.boundingClientRect.top < 0 && stockLeft(p) > 0 && !document.getElementById('product-view').classList.contains('hidden');
+                const show = !e.isIntersecting && stockLeft(p) > 0 && !document.getElementById('product-view').classList.contains('hidden');
                 bar.classList.toggle('hidden', !show); document.body.classList.toggle('sticky-on', show);
             });
             stickyObs.observe(target);
