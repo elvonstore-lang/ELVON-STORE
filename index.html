@@ -50,7 +50,7 @@
 
     <!-- Tailwind CSS -->
     <!-- tw.css: Tailwind مبني مسبقا (أسرع بزاف من cdn.tailwindcss.com). ملي تزيد classes جداد عاود بنيه: npx tailwindcss@3.4.17 -c tailwind.config.js -o tw.css --minify -->
-    <link rel="stylesheet" href="tw.css?v=20261128">
+    <link rel="stylesheet" href="tw.css?v=20261128b">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
@@ -311,7 +311,7 @@
             .ai-in{animation:aiIn .22s ease-out both}
         @keyframes aiIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
         #detail-buy-btns.stock-out button { opacity: .4; pointer-events: none; }
-        body.sticky-on #floating-btns { bottom: 84px; }
+        @media (max-width: 639px) { body.sticky-on #floating-btns { display: none; } }
         .compat-chip.on { background: #DC0A14; color: #fff; border-color: #DC0A14; }
     </style>
 <style>
@@ -1156,7 +1156,7 @@
         <div class="flex items-center gap-2">
             <div class="min-w-0 flex-1"><p id="sticky-name" class="text-[11px] font-bold text-zinc-400 truncate"></p><p id="sticky-price" class="text-base font-black text-[#DC0A14]"></p></div>
             <button id="sticky-cart" class="shrink-0 w-11 h-11 rounded-xl bg-elvon-card border border-zinc-600 text-white text-lg" aria-label="إضافة للسلة">🛒</button>
-            <button id="sticky-order" class="shrink-0 px-4 h-11 rounded-xl bg-[#DC0A14] text-white text-sm font-black">اطلب دابا</button>
+            <button id="sticky-order" class="shrink-0 px-5 h-12 rounded-xl bg-[#DC0A14] text-white text-base font-black shadow-lg shadow-red-900/40">اطلب دابا 🛒</button>
         </div>
     </div>
 
@@ -5732,7 +5732,7 @@
             document.getElementById('sticky-cart').onclick = () => addToCart(p.id, Math.max(1, currentDetailQty));
             document.getElementById('sticky-order').onclick = () => openWhatsappOrderModal(p.id, Math.max(1, currentDetailQty), false, 'site');
             stickyObs = new IntersectionObserver(([e]) => {
-                const show = !e.isIntersecting && e.boundingClientRect.top < 0 && stockLeft(p) > 0 && !document.getElementById('product-view').classList.contains('hidden');
+                const show = !e.isIntersecting && stockLeft(p) > 0 && !document.getElementById('product-view').classList.contains('hidden');
                 bar.classList.toggle('hidden', !show); document.body.classList.toggle('sticky-on', show);
             });
             stickyObs.observe(target);
