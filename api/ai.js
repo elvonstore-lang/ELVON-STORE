@@ -196,6 +196,8 @@ function teamPrompt(body) {
     'أنتم فريق ELVON STORE (متجر إكسسوارات الهواتف ف طنجة، المغرب، الدفع عند الاستلام، موقع + واتساب + عملات ELVON + عجلة الحظ + ELVON AI).',
     'المعطيات الحقيقية ديال المتجر دابا: ' + ctx,
     'الموضوع اللي طرحو المدير (مول المتجر): ' + topic,
+    '- أعضاء الشركة (20 شخص، ما كاين حتى واحد آخر): ' + MANAGER[0] + ' (المدير العام)، ' + Object.values(TEAM).map(d => d.label + ': ' + d.agents.map(a => a[0]).join('، ')).join(' • ') + '. أي مهمة ولا رسالة خاصها تكون باسم واحد منهم.',
+    '- اكتبو ديما بالحروف العربية (ماشي بالحروف اللاتينية)، غير أسماء المنتجات والماركات تقدر تبقى بالفرنسية ولا الإنجليزية.',
     '- هضرو بالدارجة المغربية بالحروف العربية، بحال فريق حقيقي ف اجتماع: كل واحد كيهضر من الاختصاص ديالو، كيجاوب على الآخرين بالسمية، كيتفق ولا كيخالف ويعطي السبب.',
     '- اعتمدو على المعطيات الحقيقية. ما تخترعوش أرقام. إلا شي معلومة ناقصة قولوها.',
     '- اقتراحات عملية وممكنة لمتجر صغير بميزانية صغيرة، فيها أرقام وأهداف قابلة للقياس. ما تقولوش "درنا" شي حاجة: أنتم كتقترحو، ومول الشركة هو اللي كيوافق وكينفذ.',
@@ -224,6 +226,13 @@ function teamPrompt(body) {
     '- بين 7 و 9 ديال الرسائل، كل عضو كيهضر مرة على الأقل، كل رسالة بين جملة و 3 جمل.',
     '- رجع غير JSON صحيح: {"messages":[{"agent":"السمية","text":"..."}]}',
   ]).join('\n'), user: 'بداو النقاش.' };
+}
+const ALL_NAMES = [MANAGER[0]].concat(...Object.values(TEAM).map(d => d.agents.map(a => a[0])));
+function fixOwner(owner, dept) {
+  const o = cleanStr(owner, 30).trim();
+  if (ALL_NAMES.includes(o)) return o;
+  const d = Object.values(TEAM).find(x => String(dept || '').includes(x.label.split(' ')[0]));
+  return d ? d.agents[0][0] : MANAGER[0];
 }
 function parseJson(text) { const t = String(text || '').replace(/^```(?:json)?|```$/gm, '').trim(); const m = t.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : t); } catch { return null; } }
 
@@ -308,7 +317,7 @@ module.exports = async (req, res) => {
         if (body.dept === 'report' && j && j.report) return res.status(200).json({ report: String(j.report).slice(0, 1800),
           kpis: (Array.isArray(j.kpis) ? j.kpis : []).slice(0, 6).map(k => ({ name: cleanStr(k.name, 60), value: cleanStr(k.value, 40), target: cleanStr(k.target, 40) })),
           approvals: (Array.isArray(j.approvals) ? j.approvals : []).slice(0, 5).map(k => ({ title: cleanStr(k.title, 200), why: cleanStr(k.why, 300), cost: cleanStr(k.cost, 40) })),
-          tasks: (Array.isArray(j.tasks) ? j.tasks : []).slice(0, 10).map(a => ({ owner: cleanStr(a.owner, 30), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10), deadline: cleanStr(a.deadline, 40) })), model });
+          tasks: (Array.isArray(j.tasks) ? j.tasks : []).slice(0, 10).map(a => ({ owner: fixOwner(a.owner, a.dept), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10), deadline: cleanStr(a.deadline, 40) })), model });
         if (body.dept === 'summary' && j && j.summary) return res.status(200).json({ summary: String(j.summary).slice(0, 1500), actions: (Array.isArray(j.actions) ? j.actions : []).slice(0, 10).map(a => ({ owner: cleanStr(a.owner, 30), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10) })), model });
         if (j && Array.isArray(j.messages) && j.messages.length) {
           const names = TEAM[body.dept].agents.map(a => a[0]);
