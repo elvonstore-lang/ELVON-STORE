@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tw.css?v=20261128c">
+<link rel="stylesheet" href="tw.css?v=20261128d">
 <style>
   body { font-family: 'Cairo', sans-serif; background: #050505; color: #fff; }
   .card { background: #131316; border: 1px solid #242429; border-radius: 1.25rem; }
@@ -111,25 +111,21 @@
       <div id="msgs" class="space-y-3"></div>
     </section>
 
-    <!-- فريق ELVON AI -->
+    <!-- شركة ELVON AI -->
     <section id="t-team" class="hidden space-y-4">
       <div class="card p-4 space-y-3">
-        <p class="font-black">🤖 فريق ELVON AI: 20 خبير كيتناقشو ويعطيوك خطة</p>
-        <p class="text-[11px] text-zinc-400">طرح سؤال ولا مشكل، والأقسام كيتناقشو وحدة من بعد وحدة (كيقراو المعطيات الحقيقية ديال المتجر)، ومن بعد كيعطيوك خلاصة وخطة عمل. هوما كيقترحو، ونتا اللي كتقرر.</p>
-        <div id="team-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
-        <textarea id="team-topic" rows="3" class="inp" placeholder="مثال: كيفاش نزيدو المبيعات هاد الأسبوع بلا ما نخسرو بزاف؟"></textarea>
-        <div class="flex flex-wrap gap-2 text-[11px]">
-          <button onclick="teamPreset('كيفاش نزيدو المبيعات هاد الأسبوع بميزانية صغيرة؟')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">📈 نزيدو المبيعات</button>
-          <button onclick="teamPreset('راجعو الموقع والطلبات ديال هاد الأسبوع: شنو المشاكل وشنو خاصنا نصلحو؟')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">🔍 مراجعة الأسبوع</button>
-          <button onclick="teamPreset('زبون اشتكى بلي الطلب ديالو تعطل بزاف وبغا يلغيه. كيفاش نتعاملو معاه ونمنعو هادشي يتعاود؟')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">😠 شكاية زبون</button>
-          <button onclick="teamPreset('شنو هي الخدمة الجديدة اللي نزيدو ف ELVON STORE هاد الشهر؟')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">💡 خدمة جديدة</button>
-          <button onclick="teamPreset('واش الموقع محمي مزيان؟ شنو هي أكبر المخاطر دابا وكيفاش نحميو الزبناء والطلبات؟')" class="px-3 py-1.5 rounded-full bg-black border border-[#242429] font-bold">🛡️ الأمان</button>
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="font-black">🏢 شركة ELVON AI</p><p class="text-[11px] text-zinc-400">20 شخص كيخدمو مع بعضياتهم ويتناقشو بوحدهم. المدير عثمان كيحل الاجتماع، كيختار المواضيع من المعطيات ديال المتجر، وكيصيفط ليك تقرير فيه القرارات اللي خاصها الموافقة ديالك.</p></div>
         </div>
-        <div class="flex flex-wrap gap-3 text-xs font-bold text-zinc-300" id="team-depts"></div>
-        <button id="team-btn" onclick="startMeeting()" class="btn w-full bg-gradient-to-l from-[#DC0A14] to-[#ff5a60] text-base py-3">🎙️ بدا الاجتماع</button>
+        <div id="org" class="space-y-2"></div>
+        <label class="flex items-center gap-2 text-xs font-bold text-zinc-300"><input id="auto-daily" type="checkbox" class="w-4 h-4 accent-[#DC0A14]" onchange="setAutoDaily(this.checked)"> 🟢 اجتماع يومي أوتوماتيكي (كيبدا بوحدو ملي كتحل هاد الصفحة، مرة ف النهار)</label>
+        <details><summary class="cursor-pointer text-xs font-bold text-zinc-400">✍️ عندك موضوع خاص بغيتي يدخل ف الاجتماع؟ (اختياري)</summary>
+          <textarea id="team-topic" rows="2" class="inp mt-2" placeholder="مثال: زبون اشتكى بالتأخير ف التوصيل"></textarea></details>
+        <button id="team-btn" onclick="runMeeting(false)" class="btn w-full bg-gradient-to-l from-[#DC0A14] to-[#ff5a60] text-base py-3">🎙️ اجتماع دابا</button>
+        <p id="team-status" class="text-[11px] text-zinc-500 text-center"></p>
       </div>
-      <div id="team-chat" class="space-y-2"></div>
-      <div id="team-summary"></div>
+      <div id="team-report"></div>
+      <details id="team-live-box" class="card p-3"><summary class="cursor-pointer text-sm font-black">📝 المحضر الكامل ديال الاجتماع</summary><div id="team-chat" class="space-y-2 mt-3"></div></details>
       <div id="team-history" class="space-y-2"></div>
     </section>
 
@@ -400,86 +396,118 @@ window.renderHistory = () => {
 };
 window.stopCode = async (id) => { const cm = campaigns.find(x => x._id === id); if (!cm || !confirm(`نوقفو الكود ${cm.code}؟`)) return; await setDoc(doc(db, 'promos', 'DC_' + cm.code), { active: false }, { merge: true }); await setDoc(doc(db, 'orders', id), { stopped: true }, { merge: true }); cm.stopped = true; renderHistory(); toast('تحبس الكود'); };
 
-// ===== فريق ELVON AI =====
+// ===== شركة ELVON AI =====
+const MANAGER = { name: 'عثمان', role: 'المدير العام', color: '#DC0A14' };
 const DEPTS = [
   { k: 'marketing', label: '📣 التسويق', color: '#f59e0b', agents: [['سلمى', 'مديرة التسويق'], ['يوسف', 'إنستغرام وتيكتوك'], ['نادية', 'الإشهار الممول'], ['حمزة', 'العروض والأثمنة'], ['ليلى', 'تحليل الزبناء']] },
   { k: 'security', label: '🛡️ حماية الموقع', color: '#38bdf8', agents: [['أمين', 'رئيس الأمن'], ['سارة', 'الطلبات المزورة'], ['كريم', 'الحسابات والعملات'], ['هدى', 'الخصوصية والقانون'], ['عمر', 'Firebase والنسخ']] },
-  { k: 'dev', label: '🛠️ التطوير والخدمات', color: '#a78bfa', agents: [['إلياس', 'مدير المنتج'], ['مريم', 'تجربة المستخدم'], ['رضا', 'السرعة وGoogle'], ['خديجة', 'ELVON AI'], ['أنس', 'خدمات جديدة']] },
+  { k: 'dev', label: '🛠️ التطوير والخدمات', color: '#a78bfa', agents: [['مريم', 'تجربة المستخدم والمنتج'], ['رضا', 'السرعة وGoogle'], ['خديجة', 'ELVON AI'], ['أنس', 'خدمات جديدة']] },
   { k: 'aftersales', label: '🤝 ما بعد البيع', color: '#34d399', agents: [['فاطمة', 'خدمة الزبناء'], ['بلال', 'التوصيل والتتبع'], ['زينب', 'الإرجاع والضمان'], ['سفيان', 'التقييمات والشكايات'], ['هبة', 'الوفاء والعملات']] },
 ];
-const agentOf = (name) => { for (const d of DEPTS) { const a = d.agents.find(x => x[0] === name); if (a) return { name, role: a[1], dept: d }; } return { name, role: '', dept: DEPTS[0] }; };
+const agentOf = (name) => { if (name === MANAGER.name) return { name, role: MANAGER.role, dept: { color: MANAGER.color } }; for (const d of DEPTS) { const a = d.agents.find(x => x[0] === name); if (a) return { name, role: a[1], dept: d }; } return { name, role: '', dept: DEPTS[0] }; };
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+window.setAutoDaily = (v) => lsSet('elvon_auto_meeting', !!v);
+let meetingRunning = false;
 window.renderTeam = () => {
-  $('team-grid').innerHTML = DEPTS.map(d => `<div class="rounded-xl bg-black border border-[#242429] p-2 space-y-1"><p class="text-[11px] font-black" style="color:${d.color}">${d.label}</p>${d.agents.map(a => `<p class="text-[10px] text-zinc-300 truncate"><b>${a[0]}</b> • ${a[1]}</p>`).join('')}</div>`).join('');
-  if (!$('team-depts').innerHTML) $('team-depts').innerHTML = DEPTS.map(d => `<label class="flex items-center gap-1.5"><input type="checkbox" checked data-dept="${d.k}" class="w-4 h-4 accent-[#DC0A14]">${d.label}</label>`).join('');
+  $('org').innerHTML = `<div class="rounded-xl p-2.5 text-center border" style="border-color:${MANAGER.color};background:rgba(220,10,20,.08)"><p class="text-sm font-black">👔 ${MANAGER.name} • ${MANAGER.role}</p><p class="text-[10px] text-zinc-400">كيرفع ليك التقارير</p></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${DEPTS.map(d => `<div class="rounded-xl bg-black border border-[#242429] p-2 space-y-1"><p class="text-[11px] font-black" style="color:${d.color}">${d.label}</p>${d.agents.map(a => `<p class="text-[10px] text-zinc-300 truncate"><b>${a[0]}</b> • ${a[1]}</p>`).join('')}</div>`).join('')}</div>`;
+  $('auto-daily').checked = lsGet('elvon_auto_meeting', true);
+  const last = meetings[0];
+  $('team-status').textContent = last ? `آخر اجتماع: ${new Date(last.createdAt).toLocaleString('ar-MA', { dateStyle: 'short', timeStyle: 'short' })}` : 'مازال ما كان حتى اجتماع';
+  if (last && last.report && !meetingRunning) { $('team-report').innerHTML = reportHtml(last, 0); $('team-chat').innerHTML = (last.messages || []).map(bubble).join(''); }
+  if (!meetingRunning && $('auto-daily').checked && (!last || Date.now() - (last.createdAt || 0) > 20 * 3600e3) && customers !== undefined) setTimeout(() => runMeeting(true), 1500);
 };
-window.teamPreset = (t) => { $('team-topic').value = t; };
 function storeContext() {
-  const now = Date.now(), last30 = allOrders.filter(o => now - (o.createdAt || 0) < 30 * DAY && !/تجربة/.test(o.customer || ''));
+  const now = Date.now(), real = allOrders.filter(o => !/تجربة/.test(o.customer || '')), last30 = real.filter(o => now - (o.createdAt || 0) < 30 * DAY), last7 = real.filter(o => now - (o.createdAt || 0) < 7 * DAY);
   const by = (st) => last30.filter(o => o.status === st).length;
   const sold = {}; last30.forEach(o => (o.items || []).forEach(i => { sold[i.name] = (sold[i.name] || 0) + (Number(i.qty) || 1); }));
   const top = Object.entries(sold).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, q]) => `${String(n).slice(0, 40)} (${q})`).join('، ');
-  const out = products.filter(p => Number(p.stock) === 0).length, low = products.filter(p => Number(p.stock) > 0 && Number(p.stock) <= 3).length;
-  const cats = {}; products.forEach(p => { cats[CAT[p.category] || p.category || 'أخرى'] = (cats[CAT[p.category] || p.category || 'أخرى'] || 0) + 1; });
-  const revenue = last30.filter(o => o.status !== 'ملغي').reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const out = products.filter(p => Number(p.stock) === 0).map(p => String(p.name).slice(0, 30)), low = products.filter(p => Number(p.stock) > 0 && Number(p.stock) <= 3).length;
+  const cats = {}; products.forEach(p => { const c = CAT[p.category] || p.category || 'أخرى'; cats[c] = (cats[c] || 0) + 1; });
+  const rev = (l) => l.filter(o => o.status !== 'ملغي').reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const stale = real.filter(o => o.status === 'جديد' && now - (o.createdAt || 0) > 2 * DAY).length;
+  const cities = {}; last30.forEach(o => { cities[o.city || '؟'] = (cities[o.city || '؟'] || 0) + 1; });
   return [
-    `المنتجات: ${products.length} (${Object.entries(cats).map(([k, v]) => k + ' ' + v).join('، ')}). نفد المخزون: ${out}. باقي 3 ولا أقل: ${low}.`,
-    `الطلبات ف آخر 30 يوم (بلا التجارب): ${last30.length} • جديد ${by('جديد')} • قيد التجهيز ${by('قيد التجهيز')} • تم الشحن ${by('تم الشحن')} • تم التسليم ${by('تم التسليم')} • ملغي ${by('ملغي')}. المداخيل: ${revenue} MAD.`,
-    `من الموقع: ${last30.filter(o => o.channel === 'الموقع').length}، من واتساب: ${last30.filter(o => o.channel !== 'الموقع').length}. استعملو كود تخفيض: ${last30.filter(o => o.promoCode).length}.`,
+    `التاريخ: ${new Date().toLocaleDateString('ar-MA', { weekday: 'long', day: 'numeric', month: 'long' })}.`,
+    `المنتجات: ${products.length} (${Object.entries(cats).map(([k, v]) => k + ' ' + v).join('، ')}). نفد المخزون: ${out.length}${out.length ? ' (' + out.slice(0, 4).join('، ') + ')' : ''}. باقي 3 ولا أقل: ${low}.`,
+    `آخر 7 أيام: ${last7.length} طلب، ${rev(last7)} MAD. آخر 30 يوم: ${last30.length} طلب • جديد ${by('جديد')} • قيد التجهيز ${by('قيد التجهيز')} • تم الشحن ${by('تم الشحن')} • تم التسليم ${by('تم التسليم')} • ملغي ${by('ملغي')} • المداخيل ${rev(last30)} MAD.`,
+    `طلبات "جديد" فاتو عليهم أكثر من يومين بلا تأكيد: ${stale}. المدن: ${Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, n]) => c + ' ' + n).join('، ') || '-'}.`,
+    `من الموقع: ${last30.filter(o => o.channel === 'الموقع').length}، من واتساب: ${last30.filter(o => o.channel !== 'الموقع').length}. بكود تخفيض: ${last30.filter(o => o.promoCode).length}.`,
     `الأكثر مبيعا: ${top || 'مازال ما كاين'}.`,
-    `الزبناء اللي تسلمو: ${customers.length}، وافقو على العروض: ${customers.filter(c => c.optIn && !c.optOut).length}. الحملات: ${campaigns.length}.`,
-    `التوصيل: طنجة نهار، المدن الأخرى 2-4 أيام. الدفع عند الاستلام. الاستبدال 48 ساعة.`,
+    `الزبناء اللي تسلمو: ${customers.length}، وافقو على العروض: ${customers.filter(c => c.optIn && !c.optOut).length}. الحملات: ${campaigns.length}${campaigns[0] ? ' (آخرها: ' + String(campaigns[0].offer || '').slice(0, 60) + ')' : ''}.`,
+    `الخدمات: موقع + طلب ف واتساب، الدفع عند الاستلام، التوصيل طنجة نهار والمدن 2-4 أيام، استبدال 48 ساعة، عملات ELVON + عجلة الحظ، ELVON AI، ورشة الإصلاح. الإطلاق الرسمي كان 28/11/2026.`,
   ].join('\n');
+}
+function memoryText() {
+  return meetings.slice(0, 3).map(m => {
+    const r = m.report || {}, ans = m.answers || {}, done = m.done || {};
+    return `${fmtDate(m.createdAt)}: ` + (r.approvals || []).map((a, i) => `[${ans[i] === 'yes' ? 'وافق' : ans[i] === 'no' ? 'رفض' : 'ما جاوبش'}] ${a.title}`).join(' | ') + ' || المهام: ' + (r.tasks || []).map((t, i) => `${t.owner}: ${t.task} (${done[i] ? 'تدارت' : 'مازال'})`).join(' | ');
+  }).join('\n').slice(0, 1500);
 }
 function bubble(m) {
   const a = agentOf(m.agent);
-  return `<div class="flex gap-2 items-start"><div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-black" style="background:${a.dept.color}">${esc(a.name.slice(0, 1))}</div>
-    <div class="card px-3 py-2 flex-1"><p class="text-[11px] font-black" style="color:${a.dept.color}">${esc(a.name)} <span class="text-zinc-500 font-bold">• ${esc(a.role)}</span></p><p class="text-[13px] leading-relaxed mt-0.5">${esc(m.text)}</p></div></div>`;
+  return `<div class="flex gap-2 items-start"><div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-black ${a.name === MANAGER.name ? 'text-white' : 'text-black'}" style="background:${a.dept.color}">${esc(a.name.slice(0, 1))}</div>
+    <div class="card px-3 py-2 flex-1"><p class="text-[11px] font-black" style="color:${a.dept.color}">${esc(a.name)} <span class="text-zinc-500 font-bold">• ${esc(a.role)}</span></p><p class="text-[13px] leading-relaxed mt-0.5 whitespace-pre-line">${esc(m.text)}</p></div></div>`;
 }
-function summaryHtml(sm) {
-  if (!sm) return '';
+function reportHtml(m, idx) {
+  const r = m.report; if (!r) return '';
+  const ans = m.answers || {}, done = m.done || {};
   const pc = (p) => /عالية/.test(p) ? 'bg-red-500/20 text-red-300' : /متوسطة/.test(p) ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-700/40 text-zinc-300';
-  return `<div class="card p-4 space-y-3 border-[#DC0A14]"><p class="font-black">📋 الخلاصة والخطة</p><p class="text-[13px] leading-relaxed text-zinc-200">${esc(sm.summary)}</p>
-    ${(sm.actions || []).map((a, i) => `<div class="flex items-start gap-2 rounded-xl bg-black p-2.5"><span class="text-xs font-black text-zinc-500">${i + 1}</span><div class="flex-1"><p class="text-[13px] font-bold">${esc(a.task)}</p><p class="text-[10px] text-zinc-400">${esc(a.owner)} • ${esc(a.dept)}</p></div><span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${pc(a.priority)}">${esc(a.priority)}</span></div>`).join('')}</div>`;
+  return `<div class="card p-4 space-y-3" style="border-color:${MANAGER.color}">
+    <div class="flex items-center gap-2"><div class="w-10 h-10 rounded-full bg-[#DC0A14] flex items-center justify-center font-black">ع</div><div><p class="font-black">📨 تقرير المدير العام عثمان</p><p class="text-[10px] text-zinc-400">${new Date(m.createdAt).toLocaleString('ar-MA', { dateStyle: 'medium', timeStyle: 'short' })}${m.auto ? ' • اجتماع أوتوماتيكي' : ''}</p></div></div>
+    <p class="text-[13px] leading-relaxed text-zinc-100 whitespace-pre-line">${esc(r.report)}</p>
+    ${(r.kpis || []).length ? `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${r.kpis.map(k => `<div class="rounded-xl bg-black p-2"><p class="text-[10px] text-zinc-400">${esc(k.name)}</p><p class="text-sm font-black">${esc(k.value)} <span class="text-[10px] text-emerald-400 font-bold">← ${esc(k.target)}</span></p></div>`).join('')}</div>` : ''}
+    ${(r.approvals || []).length ? `<p class="text-xs font-black text-amber-300">🖊️ قرارات خاصها الموافقة ديالك</p>${r.approvals.map((a, i) => `<div class="rounded-xl bg-black p-2.5 space-y-1.5"><p class="text-[13px] font-bold">${esc(a.title)}</p><p class="text-[11px] text-zinc-400">${esc(a.why)}${a.cost && a.cost !== '0' ? ' • التكلفة: ' + esc(a.cost) : ''}</p>
+      ${ans[i] ? `<p class="text-[11px] font-black ${ans[i] === 'yes' ? 'text-emerald-400' : 'text-red-300'}">${ans[i] === 'yes' ? '✅ وافقتي' : '❌ رفضتي'}</p>` : `<div class="flex gap-2"><button onclick="answer(${idx},${i},'yes')" class="btn bg-emerald-600 text-[11px] py-1.5">✅ موافق</button><button onclick="answer(${idx},${i},'no')" class="btn bg-black border border-[#242429] text-[11px] py-1.5">❌ لا</button></div>`}</div>`).join('')}` : ''}
+    ${(r.tasks || []).length ? `<p class="text-xs font-black">📋 المهام</p>${r.tasks.map((t, i) => `<label class="flex items-start gap-2 rounded-xl bg-black p-2.5 cursor-pointer"><input type="checkbox" ${done[i] ? 'checked' : ''} onchange="markDone(${idx},${i},this.checked)" class="mt-1 w-4 h-4 accent-[#DC0A14]"><span class="flex-1"><span class="block text-[13px] font-bold ${done[i] ? 'line-through text-zinc-500' : ''}">${esc(t.task)}</span><span class="block text-[10px] text-zinc-400">${esc(t.owner)} • ${esc(t.dept)}${t.deadline ? ' • ' + esc(t.deadline) : ''}</span></span><span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${pc(t.priority)}">${esc(t.priority)}</span></label>`).join('')}` : ''}
+  </div>`;
 }
+window.answer = async (idx, i, v) => { const m = meetings[idx]; m.answers = { ...(m.answers || {}), [i]: v }; await setDoc(doc(db, 'orders', m._id), { answers: m.answers }, { merge: true }); refreshReports(); toast(v === 'yes' ? 'تسجلات الموافقة ✅ الفريق غادي يتابعها ف الاجتماع الجاي' : 'تسجل الرفض'); };
+window.markDone = async (idx, i, v) => { const m = meetings[idx]; m.done = { ...(m.done || {}), [i]: v }; await setDoc(doc(db, 'orders', m._id), { done: m.done }, { merge: true }); refreshReports(); };
+function refreshReports() { if (meetings[0]) $('team-report').innerHTML = reportHtml(meetings[0], 0); renderMeetings(); }
 async function teamCall(body) {
-  for (let k = 0; k < 2; k++) {
-    try { const r = await fetch(AI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await r.json(); if ((d.messages && d.messages.length) || d.summary) return d; } catch (e) {}
-    await new Promise(r => setTimeout(r, 4000));
+  for (let k = 0; k < 3; k++) {
+    try { const r = await fetch(AI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await r.json(); if ((d.messages && d.messages.length) || d.opening || d.report || d.summary) return d; } catch (e) {}
+    await new Promise(r => setTimeout(r, 5000 + k * 5000));
   }
   return null;
 }
-window.startMeeting = async () => {
-  const topic = $('team-topic').value.trim();
-  if (!topic) return toast('كتب الموضوع ديال الاجتماع');
-  const depts = [...document.querySelectorAll('[data-dept]')].filter(i => i.checked).map(i => i.dataset.dept);
-  if (!depts.length) return toast('ختار قسم واحد على الأقل');
+window.runMeeting = async (auto) => {
+  if (meetingRunning) return; meetingRunning = true;
   const btn = $('team-btn'); btn.disabled = true;
-  const context = storeContext(), all = [];
-  $('team-chat').innerHTML = `<div class="card p-3"><p class="text-xs text-zinc-400">🎙️ الموضوع:</p><p class="font-bold">${esc(topic)}</p></div>`; $('team-summary').innerHTML = '';
-  const transcript = () => all.map(m => m.agent + ': ' + m.text).join('\n').slice(-2200);
-  for (const k of depts) {
-    const d = DEPTS.find(x => x.k === k);
+  const extra = $('team-topic').value.trim(), context = storeContext(), memory = memoryText(), all = [];
+  $('team-report').innerHTML = ''; $('team-chat').innerHTML = ''; $('team-live-box').open = true;
+  const say = (m) => { all.push(m); $('team-chat').insertAdjacentHTML('beforeend', bubble(m)); };
+  const transcript = () => all.map(m => m.agent + ': ' + m.text).join('\n').slice(-2600);
+  btn.textContent = '👔 عثمان كيحل الاجتماع...';
+  const ag = await teamCall({ mode: 'team', dept: 'agenda', topic: extra || 'الاجتماع اليومي: المدير كيختار المواضيع', context, memory });
+  if (!ag) { meetingRunning = false; btn.disabled = false; btn.textContent = '🎙️ اجتماع دابا'; $('team-chat').innerHTML = '<p class="text-xs text-red-300">ما قدرش الفريق يتجمع دابا (الحد ديال الذكاء الاصطناعي المجاني). عاود من بعد شوية.</p>'; return; }
+  const topics = (ag.topics || []).concat(extra ? ['موضوع من مول الشركة: ' + extra] : []);
+  say({ agent: MANAGER.name, text: ag.opening + '\n\nجدول الأعمال:\n' + topics.map((t, i) => `${i + 1}) ${t}`).join('\n') });
+  const topic = topics.join(' • ');
+  for (const d of DEPTS) {
     btn.textContent = `🎙️ كيهضر قسم ${d.label}...`;
     $('team-chat').insertAdjacentHTML('beforeend', `<p id="typing" class="text-xs text-zinc-500 px-2">${d.label} كيكتبو...</p>`);
-    const r = await teamCall({ mode: 'team', dept: k, topic, context, transcript: transcript() });
+    const r = await teamCall({ mode: 'team', dept: d.k, topic, context, memory, transcript: transcript() });
     $('typing')?.remove();
-    if (!r) { $('team-chat').insertAdjacentHTML('beforeend', `<p class="text-xs text-red-300 px-2">${d.label}: ما قدروش يجاوبو دابا (الحد ديال الذكاء الاصطناعي المجاني). عاود من بعد دقيقة.</p>`); continue; }
-    for (const m of r.messages) { all.push(m); $('team-chat').insertAdjacentHTML('beforeend', bubble(m)); await new Promise(x => setTimeout(x, 350)); }
+    if (!r) { $('team-chat').insertAdjacentHTML('beforeend', `<p class="text-xs text-red-300 px-2">${d.label}: ما قدروش يجاوبو دابا.</p>`); continue; }
+    for (const m of r.messages) { say(m); await new Promise(x => setTimeout(x, 250)); }
   }
-  let sm = null;
-  if (all.length) {
-    btn.textContent = '📋 كنكتبو الخلاصة...';
-    sm = await teamCall({ mode: 'team', dept: 'summary', topic, context, transcript: transcript() });
-    $('team-summary').innerHTML = sm ? summaryHtml(sm) : '<p class="text-xs text-red-300">ما قدرناش نكتبو الخلاصة دابا.</p>';
-    const id = 'MEET_' + Date.now().toString(36);
-    const rec = { type: 'mkt', kind: 'meeting', status: 'جديد', total: 0, topic, createdAt: Date.now(), messages: all.slice(0, 40), summary: sm ? { summary: sm.summary, actions: sm.actions || [] } : null };
-    try { await setDoc(doc(db, 'orders', id), rec); meetings.unshift({ ...rec, _id: id }); renderMeetings(); } catch (e) {}
-  }
-  btn.disabled = false; btn.textContent = '🎙️ بدا الاجتماع';
+  btn.textContent = '📨 عثمان كيكتب التقرير...';
+  const rp = await teamCall({ mode: 'team', dept: 'report', topic, context, memory, transcript: transcript() });
+  const rec = { type: 'mkt', kind: 'meeting', status: 'جديد', total: 0, auto: !!auto, topic: topics.join(' • ').slice(0, 600), createdAt: Date.now(), messages: all.slice(0, 50), report: rp ? { report: rp.report, kpis: rp.kpis || [], approvals: rp.approvals || [], tasks: rp.tasks || [] } : null, answers: {}, done: {} };
+  const id = 'MEET_' + Date.now().toString(36);
+  try { await setDoc(doc(db, 'orders', id), rec); } catch (e) {}
+  meetings.unshift({ ...rec, _id: id });
+  $('team-live-box').open = false; refreshReports();
+  $('team-status').textContent = 'آخر اجتماع: دابا'; $('team-topic').value = '';
+  meetingRunning = false; btn.disabled = false; btn.textContent = '🎙️ اجتماع دابا';
+  toast(rp ? '📨 وصلك تقرير المدير' : 'سالا الاجتماع، ولكن التقرير ما تكتبش');
 };
 window.renderMeetings = () => {
-  $('team-history').innerHTML = meetings.length ? '<p class="text-sm font-black mt-2">🗂️ الاجتماعات اللي فاتو</p>' + meetings.slice(0, 15).map((m, i) => `<details class="card p-3"><summary class="cursor-pointer text-sm font-bold">${fmtDate(m.createdAt)} • ${esc(String(m.topic).slice(0, 80))}</summary>
-    <div class="space-y-2 mt-3">${(m.messages || []).map(bubble).join('')}${summaryHtml(m.summary)}</div></details>`).join('') : '';
+  $('team-history').innerHTML = meetings.length > 1 ? '<p class="text-sm font-black mt-2">🗂️ الاجتماعات اللي فاتو</p>' + meetings.slice(1, 15).map((m, j) => `<details class="card p-3"><summary class="cursor-pointer text-sm font-bold">${fmtDate(m.createdAt)} • ${esc(String(m.topic || '').slice(0, 80))}</summary>
+    <div class="space-y-2 mt-3">${reportHtml(m, j + 1)}<details><summary class="cursor-pointer text-xs text-zinc-400 font-bold">📝 المحضر</summary><div class="space-y-2 mt-2">${(m.messages || []).map(bubble).join('')}</div></details></div></details>`).join('') : '';
 };
 
 // ===== الزبناء =====
