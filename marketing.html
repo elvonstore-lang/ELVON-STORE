@@ -202,7 +202,7 @@
 const FB = 'https://www.gstatic.com/firebasejs/11.6.1/';
 const { initializeApp } = await import(FB + 'firebase-app.js');
 const { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } = await import(FB + 'firebase-auth.js');
-const { getFirestore, collection, getDocs, doc, setDoc } = await import(FB + 'firebase-firestore.js');
+const { getFirestore, collection, getDocs, getDoc, doc, setDoc } = await import(FB + 'firebase-firestore.js');
 const app = initializeApp({ apiKey: 'AIzaSyDcDjOPHkKFTQ2mc-GDWllqo7QfzjzAV64', authDomain: 'elvon-store.firebaseapp.com', projectId: 'elvon-store', storageBucket: 'elvon-store.firebasestorage.app', messagingSenderId: '78681211845', appId: '1:78681211845:web:3be30581fcd2db8d1141ac' });
 const ADMIN = 'elvonstore1@gmail.com', SITE = 'https://elvonstore-lang.github.io/ELVON-STORE/', AI = 'https://elvon-store.vercel.app/api/ai';
 const auth = getAuth(app), db = getFirestore(app);
@@ -212,7 +212,7 @@ const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.sta
 const okPhone = (n) => /^[5-7]\d{8}$/.test(n);
 const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add('hidden'), 3200); };
 const CAT = { chargers: 'شواحن وكابلات', audio: 'سماعات', protection: 'كفرات وحماية', watches: 'ساعات', powerbanks: 'باور بانك', holders: 'حوامل وستاندات' };
-let products = [], customers = [], picked = [], drafts = [], campaigns = [], allOrders = [], currentCampaign = null, meetings = [], cfg = { costs: {} }, reviewsSum = null;
+let products = [], customers = [], picked = [], drafts = [], campaigns = [], allOrders = [], currentCampaign = null, meetings = [], cfg = { costs: {} }, reviewsSum = null, shop = {};
 const DAY = 864e5;
 const fmtDate = (t) => { const d = new Date(t); return `${d.getDate()}/${d.getMonth() + 1}`; };
 
@@ -266,6 +266,7 @@ async function load() {
   $('f-cat').innerHTML = '<option value="">أي منتج شراو</option>' + Object.entries(CAT).map(([k, v]) => `<option value="${k}">شراو ${v}</option>`).join('');
   if (!$('dc-code').value) newCode();
   fillCfg();
+  try { const sm = await getDoc(doc(db, 'settings', 'main')); shop = sm.exists() ? sm.data() : {}; } catch (e) { shop = {}; }
   await loadReviews();
   stats(); renderAudience(); renderCustomers(); renderProductPicker(); renderSuggest(); renderThanks(); renderHistory(); renderConfirm(); renderCosts(); renderCalendar(); renderTeam(); renderMeetings();
 }
@@ -471,13 +472,13 @@ function storeContext() {
   const cities = {}; last30.forEach(o => { cities[o.city || '؟'] = (cities[o.city || '؟'] || 0) + 1; });
   return [
     `التاريخ: ${new Date().toLocaleDateString('ar-MA', { weekday: 'long', day: 'numeric', month: 'long' })}.`,
-    `المنتجات: ${products.length} (${Object.entries(cats).map(([k, v]) => k + ' ' + v).join('، ')}). نفد المخزون: ${out.length}${out.length ? ' (' + out.slice(0, 4).join('، ') + ')' : ''}. باقي 3 ولا أقل: ${low}.`,
+    `المنتجات: ${products.length} منتج ف المتجر (${Object.entries(cats).map(([k, v]) => k + ' ' + v).join('، ')}). عدد المنتجات اللي نفد ليهم المخزون: ${out.length} من أصل ${products.length}${out.length ? ' (' + out.slice(0, 4).join('، ') + ')' : ''}. عدد المنتجات اللي باقي فيهم 3 قطع ولا أقل: ${low}.`,
     `آخر 7 أيام: ${last7.length} طلب، ${rev(last7)} MAD. آخر 30 يوم: ${last30.length} طلب • جديد ${by('جديد')} • قيد التجهيز ${by('قيد التجهيز')} • تم الشحن ${by('تم الشحن')} • تم التسليم ${by('تم التسليم')} • ملغي ${by('ملغي')} • المداخيل ${rev(last30)} MAD.`,
     `طلبات "جديد" فاتو عليهم أكثر من يومين بلا تأكيد: ${stale}. المدن: ${Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, n]) => c + ' ' + n).join('، ') || '-'}.`,
     `من الموقع: ${last30.filter(o => o.channel === 'الموقع').length}، من واتساب: ${last30.filter(o => o.channel !== 'الموقع').length}. بكود تخفيض: ${last30.filter(o => o.promoCode).length}.`,
     `الأكثر مبيعا: ${top || 'مازال ما كاين'}.`,
     `الزبناء اللي تسلمو: ${customers.length}، وافقو على العروض: ${customers.filter(c => c.optIn && !c.optOut).length}. الحملات: ${campaigns.length}${campaigns[0] ? ' (آخرها: ' + String(campaigns[0].offer || '').slice(0, 60) + ')' : ''}.`,
-    `الخدمات: موقع + طلب ف واتساب، الدفع عند الاستلام، التوصيل طنجة نهار والمدن 2-4 أيام، استبدال 48 ساعة، عملات ELVON + عجلة الحظ، ELVON AI، ورشة الإصلاح. الإطلاق الرسمي كان 28/11/2026.`,
+    `الخدمات: موقع + طلب ف واتساب، الدفع عند الاستلام، ثمن التوصيل للزبون: طنجة ${shop.shippingFee ?? 15} درهم والمدن الأخرى ${shop.otherCitiesFee ?? 25} درهم، مجاني فوق ${shop.freeShippingThreshold ?? 300} درهم. التوصيل طنجة نهار والمدن 2-4 أيام، استبدال 48 ساعة، عملات ELVON + عجلة الحظ، ELVON AI، ورشة الإصلاح. الإطلاق الرسمي كان 28/11/2026.`,
     kpiText(),
     marginText(last30),
     reviewsSum ? `التقييمات: ${reviewsSum.count} تقييم، المعدل ${reviewsSum.avg}/5.${reviewsSum.low.length ? ' تقييمات ضعيفة: ' + reviewsSum.low.join(' | ') : ''}` : 'التقييمات: مازال ما كاين.',
