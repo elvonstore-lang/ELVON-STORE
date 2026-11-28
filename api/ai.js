@@ -183,22 +183,35 @@ const TEAM = {
     ['أمين', 'رئيس الأمن'], ['سارة', 'كشف الطلبات المزورة والأرقام الغالطة'], ['كريم', 'حماية الحسابات وعملات ELVON'],
     ['هدى', 'الخصوصية والقانون المغربي 09-08 ورضا الزبون'], ['عمر', 'Firebase والقواعد والنسخ الاحتياطي'] ] },
   dev: { label: 'تطوير الموقع والخدمات', agents: [
-    ['إلياس', 'مدير المنتج والأولويات'], ['مريم', 'تجربة المستخدم ف التيليفون'], ['رضا', 'سرعة الموقع وGoogle'],
+    ['مريم', 'تجربة المستخدم والمنتج'], ['رضا', 'سرعة الموقع وGoogle'],
     ['خديجة', 'ELVON AI والمساعد الذكي'], ['أنس', 'خدمات جديدة: الورشة، التوصيل، المحل'] ] },
   aftersales: { label: 'خدمات ما بعد البيع', agents: [
     ['فاطمة', 'رئيسة خدمة الزبناء'], ['بلال', 'التوصيل وتتبع الطلبات'], ['زينب', 'الإرجاع والاستبدال والضمان'],
     ['سفيان', 'التقييمات والشكايات'], ['هبة', 'وفاء الزبناء وعملات ELVON'] ] },
 };
+const MANAGER = ['عثمان', 'المدير العام ديال ELVON STORE'];
 function teamPrompt(body) {
-  const ctx = cleanStr(body.context, 2500), topic = cleanStr(body.topic, 600), prev = cleanStr(body.transcript, 2200);
+  const ctx = cleanStr(body.context, 2500), topic = cleanStr(body.topic, 900), prev = cleanStr(body.transcript, 2600), memory = cleanStr(body.memory, 1500);
   const base = [
     'أنتم فريق ELVON STORE (متجر إكسسوارات الهواتف ف طنجة، المغرب، الدفع عند الاستلام، موقع + واتساب + عملات ELVON + عجلة الحظ + ELVON AI).',
     'المعطيات الحقيقية ديال المتجر دابا: ' + ctx,
     'الموضوع اللي طرحو المدير (مول المتجر): ' + topic,
     '- هضرو بالدارجة المغربية بالحروف العربية، بحال فريق حقيقي ف اجتماع: كل واحد كيهضر من الاختصاص ديالو، كيجاوب على الآخرين بالسمية، كيتفق ولا كيخالف ويعطي السبب.',
     '- اعتمدو على المعطيات الحقيقية. ما تخترعوش أرقام. إلا شي معلومة ناقصة قولوها.',
-    '- اقتراحات عملية وممكنة لمتجر صغير بميزانية صغيرة. ما تقولوش "درنا" شي حاجة: أنتم كتقترحو، والمدير هو اللي كيقرر وكينفذ.',
+    '- اقتراحات عملية وممكنة لمتجر صغير بميزانية صغيرة، فيها أرقام وأهداف قابلة للقياس. ما تقولوش "درنا" شي حاجة: أنتم كتقترحو، ومول الشركة هو اللي كيوافق وكينفذ.',
+    '- المدير العام هو ' + MANAGER[0] + '. الفريق كيرفع ليه التقارير، وهو كيرفع التقرير لمول الشركة.',
+    memory ? '- القرارات والمهام ديال الاجتماعات اللي فاتو وجواب مول الشركة عليهم (تابعو واش تدارو):\n' + memory : '- هادا أول اجتماع للفريق.',
   ];
+  if (body.dept === 'agenda') return { system: base.concat([
+    'دورك: ' + MANAGER[0] + '، المدير العام. حل الاجتماع اليومي: حلل المعطيات واختار 3 مواضيع أهم دابا (مشكل، فرصة، متابعة ديال قرار قديم).',
+    '- رجع غير JSON صحيح: {"opening":"كلمة الافتتاح ديالك للفريق (3 حتى 5 جمل، بالأرقام)","topics":["الموضوع 1","الموضوع 2","الموضوع 3"]}',
+  ]).join('\n'), user: 'حل الاجتماع.' };
+  if (body.dept === 'report') return { system: base.concat([
+    'دورك: ' + MANAGER[0] + '، المدير العام. كتب التقرير اللي غادي تصيفط لمول الشركة من بعد الاجتماع: واضح، مختصر، بحال مدير محترف.',
+    '- رجع غير JSON صحيح بهاد الشكل:',
+    '{"report":"رسالة لمول الشركة (4 حتى 6 جمل): شنو لقيتو ف المعطيات وشنو قررتو","kpis":[{"name":"مؤشر","value":"القيمة دابا","target":"الهدف"}],"approvals":[{"title":"قرار خاصو الموافقة ديالك","why":"علاش","cost":"التكلفة بالدرهم ولا 0"}],"tasks":[{"owner":"السمية","dept":"القسم","task":"شنو يدار بالضبط","priority":"عالية|متوسطة|عادية","deadline":"فوقاش"}]}',
+    '- بين 2 و 4 قرارات للموافقة، بين 4 و 8 مهام، بين 3 و 5 مؤشرات.',
+  ]).join('\n'), user: 'النقاش ديال الاجتماع:\n' + prev };
   if (body.dept === 'summary') return { system: base.concat([
     'دورك: كاتب الاجتماع. لخص النقاش اللي تحت وعطي خطة عمل مرتبة بالأولوية.',
     '- رجع غير JSON صحيح: {"summary":"3 حتى 5 جمل","actions":[{"owner":"السمية","dept":"القسم","task":"شنو يدار بالضبط","priority":"عالية|متوسطة|عادية"}]}',
@@ -291,6 +304,11 @@ module.exports = async (req, res) => {
         try { out = await callGroq(groqKey, model, tp.system, contents); }
         catch (e) { const wait = Number((String(e.message).match(/try again in ([\d.]+)s/i) || [])[1]); if (e.status === 429 && wait && wait <= 8) { await sleep(wait * 1000 + 300); out = await callGroq(groqKey, model, tp.system, contents); } else throw e; }
         const j = parseJson(out);
+        if (body.dept === 'agenda' && j && j.opening) return res.status(200).json({ opening: String(j.opening).slice(0, 1200), topics: (Array.isArray(j.topics) ? j.topics : []).slice(0, 4).map(t => cleanStr(t, 200)), model });
+        if (body.dept === 'report' && j && j.report) return res.status(200).json({ report: String(j.report).slice(0, 1800),
+          kpis: (Array.isArray(j.kpis) ? j.kpis : []).slice(0, 6).map(k => ({ name: cleanStr(k.name, 60), value: cleanStr(k.value, 40), target: cleanStr(k.target, 40) })),
+          approvals: (Array.isArray(j.approvals) ? j.approvals : []).slice(0, 5).map(k => ({ title: cleanStr(k.title, 200), why: cleanStr(k.why, 300), cost: cleanStr(k.cost, 40) })),
+          tasks: (Array.isArray(j.tasks) ? j.tasks : []).slice(0, 10).map(a => ({ owner: cleanStr(a.owner, 30), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10), deadline: cleanStr(a.deadline, 40) })), model });
         if (body.dept === 'summary' && j && j.summary) return res.status(200).json({ summary: String(j.summary).slice(0, 1500), actions: (Array.isArray(j.actions) ? j.actions : []).slice(0, 10).map(a => ({ owner: cleanStr(a.owner, 30), dept: cleanStr(a.dept, 40), task: cleanStr(a.task, 300), priority: cleanStr(a.priority, 10) })), model });
         if (j && Array.isArray(j.messages) && j.messages.length) {
           const names = TEAM[body.dept].agents.map(a => a[0]);
