@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tw.css?v=20261127d">
+<link rel="stylesheet" href="tw.css?v=20261128">
 <style>
   body { font-family: 'Cairo', sans-serif; background: #050505; color: #fff; }
   .card { background: #131316; border: 1px solid #242429; border-radius: 1.25rem; }
@@ -56,13 +56,16 @@
       <div class="card p-3"><p class="text-[11px] text-zinc-400 font-bold">حبسو العروض (STOP)</p><p id="st-out" class="text-2xl font-black text-red-300">0</p></div>
     </section>
 
-    <div class="flex gap-2">
+    <div class="flex gap-2 overflow-x-auto pb-1">
       <button onclick="tab('campaign')" data-tab="campaign" class="tab btn border border-[#242429] on">📣 حملة جديدة</button>
+      <button onclick="tab('thanks')" data-tab="thanks" class="tab btn border border-[#242429]">🙏 الشكر <span id="thanks-badge" class="hidden ml-1 px-1.5 rounded-full bg-[#DC0A14] text-[10px]"></span></button>
+      <button onclick="tab('history')" data-tab="history" class="tab btn border border-[#242429]">📊 الحملات</button>
       <button onclick="tab('customers')" data-tab="customers" class="tab btn border border-[#242429]">👥 الزبناء</button>
     </div>
 
     <!-- الحملة -->
     <section id="t-campaign" class="space-y-4">
+      <div id="suggest" class="space-y-2"></div>
       <div class="card p-4 space-y-3">
         <p class="font-black">1) شنو هو العرض ديالك؟</p>
         <textarea id="offer" rows="3" class="inp" placeholder="مثال: تخفيض 20% على جميع الكابلات حتى نهار الأحد، والتوصيل مجاني ف طنجة"></textarea>
@@ -75,6 +78,15 @@
         <input id="prod-search" class="inp" placeholder="قلب على منتج..." oninput="renderProductPicker()">
         <div id="prod-picker" class="flex gap-2 overflow-x-auto pb-1"></div>
         <div id="prod-picked" class="flex flex-wrap gap-1.5"></div>
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2">
+          <p class="text-xs font-black text-emerald-300">🎁 كود تخفيض خاص بهاد الحملة (اختياري)</p>
+          <div class="grid grid-cols-3 gap-2">
+            <select id="dc-pct" class="inp"><option value="0">بلا كود</option><option value="5">-5%</option><option value="10" selected>-10%</option><option value="15">-15%</option><option value="20">-20%</option><option value="25">-25%</option><option value="30">-30%</option></select>
+            <select id="dc-days" class="inp"><option value="3">3 أيام</option><option value="7" selected>7 أيام</option><option value="14">14 يوم</option><option value="30">30 يوم</option></select>
+            <div class="flex gap-1"><input id="dc-code" class="inp uppercase" dir="ltr" maxlength="16"><button onclick="newCode()" class="btn bg-black border border-[#242429] px-2" title="كود جديد">🔄</button></div>
+          </div>
+          <p class="text-[10px] text-zinc-500">الكود كيتزاد ف الرسائل، والزبون كيكتبو ف الموقع ملي كيطلب. ف "📊 الحملات" كتشوف شحال من طلب جا بيه.</p>
+        </div>
       </div>
 
       <div class="card p-4 space-y-3">
@@ -96,6 +108,17 @@
       </div>
 
       <div id="msgs" class="space-y-3"></div>
+    </section>
+
+    <!-- الشكر -->
+    <section id="t-thanks" class="hidden space-y-3">
+      <div class="card p-4"><p class="font-black">🙏 شكر الزبناء اللي توصلو مؤخرا</p><p class="text-xs text-zinc-400 mt-1">رسالة شكر + رابط باش يكتب تقييم للمنتج اللي شرا + سؤال واش بغا توصلو العروض. كيبانو هنا الزبناء اللي تسلمو الطلب ديالهم ف آخر 10 أيام.</p></div>
+      <div id="thanks-list" class="space-y-2"></div>
+    </section>
+
+    <!-- الحملات -->
+    <section id="t-history" class="hidden space-y-3">
+      <div id="history-list" class="space-y-2"></div>
     </section>
 
     <!-- الزبناء -->
@@ -133,7 +156,9 @@ const normPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.sta
 const okPhone = (n) => /^[5-7]\d{8}$/.test(n);
 const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add('hidden'), 3200); };
 const CAT = { chargers: 'شواحن وكابلات', audio: 'سماعات', protection: 'كفرات وحماية', watches: 'ساعات', powerbanks: 'باور بانك', holders: 'حوامل وستاندات' };
-let products = [], customers = [], picked = [], drafts = [];
+let products = [], customers = [], picked = [], drafts = [], campaigns = [], allOrders = [], currentCampaign = null;
+const DAY = 864e5;
+const fmtDate = (t) => { const d = new Date(t); return `${d.getDate()}/${d.getMonth() + 1}`; };
 
 window.login = async () => {
   $('login-btn').disabled = true; $('login-msg').textContent = '';
@@ -162,24 +187,27 @@ async function load() {
   const [ordSnap, prodSnap] = await Promise.all([getDocs(collection(db, 'orders')), getDocs(collection(db, 'products'))]);
   products = []; prodSnap.forEach(d => products.push({ ...d.data(), id: d.id }));
   const orders = [], mkt = {};
-  ordSnap.forEach(d => { const o = { ...d.data(), _id: d.id }; if (o.type === 'mkt') mkt[o.phone] = o; else if (!o.type) orders.push(o); });
+  campaigns = [];
+  ordSnap.forEach(d => { const o = { ...d.data(), _id: d.id }; if (o.type === 'mkt' && o.kind === 'campaign') campaigns.push(o); else if (o.type === 'mkt') mkt[o.phone] = o; else if (!o.type) orders.push(o); });
+  allOrders = orders; campaigns.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const map = {};
   for (const o of orders) {
     if (o.status !== 'تم التسليم') continue;
     const n = normPhone(o.phone); if (!okPhone(n)) continue;
     const c = map[n] || (map[n] = { phone: n, name: o.customer || '', city: o.city || '', bought: [], cats: new Set(), spent: 0, orders: 0, last: 0, optIn: false });
     c.orders++; c.spent += Number(o.total) || 0;
-    if ((o.createdAt || 0) > c.last) { c.last = o.createdAt || 0; c.name = o.customer || c.name; c.city = o.city || c.city; }
+    if ((o.createdAt || 0) > c.last) { c.last = o.createdAt || 0; c.name = o.customer || c.name; c.city = o.city || c.city; c.lastOrder = o; }
     if (o.marketingOptIn) c.optIn = true;
     for (const it of (o.items || [])) { c.bought.push(String(it.name || '').slice(0, 80)); const p = products.find(x => x.id === it.id); if (p) c.cats.add(p.category); }
   }
   for (const [n, m] of Object.entries(mkt)) {
     const c = map[n] || (map[n] = { phone: n, name: m.name || '', city: m.city || '', bought: m.note ? [m.note] : [], cats: new Set(), spent: 0, orders: 0, last: m.createdAt || 0, optIn: false, manual: true });
-    if (m.optIn) c.optIn = true; c.optOut = !!m.optOut; c.lastMsg = m.lastMsgAt || 0; c.sent = m.sentCount || 0;
+    if (m.optIn) c.optIn = true; c.optOut = !!m.optOut; c.lastMsg = m.lastMsgAt || 0; c.sent = m.sentCount || 0; c.thanked = Array.isArray(m.thanked) ? m.thanked : [];
   }
   customers = Object.values(map).sort((a, b) => b.last - a.last);
   $('f-cat').innerHTML = '<option value="">أي منتج شراو</option>' + Object.entries(CAT).map(([k, v]) => `<option value="${k}">شراو ${v}</option>`).join('');
-  stats(); renderAudience(); renderCustomers(); renderProductPicker();
+  if (!$('dc-code').value) newCode();
+  stats(); renderAudience(); renderCustomers(); renderProductPicker(); renderSuggest(); renderThanks(); renderHistory();
 }
 function stats() {
   $('st-all').textContent = customers.length;
@@ -215,11 +243,28 @@ window.preset = (t) => { $('offer').value = t; };
 
 // ===== كتابة الرسائل =====
 const fallbackMsg = (c, offer) => `سلام ${c.name || ''} 👋\nمعاك ELVON STORE، شكرا على الثقة ديالك.\n${offer}\n${SITE}\n(إلا ما بغيتيش توصلك العروض، صيفط STOP)`;
+window.newCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = 'ELV'; for (let i = 0; i < 4; i++) c += a[Math.floor(Math.random() * a.length)]; $('dc-code').value = c; };
 window.generate = async () => {
-  const offer = $('offer').value.trim(), list = audience();
+  let offer = $('offer').value.trim(); const list = audience();
   if (!offer) return toast('كتب العرض ديالك اللول');
   if (!list.length) return toast('ما كاين حتى زبون ف هاد الاختيار');
   const btn = $('gen-btn'); btn.disabled = true;
+  const pct = Number($('dc-pct').value), code = $('dc-code').value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''), days = Number($('dc-days').value);
+  const id = 'CMP_' + Date.now().toString(36), now = Date.now();
+  currentCampaign = { _id: id, type: 'mkt', kind: 'campaign', status: 'جديد', total: 0, offer, createdAt: now, audience: list.length, sentPhones: [] };
+  try {
+    if (pct > 0) {
+      if (code.length < 5) { btn.disabled = false; return toast('الكود خاصو 5 حروف ولا أكثر'); }
+      const expiresAt = now + days * DAY;
+      await setDoc(doc(db, 'promos', 'DC_' + code), { type: 'discount', percent: pct, active: true, expiresAt, campaign: id, createdAt: now });
+      Object.assign(currentCampaign, { code, percent: pct, expiresAt });
+      offer += `\nكود التخفيض: ${code} (-${pct}%) صالح حتى ${fmtDate(expiresAt)}، كيتكتب ف الموقع ملي كتطلب`;
+      newCode();
+    }
+    const { _id, ...rec } = currentCampaign;
+    await setDoc(doc(db, 'orders', id), rec);
+    campaigns.unshift(currentCampaign); renderHistory();
+  } catch (e) { btn.disabled = false; return toast('ما قدرناش نحفظو الحملة، عاود'); }
   const prods = picked.map(id => products.find(p => p.id === id)).filter(Boolean).map(p => ({ id: p.id, name: p.name, price: p.price, oldPrice: p.oldPrice || null, category: CAT[p.category] || '' }));
   drafts = list.map(c => ({ c, text: '' }));
   renderDrafts();
@@ -251,9 +296,84 @@ window.sendOne = async (i) => {
   const d = drafts[i]; d.text = $('d-' + i).value;
   window.open(`https://wa.me/212${d.c.phone}?text=${encodeURIComponent(d.text)}`, '_blank', 'noopener');
   d.sent = true; renderDrafts();
+  if (currentCampaign && !currentCampaign.sentPhones.includes(d.c.phone)) { currentCampaign.sentPhones.push(d.c.phone); setDoc(doc(db, 'orders', currentCampaign._id), { sentPhones: currentCampaign.sentPhones, sent: currentCampaign.sentPhones.length }, { merge: true }); renderHistory(); }
   await saveMkt(d.c, { lastMsgAt: Date.now(), sentCount: (d.c.sent || 0) + 1 }); d.c.sent = (d.c.sent || 0) + 1; d.c.lastMsg = Date.now(); stats();
 };
 window.optOut = async (i) => { const d = drafts[i]; if (!confirm(`${d.c.name || 'الزبون'} ما بغاش العروض؟ ما غاديش يبان ف الحملات الجاية.`)) return; await saveMkt(d.c, { optOut: true }); drafts.splice(i, 1); renderDrafts(); stats(); renderAudience(); };
+
+// ===== اقتراحات أوتوماتيكية =====
+const CABLE = /كابل|cable|câble|سلك/i;
+function suggestions() {
+  const now = Date.now(), fresh = (c) => !c.optOut && (!c.lastMsg || now - c.lastMsg > 14 * DAY);
+  const out = [];
+  const th = thanksList().length;
+  if (th) out.push({ icon: '🙏', text: `${th} زبون توصلو مؤخرا وما شكرتيهمش`, sub: 'رسالة شكر + طلب تقييم + سؤال على العروض', btn: 'صيفط الشكر', act: "tab('thanks')" });
+  const old = customers.filter(c => fresh(c) && c.last && now - c.last >= 30 * DAY);
+  if (old.length) out.push({ icon: '⏰', text: `${old.length} زبون ما شراوش من شهر ولا أكثر`, sub: 'عرض "رجع عندنا" مع كود تخفيض', btn: 'دير الحملة', act: 'suggestBack()' });
+  const noCable = customers.filter(c => fresh(c) && c.cats.has('chargers') && !c.bought.some(b => CABLE.test(b)));
+  if (noCable.length) out.push({ icon: '🔌', text: `${noCable.length} زبون شراو شاحن بلا كابل`, sub: 'اقترح عليهم كابل كيمشي مع الشاحن ديالهم', btn: 'دير الحملة', act: 'suggestCable()' });
+  const audio = customers.filter(c => fresh(c) && c.cats.has('audio') && !c.cats.has('protection'));
+  if (audio.length) out.push({ icon: '🎧', text: `${audio.length} زبون شراو سماعات`, sub: 'اقترح عليهم كفر ولا حماية', btn: 'دير الحملة', act: 'suggestCat("audio")' });
+  return out;
+}
+window.renderSuggest = () => {
+  const list = suggestions();
+  $('suggest').innerHTML = list.length ? '<p class="text-sm font-black">💡 اقتراحات ليك اليوم</p>' + list.map(x => `<div class="card p-3 flex items-center gap-3">
+    <span class="text-2xl">${x.icon}</span><div class="flex-1 min-w-0"><p class="text-sm font-black">${esc(x.text)}</p><p class="text-[11px] text-zinc-400">${esc(x.sub)}</p></div>
+    <button onclick="${x.act}" class="btn bg-[#DC0A14] shrink-0 text-[11px]">${x.btn}</button></div>`).join('') : '';
+};
+function setFilters(who, cat, days) { $('f-who').value = who; $('f-cat').value = cat; $('f-days').value = String(days); $('f-recent').checked = true; renderAudience(); }
+window.suggestBack = () => { setFilters('opt', '', 30); $('offer').value = 'توحشناك! 🙏 رجع عندنا وخود تخفيض خاص غير ليك على أي منتج'; $('dc-pct').value = '10'; $('offer').scrollIntoView({ behavior: 'smooth' }); };
+window.suggestCable = () => { setFilters('opt', 'chargers', 0); $('offer').value = 'كابل سريع كيمشي مع الشاحن اللي خديتي عندنا، باش تشحن بالسرعة الكاملة ⚡'; picked = products.filter(p => CABLE.test(p.name) && Number(p.stock) !== 0).slice(0, 4).map(p => p.id); renderProductPicker(); $('offer').scrollIntoView({ behavior: 'smooth' }); };
+window.suggestCat = (cat) => { setFilters('opt', cat, 0); $('offer').value = 'حمي التيليفون والسماعات ديالك: كفرات وحماية بأثمنة زوينة 🛡️'; picked = products.filter(p => p.category === 'protection' && Number(p.stock) !== 0).slice(0, 4).map(p => p.id); renderProductPicker(); $('offer').scrollIntoView({ behavior: 'smooth' }); };
+
+// ===== الشكر بعد التسليم =====
+function thanksList() {
+  const now = Date.now();
+  return customers.filter(c => c.lastOrder && !c.optOut && now - (c.lastOrder.deliveredAt || c.lastOrder.createdAt || 0) <= 10 * DAY && !(c.thanked || []).includes(c.lastOrder._id));
+}
+function thanksMsg(c) {
+  const it = (c.lastOrder.items || [])[0] || {}, prod = String(it.name || 'الطلب ديالك').replace(/\s*\(.*?\)\s*$/, '');
+  const link = it.id && products.some(p => p.id === it.id) ? `${SITE}#p=${it.id}&review` : SITE;
+  return `سلام ${c.name || ''} 👋\nشكرا بزاف على الثقة ف ELVON STORE ❤️\nوصلك ${prod} مزيان؟ إلا عجبك، عافاك خلي لينا تقييم صغير هنا، كيعاونا بزاف 🙏\n${link}` + (c.optIn ? '' : `\n\nوإلا بغيتي توصلك العروض والتخفيضات ديالنا قبل الناس، جاوبنا بـ "إيه" 🎁`);
+}
+window.renderThanks = () => {
+  const list = thanksList();
+  const b = $('thanks-badge'); b.textContent = list.length; b.classList.toggle('hidden', !list.length);
+  $('thanks-list').innerHTML = list.map(c => `<div class="card p-3 space-y-2">
+    <div class="flex items-center justify-between gap-2"><p class="text-sm font-black">${esc(c.name || 'زبون')} <span class="text-[11px] text-zinc-400 font-bold" dir="ltr">0${esc(c.phone)}</span></p><span class="text-[10px] text-zinc-400">تسلم ${fmtDate(c.lastOrder.deliveredAt || c.lastOrder.createdAt)}</span></div>
+    <textarea id="th-${c.phone}" rows="5" class="inp text-[13px] leading-relaxed">${esc(thanksMsg(c))}</textarea>
+    <div class="flex flex-wrap gap-2"><button onclick="sendThanks('${c.phone}')" class="btn flex-1 bg-[#25D366] text-black">📤 صيفط الشكر</button>
+      ${c.optIn ? '' : `<button onclick="toggleOpt('${c.phone}')" class="btn bg-black border border-emerald-500/50 text-emerald-300 text-[11px]">قال "إيه" للعروض ✅</button>`}
+      <button onclick="skipThanks('${c.phone}')" class="btn bg-black border border-[#242429] text-zinc-400 text-[11px]">تخطى</button></div></div>`).join('') || '<p class="text-xs text-zinc-500 text-center py-6">ما كاين حتى زبون جديد تسلم. ملي تبدل شي طلب لـ "تم التسليم" ف لوحة التحكم، كيبان هنا ✅</p>';
+};
+async function markThanked(c) { const t = [...(c.thanked || []), c.lastOrder._id].slice(-20); await saveMkt(c, { thanked: t }); c.thanked = t; renderThanks(); renderSuggest(); }
+window.sendThanks = async (phone) => { const c = customers.find(x => x.phone === phone); const t = $('th-' + phone).value; window.open(`https://wa.me/212${phone}?text=${encodeURIComponent(t)}`, '_blank', 'noopener'); await markThanked(c); toast('تصيفط ✅'); };
+window.skipThanks = async (phone) => { await markThanked(customers.find(x => x.phone === phone)); };
+
+// ===== سجل الحملات والنتائج =====
+window.renderHistory = () => {
+  $('history-list').innerHTML = campaigns.map(cm => {
+    const end = (cm.createdAt || 0) + 10 * DAY, sent = cm.sentPhones || [];
+    const byCode = cm.code ? allOrders.filter(o => String(o.promoCode || '').toUpperCase() === cm.code && o.status !== 'ملغي') : [];
+    const after = allOrders.filter(o => o.status !== 'ملغي' && (o.createdAt || 0) >= cm.createdAt && (o.createdAt || 0) <= end && sent.includes(normPhone(o.phone)));
+    const all = [...new Map([...byCode, ...after].map(o => [o._id, o])).values()];
+    const revenue = all.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    const expired = cm.expiresAt && Date.now() > cm.expiresAt;
+    return `<div class="card p-4 space-y-2">
+      <div class="flex items-start justify-between gap-2"><p class="text-sm font-black leading-relaxed">${esc(String(cm.offer || '').slice(0, 120))}</p><span class="text-[11px] text-zinc-400 shrink-0">${fmtDate(cm.createdAt)}</span></div>
+      ${cm.code ? `<p class="text-[11px] font-bold ${cm.stopped || expired ? 'text-zinc-500' : 'text-emerald-300'}" dir="ltr">🎁 ${esc(cm.code)} • -${esc(cm.percent)}% • ${cm.stopped ? 'متوقف' : expired ? 'سالا' : 'حتى ' + fmtDate(cm.expiresAt)}</p>` : ''}
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="rounded-xl bg-black p-2"><p class="text-lg font-black">${sent.length}<span class="text-[10px] text-zinc-500">/${cm.audience || 0}</span></p><p class="text-[10px] text-zinc-400">تصيفطو</p></div>
+        <div class="rounded-xl bg-black p-2"><p class="text-lg font-black text-emerald-400">${byCode.length}</p><p class="text-[10px] text-zinc-400">استعملو الكود</p></div>
+        <div class="rounded-xl bg-black p-2"><p class="text-lg font-black text-amber-300">${all.length}</p><p class="text-[10px] text-zinc-400">طلبات</p></div>
+        <div class="rounded-xl bg-black p-2"><p class="text-lg font-black">${revenue}</p><p class="text-[10px] text-zinc-400">MAD</p></div>
+      </div>
+      ${cm.code && !cm.stopped && !expired ? `<button onclick="stopCode('${cm._id}')" class="btn bg-black border border-[#242429] text-zinc-400 text-[11px]">وقف الكود</button>` : ''}
+    </div>`;
+  }).join('') || '<p class="text-xs text-zinc-500 text-center py-6">مازال ما درتي حتى حملة. الطلبات اللي كتجي من الحملات كتبان هنا (اللي استعملو الكود + اللي طلبو ف 10 أيام من بعد الرسالة).</p>';
+};
+window.stopCode = async (id) => { const cm = campaigns.find(x => x._id === id); if (!cm || !confirm(`نوقفو الكود ${cm.code}؟`)) return; await setDoc(doc(db, 'promos', 'DC_' + cm.code), { active: false }, { merge: true }); await setDoc(doc(db, 'orders', id), { stopped: true }, { merge: true }); cm.stopped = true; renderHistory(); toast('تحبس الكود'); };
 
 // ===== الزبناء =====
 window.renderCustomers = () => {
@@ -267,7 +387,7 @@ window.renderCustomers = () => {
     ${c.optOut ? '' : `<button onclick="toggleOpt('${c.phone}')" class="btn bg-black border border-[#242429] text-[11px]">${c.optIn ? 'حيد الموافقة' : 'وافق (قاليها ليا)'}</button>`}
   </div>`).join('') || '<p class="text-xs text-zinc-500 text-center py-6">ما كاين حتى زبون. الزبناء كيتزادو بوحدهم ملي تبدل الطلب ل "تم التسليم".</p>';
 };
-window.toggleOpt = async (phone) => { const c = customers.find(x => x.phone === phone); await saveMkt(c, { optIn: !c.optIn }); stats(); renderCustomers(); renderAudience(); };
+window.toggleOpt = async (phone) => { const c = customers.find(x => x.phone === phone); await saveMkt(c, { optIn: !c.optIn }); stats(); renderCustomers(); renderAudience(); renderThanks(); };
 window.addManual = async () => {
   const n = normPhone($('m-phone').value), name = $('m-name').value.trim();
   if (!okPhone(n) || !name) return toast('دخل السمية ورقم مغربي صحيح');
@@ -278,7 +398,7 @@ window.addManual = async () => {
   ['m-name', 'm-phone', 'm-city', 'm-note'].forEach(id => $(id).value = ''); $('m-opt').checked = false;
   toast('تزاد ✅'); stats(); renderCustomers(); renderAudience();
 };
-window.tab = (t) => { document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); $('t-campaign').classList.toggle('hidden', t !== 'campaign'); $('t-customers').classList.toggle('hidden', t !== 'customers'); };
+window.tab = (t) => { document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); ['campaign', 'thanks', 'history', 'customers'].forEach(x => $('t-' + x).classList.toggle('hidden', t !== x)); window.scrollTo(0, 0); };
 </script>
 </body>
 </html>
